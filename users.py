@@ -41,12 +41,15 @@ class User(TypedDict):
     name:str
     type:str
 
-
 class Group(TypedDict):
     id:int
     name:str
     rule:str
 
+
+####################################################################################
+#            INICIO DAS CLASSES QUE IRAO TRATAR OS GRUPOS DE USUARIOS.             #
+####################################################################################
 @api.route("/<int:page>")
 @api.param("page","Número da página")
 class UsersApi(Resource):
@@ -79,6 +82,11 @@ class UserApi(Resource):
         return False
 
 
+
+
+####################################################################################
+#            INICIO DAS CLASSES QUE IRAO TRATAR OS GRUPOS DE USUARIOS.             #
+####################################################################################
 @apis.route("/<int:page>")
 @apis.param("page","Número da página de registros")
 class UserGroupsApi(Resource):
@@ -87,6 +95,7 @@ class UserGroupsApi(Resource):
     def get(self,page:int)->str:
 
         return None
+
 
 @apis.route("/<int:id>")
 @apis.param("id","Id do registro")
