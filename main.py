@@ -3,7 +3,7 @@ from flask_cors import CORS
 from flask import Blueprint
 from flask_restx import Api
 from users import api as ns_user
-from representatives import api as ns_reps
+from users import apis as ns_group
 
 app = Flask(__name__)
 
@@ -21,10 +21,7 @@ app.register_blueprint(blueprint)
 CORS(app)
 
 api.add_namespace(ns_user)
-api.add_namespace(ns_reps)
-
-
-
+api.add_namespace(ns_group)
 
 
 
