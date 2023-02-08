@@ -1,6 +1,6 @@
 # Venda Fashion (Server)
 
-Repositório para hospedar a versão server do sistema de Força de Vendas desenvolvido em Laravel com banco de dados PostgreSQL.
+Repositório para hospedar a versão server do sistema de Força de Vendas desenvolvido em Python.
 
 O sistema possui 5 níveis de acesso sendo:
 1. Administrador: possui acesso em todo o sistema.
