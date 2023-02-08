@@ -28,35 +28,40 @@ class User(TypedDict):
     username:str
     password:str
 
-
-@api.route("/")
+@api.route("/<int:page>")
+@api.param("page","Número da página")
 class UsersApi(Resource):
     username:str
     password:str
 
     @api.response(HTTPStatus.OK.value,"Obtem a listagem de usuários",[user_model])
-    def get(self)-> list[User]:
+    def get(self,page:int)-> list[User]:
+
         return False
 
     @api.response(HTTPStatus.OK.value,"Salva os dados de usuários")
-    @api.expect(user_request)
-    def post(self,_id:int)->bool:
+    @api.response(HTTPStatus.BAD_REQUEST.value,"Falha ao salvar os dados dos usuários")
+    @api.expect(list[user_request])
+    def post(self,page:int = 0)->bool:
 
         return False
 
 
 @api.route("/<int:id>")
+@api.param("id","Id do registro")
 class UserApi(Resource):
 
     @api.response(HTTPStatus.OK.value,"Obtem um registro de usuario",user_model)
+    @api.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
     def get(self,_id:int)->User:
         return None
 
-    @api.doc("Salva informacoes de um usuario. Se não existir, cria!")
     @api.response(HTTPStatus.OK.value,"Salva dados de um usuario")
+    @api.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
     def post(self,_id:int)->bool:
         return False
     
     @api.response(HTTPStatus.OK.value,"Exclui os dados de um usuario")
+    @api.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
     def delete(self,_id:int)->bool:
         return False
