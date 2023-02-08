@@ -1,8 +1,9 @@
 from http import HTTPStatus
 from typing import TypedDict
-from flask_restx import Resource,fields,reqparse
-from api import api
-from api import ns_rep
+from flask_restx import Resource,fields,reqparse,Namespace
+
+
+api = Namespace("representatives",description="Operações para manipular dados de representantes")
 
 
 #API Models
@@ -25,7 +26,7 @@ class User(TypedDict):
     username:str
     password:str
 
-@ns_rep.route("/")
+@api.route("/")
 class UsersApi(Resource):
     username:str
     password:str
@@ -40,7 +41,7 @@ class UsersApi(Resource):
 
         return False
 
-@ns_rep.route("/<int:id>")
+@api.route("/<int:id>")
 class UserApi(Resource):
 
     @api.response(HTTPStatus.OK.value,"Obtem um registro de um representante",rep_model)

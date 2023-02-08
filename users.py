@@ -1,9 +1,8 @@
 from http import HTTPStatus
 from typing import TypedDict
-from flask_restx import Resource,fields,reqparse
-from api import api
-from api import ns_user
+from flask_restx import Resource,fields,reqparse,Namespace
 
+api = Namespace("users",description="Operações para manipular dados de usuários do sistema")
 
 #API Models
 user_model = api.model(
@@ -30,7 +29,7 @@ class User(TypedDict):
     password:str
 
 
-@ns_user.route("/")
+@api.route("/")
 class UsersApi(Resource):
     username:str
     password:str
@@ -46,14 +45,14 @@ class UsersApi(Resource):
         return False
 
 
-@ns_user.route("/<int:id>")
+@api.route("/<int:id>")
 class UserApi(Resource):
 
     @api.response(HTTPStatus.OK.value,"Obtem um registro de usuario",user_model)
     def get(self,_id:int)->User:
         return None
 
-    @ns_user.doc("Salva informacoes de um usuario. Se não existir, cria!")
+    @api.doc("Salva informacoes de um usuario. Se não existir, cria!")
     @api.response(HTTPStatus.OK.value,"Salva dados de um usuario")
     def post(self,_id:int)->bool:
         return False
