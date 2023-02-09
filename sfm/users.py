@@ -6,7 +6,7 @@ api = Namespace("users",description="Operações para manipular dados de usuári
 
 #API Models
 user_model = api.model(
-    "Usuario",{
+    "User",{
         "id": fields.Integer,
         "username": fields.String,
         "password": fields.String,
@@ -32,18 +32,12 @@ class User(TypedDict):
     name:str
     type:str
 
-class Group(TypedDict):
-    id:int
-    name:str
-    rule:str
-
-
 ####################################################################################
 #            INICIO DAS CLASSES QUE IRAO TRATAR OS GRUPOS DE USUARIOS.             #
 ####################################################################################
 @api.route("/<int:page>")
 @api.param("page","Número da página")
-class UsersApi(Resource):
+class UsersList(Resource):
     username:str
     password:str
 
