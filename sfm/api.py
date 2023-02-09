@@ -1,6 +1,5 @@
 from flask import Blueprint
 from flask_restx import Api
-from sfm.customers import api as ns_customer
 from sfm.customers import apis as ns_group
 from sfm.orders import api as ns_order
 
@@ -12,7 +11,7 @@ Keyword arguments: pedidos, clientes, produtos
 
 
 
-nss = [ns_customer,ns_group,ns_order]
+nss = [ns_group,ns_order]
 
 
 blueprint = Blueprint("sfm",__name__,url_prefix="/sfm/api/v1/")
