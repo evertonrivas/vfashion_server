@@ -23,6 +23,5 @@ def index():
     VF_CRM - Customer Relashionship Management <a href='/crm/api/v1'>/crm/api/v1</a>
     """
 
-
 if __name__=="__main__":
     app.run(port=5000,debug=True)
