@@ -2,6 +2,7 @@ from flask import Blueprint
 from flask_restx import Api
 from cmm.users import api as ns_user
 from cmm.products import api as ns_product
+from sfm.customers import api as ns_customer
 
 """ Módulo Common entre os sistemas
     Módulo que unificará os sistemas através de uma única API com coisas que são comuns em todas as etapas
@@ -10,7 +11,7 @@ Keyword arguments: usuarios, produtos
 """
 
 
-nss = [ns_user,ns_product]
+nss = [ns_user,ns_product,ns_customer]
 
 blueprint = Blueprint("cmm",__name__,url_prefix="/cmm/api/v1/")
 
