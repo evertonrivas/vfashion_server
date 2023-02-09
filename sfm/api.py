@@ -3,6 +3,12 @@ from flask_restx import Api
 from sfm.users import api as ns_user
 from sfm.customers import api as ns_customer
 from sfm.customers import apis as ns_group
+from sfm.orders import api as ns_order
+from sfm.products import api as ns_product
+
+
+nss = [ns_user,ns_customer,ns_group,ns_order,ns_product]
+
 
 blueprint = Blueprint("sfm",__name__,url_prefix="/sfm/api/v1/")
 
@@ -14,6 +20,5 @@ api = Api(blueprint,
     contact="Venda",
     contact_url="http://www.vendafashion.com")
 
-api.add_namespace(ns_user)
-api.add_namespace(ns_customer)
-api.add_namespace(ns_group)
+for ns in nss:
+    api.add_namespace(ns)
