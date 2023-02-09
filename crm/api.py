@@ -1,5 +1,8 @@
 from flask import Blueprint
 from flask_restx import Api
+from crm.opportunities import api as ns_opportunity
+
+nss = [ns_opportunity]
 
 blueprint = Blueprint("crm",__name__,url_prefix="/crm/api/v1/")
 
@@ -10,3 +13,6 @@ api = Api(blueprint,
     contact_email="evertonrivas@gmail.com",
     contact="Venda",
     contact_url="http://www.vendafashion.com")
+
+for ns in nss:
+    api.add_namespace(ns)
