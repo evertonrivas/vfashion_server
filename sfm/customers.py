@@ -3,7 +3,7 @@ from typing import TypedDict
 from flask_restx import Resource,fields,reqparse,Namespace
 
 api = Namespace("customers",description="Operações para manipular dados de clientes")
-apis = Namespace("groups",description="Operações para manipular grupos de clientes")
+apis = Namespace("customer-groups",description="Operações para manipular grupos de clientes")
 
 #API Models
 cst_model = api.model(
@@ -17,7 +17,7 @@ cst_model = api.model(
 )
 
 group_model = apis.model(
-    "Grupo",{
+    "CustomerGroup",{
         "id": fields.Integer,
         "name": fields.String,
         "rule": fields.String
@@ -41,7 +41,7 @@ class User(TypedDict):
     name:str
     type:str
 
-class Group(TypedDict):
+class CustomerGroup(TypedDict):
     id:int
     name:str
     rule:str
@@ -52,7 +52,7 @@ class Group(TypedDict):
 ####################################################################################
 @api.route("/<int:page>")
 @api.param("page","Número da página")
-class CustomersApi(Resource):
+class CustomersList(Resource):
     username:str
     password:str
 
@@ -94,9 +94,9 @@ class CustomerApi(Resource):
 @apis.route("/<int:page>")
 @apis.param("page","Número da página de registros")
 class UserGroupsApi(Resource):
-    @api.response(HTTPStatus.OK.value,"Obtem um registro de usuario",group_model)
+    @api.response(HTTPStatus.OK.value,"Obtem um registro de usuario",[group_model])
     @api.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
-    def get(self,page:int)->str:
+    def get(self,page:int)->list[CustomerGroup]:
 
         return None
 
@@ -104,9 +104,9 @@ class UserGroupsApi(Resource):
 @apis.route("/<int:id>")
 @apis.param("id","Id do registro")
 class UserGroupApi(Resource):
-    @apis.response(HTTPStatus.OK.value,"Salva dados de um grupo")
+    @apis.response(HTTPStatus.OK.value,"Salva dados de um grupo",group_model)
     @apis.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
-    def get(self,id:int)->str:
+    def get(self,id:int)->CustomerGroup:
 
         return None
     
