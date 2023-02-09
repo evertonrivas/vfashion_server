@@ -89,7 +89,7 @@ class CustomerApi(Resource):
 
 
 ####################################################################################
-#            INICIO DAS CLASSES QUE IRAO TRATAR OS GRUPOS DE USUARIOS.             #
+#            INICIO DAS CLASSES QUE IRAO TRATAR OS GRUPOS DE CLIENTES.             #
 ####################################################################################
 @apis.route("/<int:page>")
 @apis.param("page","Número da página de registros")
