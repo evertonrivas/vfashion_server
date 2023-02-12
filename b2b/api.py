@@ -1,5 +1,9 @@
 from flask import Blueprint
 from flask_restx import Api
+from b2b.cart import api as ns_cart
+
+
+nss = [ns_cart]
 
 blueprint = Blueprint("b2b",__name__,url_prefix="/b2b/api/v1/")
 
@@ -10,3 +14,6 @@ api = Api(blueprint,
     contact_email="evertonrivas@gmail.com",
     contact="Venda",
     contact_url="http://www.vendafashion.com")
+
+for ns in nss:
+    api.add_namespace(ns)
