@@ -41,11 +41,9 @@ class CustomerGroup(TypedDict):
 ####################################################################################
 @api.route("/")
 class CustomersList(Resource):
-    username:str
-    password:str
-
     @api.response(HTTPStatus.OK.value,"Obtem a listagem de clientes",[cst_model])
     @api.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
+    @api.param("page","Número da página de registros","query",type=int)
     def get(self)-> list[Customer]:
 
         return [{
@@ -88,14 +86,21 @@ class CustomerApi(Resource):
 ####################################################################################
 #            INICIO DAS CLASSES QUE IRAO TRATAR OS GRUPOS DE CLIENTES.             #
 ####################################################################################
-@apis.route("/<int:page>")
-@apis.param("page","Número da página de registros")
+@apis.route("/")
 class UserGroupsApi(Resource):
-    @api.response(HTTPStatus.OK.value,"Obtem um registro de usuario",[group_model])
+    @api.response(HTTPStatus.OK.value,"Obtem um registro de um grupo de usuarios",[group_model])
     @api.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
-    def get(self,page:int)->list[CustomerGroup]:
+    @apis.param("page","Número da página de registros","query",type=int)
+    def get(self)->list[CustomerGroup]:
 
         return None
+
+
+    @api.response(HTTPStatus.OK.value,"Cria um novo grupo de usuários no sistema")
+    @api.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
+    def post(self)->int:
+
+        return 0
 
 
 @apis.route("/<int:id>")

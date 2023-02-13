@@ -41,13 +41,10 @@ class ConsumerGroup(TypedDict):
 #            INICIO DAS CLASSES QUE IRAO TRATAR OS GRUPOS DE CONSUMIDORES          #
 ####################################################################################
 @api.route("/")
-@api.param("page","Número da página")
 class ConsumerList(Resource):
-    username:str
-    password:str
-
     @api.response(HTTPStatus.OK.value,"Obtem a listagem de consumidores",[cons_model])
     @api.response(HTTPStatus.BAD_REQUEST.value,"")
+    @api.param("page","Número da página de registros","query",type=int)
     def get(self)-> list[Consumer]:
 
         return [{
@@ -92,6 +89,7 @@ class CustomerApi(Resource):
 class UserGroupsApi(Resource):
     @api.response(HTTPStatus.OK.value,"Obtem um registro de um grupo de consumidores",[group_model])
     @api.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
+    @api.param("page","Número da página de registros","query",type=int)
     def get(self)->list[ConsumerGroup]:
 
         return None

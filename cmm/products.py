@@ -52,11 +52,9 @@ class Product(TypedDict):
 ####################################################################################
 @api.route("/")
 class ProductsList(Resource):
-    username:str
-    password:str
-
     @api.response(HTTPStatus.OK.value,"Obtem a listagem de produto",[prod_model])
     @api.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
+    @api.param("page","Número da página")
     @api.doc(description="Teste de documentacao")
     def get(self)-> list[Product]:
 

@@ -28,11 +28,9 @@ class Order(TypedDict):
 ####################################################################################
 @api.route("/")
 class OrdersList(Resource):
-    username:str
-    password:str
-
     @api.response(HTTPStatus.OK.value,"Obtem a listagem de pedidos",[order_model])
     @api.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
+    @api.param("page","Número da página de registros","query",type=int)
     @api.doc(description="Teste de documentacao")
     def get(self)->list[Order]:
 
