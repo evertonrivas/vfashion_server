@@ -7,7 +7,6 @@ from sfm.orders import api as ns_order
 
 Keyword arguments: pedidos, clientes, produtos
 """
-
 nss = [ns_order]
 
 
@@ -18,7 +17,7 @@ api = Api(blueprint,
     title="API Venda Fashion",
     description="Uma API REST para sistema de vendas - Módulo SFM",
     contact_email="evertonrivas@gmail.com",
-    contact="Venda",
+    contact="Venda Fasion",
     contact_url="http://www.vendafashion.com")
 
 for ns in nss:
