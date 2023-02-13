@@ -3,7 +3,7 @@ from flask_restx import Api
 from cmm.users import api as ns_user
 from cmm.products import api as ns_product
 from cmm.customers import api as ns_customer
-from cmm.customers import apis as ns_group_group
+from cmm.customers import apis as ns_group_customer
 
 
 """ Módulo Common entre os sistemas
@@ -12,7 +12,7 @@ from cmm.customers import apis as ns_group_group
 Keyword arguments: usuarios, produtos
 """
 
-nss = [ns_user,ns_product,ns_customer,ns_group_group]
+nss = [ns_user,ns_product,ns_customer,ns_group_customer]
 
 blueprint = Blueprint("cmm",__name__,url_prefix="/cmm/api/v1/")
 
