@@ -1,7 +1,6 @@
 from flask import Flask
 from flask_cors import CORS
 from cmm.api import blueprint as cmm
-from sfm.api import blueprint as sfm
 from pdv.api import blueprint as pdv
 from crm.api import blueprint as crm
 from b2b.api import blueprint as b2b
@@ -10,7 +9,6 @@ from fpr.api import blueprint as fpr
 app = Flask(__name__)
 
 app.register_blueprint(cmm)
-app.register_blueprint(sfm)
 app.register_blueprint(pdv)
 app.register_blueprint(crm)
 app.register_blueprint(b2b)
