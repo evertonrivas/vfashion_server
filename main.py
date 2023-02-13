@@ -41,6 +41,7 @@ def index():
                             Para acessar as documenta&ccedil;&otilde;es das APIS, clique nos links abaixo:<br/><br/>
                             VF_SFM - Gestão de For&ccedil;a de Vendas <a href='/sfm/api/v1/'>/sfm/api/v1/</a><br/>
                             VF_B2B - Business to Business <a href='/b2b/api/v1'>/b2b/api/v1</a><br/>
+                            VF_FPR - Finished Product Return <a href='/fpr/api/v1'>/fpr/api/v1</a><br/>
                             VF_PDV - Ponto de Venda <a href='/pdv/api/v1'>/pdv/api/v1</a><br/>
                             VF_CRM - Customer Relashionship Management <a href='/crm/api/v1'>/crm/api/v1</a><hr size='1'>
 
