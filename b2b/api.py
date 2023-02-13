@@ -12,7 +12,7 @@ api = Api(blueprint,
     title="API Venda Fashion",
     description="Uma API REST para sistema de vendas - Módulo B2B",
     contact_email="evertonrivas@gmail.com",
-    contact="Venda",
+    contact="Venda Fashion",
     contact_url="http://www.vendafashion.com")
 
 for ns in nss:

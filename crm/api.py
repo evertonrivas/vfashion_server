@@ -1,8 +1,8 @@
 from flask import Blueprint
 from flask_restx import Api
-from crm.opportunities import api as ns_opportunity
+from crm.funil import api as ns_funil
 
-nss = [ns_opportunity]
+nss = [ns_funil]
 
 blueprint = Blueprint("crm",__name__,url_prefix="/crm/api/v1/")
 
@@ -11,7 +11,7 @@ api = Api(blueprint,
     title="API Venda Fashion",
     description="Uma API REST para sistema de vendas - Módulo CRM",
     contact_email="evertonrivas@gmail.com",
-    contact="Venda",
+    contact="Venda Fashion",
     contact_url="http://www.vendafashion.com")
 
 for ns in nss:
