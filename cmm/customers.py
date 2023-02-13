@@ -8,10 +8,9 @@ apis = Namespace("customer-groups",description="Operações para manipular grupo
 #API Models
 cst_model = api.model(
     "Customer",{
-        "id": fields.Integer,
-        "username": fields.String,
-        "password": fields.String,
         "name": fields.String,
+        "taxvat": fields.String,
+        "state_region": fields.String,
         "type": fields.String
     }
 )
@@ -23,16 +22,6 @@ group_model = apis.model(
         "rule": fields.String
     }
 )
-
-
-#Request parsers
-user_request = api.parser()
-user_request.add_argument("id",type=int,location="form")
-user_request.add_argument("username",type=str,location="form")
-user_request.add_argument("password",type=str,location="form")
-user_request.add_argument("name",type=str,location="form")
-user_request.add_argument("type",type=str,location="form")
-
 
 class Customer(TypedDict):
     id:int
@@ -48,16 +37,16 @@ class CustomerGroup(TypedDict):
 
 
 ####################################################################################
-#            INICIO DAS CLASSES QUE IRAO TRATAR OS GRUPOS DE USUARIOS.             #
+#            INICIO DAS CLASSES QUE IRAO TRATAR OS GRUPOS DE CLIENTES.             #
 ####################################################################################
-@api.route("/<int:page>")
-@api.param("page","Número da página")
+@api.route("/")
 class CustomersList(Resource):
     username:str
     password:str
 
     @api.response(HTTPStatus.OK.value,"Obtem a listagem de clientes",[cst_model])
-    def get(self,page:int)-> list[Customer]:
+    @api.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
+    def get(self)-> list[Customer]:
 
         return [{
             "id":1,
@@ -67,6 +56,13 @@ class CustomersList(Resource):
             "type": "A"
         }]
 
+    @api.doc(parser=cst_model)
+    @api.response(HTTPStatus.OK.value,"Cria um novo registro de cliente")
+    @api.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar um novo cliente!")
+    def post(self)->int:
+        return 0
+
+
 
 @api.route("/<int:id>")
 @api.param("id","Id do registro")
@@ -74,17 +70,18 @@ class CustomerApi(Resource):
 
     @api.response(HTTPStatus.OK.value,"Obtem um registro de cliente",cst_model)
     @api.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
-    def get(self,_id:int)->Customer:
+    def get(self,id:int)->Customer:
         return None
 
+    @api.doc(parser=cst_model)
     @api.response(HTTPStatus.OK.value,"Salva dados de um cliente")
     @api.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
-    def post(self,_id:int)->bool:
+    def post(self,id:int)->bool:
         return False
     
     @api.response(HTTPStatus.OK.value,"Exclui os dados de um cliente")
     @api.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
-    def delete(self,_id:int)->bool:
+    def delete(self,id:int)->bool:
         return False
 
 

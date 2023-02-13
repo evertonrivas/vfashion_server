@@ -15,15 +15,6 @@ order_model = api.model(
     }
 )
 
-
-#Request parsers
-order_request = api.parser()
-order_request.add_argument("id",type=int,location="form")
-order_request.add_argument("username",type=str,location="form")
-order_request.add_argument("password",type=str,location="form")
-order_request.add_argument("name",type=str,location="form")
-order_request.add_argument("type",type=str,location="form")
-
 class Order(TypedDict):
     id:int
     username:str
@@ -35,15 +26,15 @@ class Order(TypedDict):
 ####################################################################################
 #            INICIO DAS CLASSES QUE IRAO TRATAR OS GRUPOS DE USUARIOS.             #
 ####################################################################################
-@api.route("/<int:page>")
-@api.param("page","Número da página")
+@api.route("/")
 class OrdersList(Resource):
     username:str
     password:str
 
     @api.response(HTTPStatus.OK.value,"Obtem a listagem de pedidos",[order_model])
+    @api.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
     @api.doc(description="Teste de documentacao")
-    def get(self,page:int)-> list[Order]:
+    def get(self)->list[Order]:
 
         return [{
             "id":1,
@@ -53,6 +44,12 @@ class OrdersList(Resource):
             "type": "A"
         }]
 
+    @api.doc(parser=order_model)
+    @api.response(HTTPStatus.OK.value,"Cria um novo pedido")
+    @api.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar pedido!")
+    def post(self)->int:
+        return 0
+
 
 @api.route("/<int:id>")
 @api.param("id","Id do registro")
@@ -60,15 +57,16 @@ class OrderApi(Resource):
 
     @api.response(HTTPStatus.OK.value,"Obtem um registro de pedido",order_model)
     @api.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
-    def get(self,_id:int)->Order:
+    def get(self,id:int)->Order:
         return None
 
+    @api.doc(parser=order_model)
     @api.response(HTTPStatus.OK.value,"Salva dados de um pedido")
     @api.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
-    def post(self,_id:int)->bool:
+    def post(self,id:int)->bool:
         return False
     
     @api.response(HTTPStatus.OK.value,"Exclui os dados de um pedido")
     @api.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
-    def delete(self,_id:int)->bool:
+    def delete(self,id:int)->bool:
         return False
