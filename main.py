@@ -32,7 +32,7 @@ def index():
                 <div class='col-2'>&nbsp;</div>
                 <div class='col'>
                     <div class='card border border-info'>
-                        <div class='card-header text-center'>Venda Fashion - API</div>
+                        <div class='card-header text-center fw-bold'>Venda Fashion - API</div>
                         <div class='card-body'>
                             <p class='card-text'>
                             O sistema Venda Fashion possui 4 m&oacute;dulos, cada um com seu backend em REST API com sua respectiva documenta&ccedil;&atilde;o.
