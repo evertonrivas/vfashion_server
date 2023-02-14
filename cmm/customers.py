@@ -8,10 +8,13 @@ apis = Namespace("customer-groups",description="Operações para manipular grupo
 #API Models
 cst_model = api.model(
     "Customer",{
+        "id": fields.Integer,
         "name": fields.String,
         "taxvat": fields.String,
         "state_region": fields.String,
-        "type": fields.String
+        "city": fields.String,
+        "phone": fields.String,
+        "email": fields.String
     }
 )
 
@@ -25,10 +28,12 @@ group_model = apis.model(
 
 class Customer(TypedDict):
     id:int
-    username:str
-    password:str
     name:str
-    type:str
+    taxvat:str
+    state_region:str
+    city:str
+    phone:str
+    email:str
 
 class CustomerGroup(TypedDict):
     id:int
@@ -48,10 +53,12 @@ class CustomersList(Resource):
 
         return [{
             "id":1,
-            "username": "teste",
-            "password": "bolinha",
-            "name": "Jose",
-            "type": "A"
+            "name": "JOSEFINA LTDA",
+            "taxvat": "01.111.222/0001-00",
+            "state_region": "SC",
+            "city": "Florianópolis",
+            "phone": "4899999-8888",
+            "email": "josefina_ltda@gmail.com"
         }]
 
     @api.doc(parser=cst_model)
