@@ -1,15 +1,16 @@
 from http import HTTPStatus
 from typing import TypedDict
-from flask_restx import Resource,fields,reqparse,Namespace
-import array
+from flask_restx import Resource,fields,Namespace
+from flask import request
 
-api = Namespace("product",description="Operações para manipular dados de produtos")
+api = Namespace("products",description="Operações para manipular dados de produtos")
+apig = Namespace("products-grid",description="Operações para manipular dados das grades de produtos")
 
 #API Models
 sku_model = api.model(
     "sku",{
         "color": fields.String,
-        "size": fields.String
+        "size": fields.Integer
     }
 )
 
@@ -47,8 +48,9 @@ class Product(TypedDict):
     price:float
     sku:list[ProductSku]
 
+
 ####################################################################################
-#            INICIO DAS CLASSES QUE IRAO TRATAR OS GRUPOS DE PRODUTOS.             #
+#                INICIO DAS CLASSES QUE IRAO TRATAR OS PRODUTOS.                   #
 ####################################################################################
 @api.route("/")
 class ProductsList(Resource):
@@ -59,7 +61,7 @@ class ProductsList(Resource):
     def get(self)-> list[Product]:
 
         return [{
-            "id":1,
+            "id":request.args.get("page"),
             "prodCode": "10",
             "barCode": "7890000000000",
             "refCode": "BZ10",
@@ -104,4 +106,85 @@ class ProductApi(Resource):
     @api.response(HTTPStatus.OK.value,"Exclui os dados de um produto")
     @api.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
     def delete(self,id:int)->bool:
+        return False
+
+####################################################################################
+#           INICIO DAS CLASSES QUE IRAO TRATAR AS GRADES DE  PRODUTOS.             #
+####################################################################################
+
+dist_model = apig.model(
+    "GridDistribution",{
+        "size": fields.Integer,
+        "color": fields.String,
+        "value": fields.Float,
+        "is_percent":fields.Boolean
+    }
+)
+
+grid_model = apig.model(
+    "Grid",{
+        "id":fields.Integer,
+        "name": fields.String,
+        "distribution": fields.List(fields.Nested(dist_model))
+    }
+)
+
+class GridDist(TypedDict):
+    size:str
+    color:str
+    value:float
+    is_percent:bool
+
+class Grid(TypedDict):
+    id:int
+    name:str
+    distribution:list[GridDist]
+
+
+@apig.route("/")
+class GridList(Resource):
+
+    @apig.response(HTTPStatus.OK.value,"Obtem os registros de grades existentes",[grid_model])
+    @apig.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
+    @apig.param("page","Número da página")
+    def get(self)->list[Grid]:
+
+        return [{
+            "id": request.args.get("page"),
+            "name": "Grade 1",
+            "distribution": [{
+                "size": "G",
+                "color": "#000000",
+                "value": 10,
+                "is_Percent": True
+            }]
+        }]
+
+    @apig.response(HTTPStatus.OK.value,"Cria uma nova grade no sistema")
+    @apig.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar nova grade!")
+    @apig.doc(parser=grid_model)
+    def post(self)->bool:
+
+        return False
+
+
+@apig.route("/<int:id>")
+class Grid(Resource):
+    @apig.response(HTTPStatus.OK.value,"Obtem um registro de uma grade",grid_model)
+    @apig.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    def get(self,id:int)->Product:
+
+        return None
+
+    @apig.doc(parser=prod_model)
+    @apig.response(HTTPStatus.OK.value,"Salva dados de uma grade")
+    @apig.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    def post(self,id:int)->bool:
+
+        return False
+    
+    @apig.response(HTTPStatus.OK.value,"Exclui os dados de uma grade")
+    @apig.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    def delete(self,id:int)->bool:
+
         return False
