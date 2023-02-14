@@ -1,6 +1,7 @@
 from http import HTTPStatus
 from typing import TypedDict
-from flask_restx import Resource,fields,reqparse,Namespace
+from flask_restx import Resource,fields,Namespace
+from flask import request
 
 api = Namespace("customers",description="Operações para manipular dados de clientes")
 apis = Namespace("customer-groups",description="Operações para manipular grupos de clientes")
@@ -12,7 +13,7 @@ cst_model = api.model(
         "name": fields.String,
         "taxvat": fields.String,
         "state_region": fields.String,
-        "city": fields.String,
+        "postal_code": fields.String,
         "phone": fields.String,
         "email": fields.String
     }
@@ -31,7 +32,7 @@ class Customer(TypedDict):
     name:str
     taxvat:str
     state_region:str
-    city:str
+    postal_code:str
     phone:str
     email:str
 
@@ -52,7 +53,7 @@ class CustomersList(Resource):
     def get(self)-> list[Customer]:
 
         return [{
-            "id":1,
+            "id":request.args.get("page"),
             "name": "JOSEFINA LTDA",
             "taxvat": "01.111.222/0001-00",
             "state_region": "SC",
