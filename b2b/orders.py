@@ -8,7 +8,7 @@ api = Namespace("orders",description="Operações para manipular dados de pedido
 #API Models
 prod_order = api.model(
     "Product",{
-        "idproduct": fields.Integer,
+        "id_product": fields.Integer,
         "quantity": fields.Integer
     }
 )
@@ -16,40 +16,46 @@ prod_order = api.model(
 order_model = api.model(
     "Order",{
         "id": fields.Integer,
-        "date_created": fields.Integer,
-        "idcustomer": fields.Integer,
-        "products": fields.List(fields.Nested(prod_order)),
+        "date_created": fields.DateTime,
+        "id_customer": fields.Integer,
         "make_online": fields.Boolean,
-        "idpayment_condition": fields.Integer
+        "id_payment_condition": fields.Integer,
+        "products": fields.List(fields.Nested(prod_order))
     }
 )
 
 class ProdOrder(TypedDict):
-    idproduct:int
+    id_product:int
     quantity:float
 
 class Order(TypedDict):
     id:int
-    idcustomer:str
+    date_created:str
+    id_customer:int
+    make_online:bool
+    id_payment_condition:int
     products:list[ProdOrder]
 
 
 ####################################################################################
-#            INICIO DAS CLASSES QUE IRAO TRATAR OS GRUPOS DE USUARIOS.             #
+#                  INICIO DAS CLASSES QUE IRAO TRATAR OS  PEDIDOS.                 #
 ####################################################################################
 @api.route("/")
 class OrdersList(Resource):
     @api.response(HTTPStatus.OK.value,"Obtem a listagem de pedidos",[order_model])
     @api.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
-    @api.param("page","Número da página de registros","query",type=int)
+    @api.param("page","Número da página de registros","query",type=int,required=True)
     @api.doc(description="Teste de documentacao")
     def get(self)->list[Order]:
         
         return [{
             "id": int(request.args.get("page")),
-            "idcustomer": "1",
+            "id_customer": "1",
+            "date_created": "2023-02-14 13:00:00",
+            "make_online": True,
+            "id_payment_condition": 1,
             "products": [{
-                "idproduct": 1,
+                "id_product": 1,
                 "quantity": 10
             }]
         }]
