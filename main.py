@@ -12,7 +12,8 @@ app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://root:root@localhost/ven
 
 db.init_app(app)
 
-db.create_all()
+#with app.app_context():
+#    db.create_all()
 
 app.register_blueprint(cmm)
 app.register_blueprint(pdv)
