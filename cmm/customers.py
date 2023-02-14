@@ -19,14 +19,6 @@ cst_model = api.model(
     }
 )
 
-group_model = apis.model(
-    "CustomerGroup",{
-        "id": fields.Integer,
-        "name": fields.String,
-        "rule": fields.String
-    }
-)
-
 class Customer(TypedDict):
     id:int
     name:str
@@ -35,12 +27,6 @@ class Customer(TypedDict):
     postal_code:str
     phone:str
     email:str
-
-class CustomerGroup(TypedDict):
-    id:int
-    name:str
-    rule:str
-
 
 ####################################################################################
 #            INICIO DAS CLASSES QUE IRAO TRATAR OS GRUPOS DE CLIENTES.             #
@@ -94,6 +80,20 @@ class CustomerApi(Resource):
 ####################################################################################
 #            INICIO DAS CLASSES QUE IRAO TRATAR OS GRUPOS DE CLIENTES.             #
 ####################################################################################
+group_model = apis.model(
+    "CustomerGroup",{
+        "id": fields.Integer,
+        "name": fields.String,
+        "rule": fields.String
+    }
+)
+
+class CustomerGroup(TypedDict):
+    id:int
+    name:str
+    rule:str
+
+
 @apis.route("/")
 class UserGroupsApi(Resource):
     @api.response(HTTPStatus.OK.value,"Obtem um registro de um grupo de usuarios",[group_model])
