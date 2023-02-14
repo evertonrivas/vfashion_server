@@ -5,8 +5,14 @@ from pdv.api import blueprint as pdv
 from crm.api import blueprint as crm
 from b2b.api import blueprint as b2b
 from fpr.api import blueprint as fpr
+from models import db
 
 app = Flask(__name__)
+app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://root:root@localhost/venda_fashion"
+
+db.init_app(app)
+
+db.create_all()
 
 app.register_blueprint(cmm)
 app.register_blueprint(pdv)
