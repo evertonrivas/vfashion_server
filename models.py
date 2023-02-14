@@ -34,3 +34,15 @@ class ProductSku(db.Model):
     color      = sa.Column("color",sa.String(10),primary_key=True,nullable=False)
     size       = sa.Column("size",sa.String(5),primary_key=True,nullable=False)
     quantity   = sa.Column("quantity",sa.Integer)
+
+
+class Customer(db.Model):
+    __tablename__ = "customers"
+    id = sa.Column("id",sa.Integer,primary_key=True,nullable=False,autoincrement=True)
+    name = sa.Column("name",sa.String(255),nullable=False)
+    taxvat = sa.Column("taxvat",sa.String(30),nullable=False)
+    state_region = sa.Column("state_region",sa.CHAR(2),nullable=False)
+    city = sa.Column("city",sa.String(100),nullable=False)
+    neighborhood = sa.Column("neighborhood",sa.String(150),nullable=False)
+    phone = sa.Column("phone",sa.String(30),nullable=False)
+    email = sa.Column("email",sa.String(150),nullable=False)
