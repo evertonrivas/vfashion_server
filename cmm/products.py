@@ -10,7 +10,8 @@ apig = Namespace("products-grid",description="Operações para manipular dados d
 sku_model = api.model(
     "sku",{
         "color": fields.String,
-        "size": fields.Integer
+        "size": fields.String,
+        "quantity": fields.Integer
     }
 )
 
@@ -27,6 +28,7 @@ prod_model = api.model(
         "ncm": fields.String,
         "image": fields.String,
         "price": fields.Float,
+        "price_pdv": fields.Float,
         "measure_unit": fields.String,
         "structure": fields.String,
         "sku": fields.List(fields.Nested(sku_model))
@@ -37,6 +39,7 @@ prod_model = api.model(
 class ProductSku(TypedDict):
     color:str
     size: str
+    quantity:float
 
 class Product(TypedDict):
     id:int
@@ -49,6 +52,7 @@ class Product(TypedDict):
     ncm:str
     image:str
     price:float
+    price_pdv:float
     measure_unit:str
     structure:str
     sku:list[ProductSku]
@@ -80,11 +84,13 @@ class ProductsList(Resource):
             "structure": "S",
             "sku":[{
                 "color": "#FFFFFF",
-                "size": "P"
+                "size": "P",
+                "quantity": 10
             },
             {
                 "color": "#FFFFFF",
-                "size": "M"
+                "size": "M",
+                "quantity": 5
             }]
         }]
 
