@@ -4,7 +4,7 @@ import sqlalchemy as sa
 db = SQLAlchemy()
 
 
-class User(db.Model):
+class Users(db.Model):
     __tablename__ = 'users'
     id       = sa.Column("id",sa.Integer,primary_key=True,nullable=False,autoincrement=True)
     username = sa.Column("username",sa.String(100), nullable=False)
@@ -12,7 +12,7 @@ class User(db.Model):
     name     = sa.Column(sa.String(255), nullable=False)
     type     = sa.Column(sa.CHAR(1),nullable=False,default='L',comment='A = Administrador, L = Lojista, R = Representante')
 
-class Product(db.Model):
+class Products(db.Model):
     __tablename__ = "products"
     id       = sa.Column("id",sa.Integer,primary_key=True,nullable=False,autoincrement=True)
     prodCode = sa.Column("prodCode",sa.String(50),nullable=False)
@@ -28,7 +28,7 @@ class Product(db.Model):
     measure_unit = sa.Column("measure_unit",sa.CHAR(2),nullable=False)
     structure    = sa.Column("structure",sa.CHAR(1),nullable=False,default='S',comment="S = Simples, C = Composto")
 
-class ProductSku(db.Model):
+class ProductsSku(db.Model):
     __tablename__ = "products_sku"
     id_product = sa.Column("id_product",sa.Integer,primary_key=True,nullable=False)
     color      = sa.Column("color",sa.String(10),primary_key=True,nullable=False)
@@ -36,7 +36,7 @@ class ProductSku(db.Model):
     quantity   = sa.Column("quantity",sa.Integer)
 
 
-class Customer(db.Model):
+class Customers(db.Model):
     __tablename__ = "customers"
     id = sa.Column("id",sa.Integer,primary_key=True,nullable=False,autoincrement=True)
     name = sa.Column("name",sa.String(255),nullable=False)
