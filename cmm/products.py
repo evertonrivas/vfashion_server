@@ -17,6 +17,7 @@ sku_model = api.model(
 prod_model = api.model(
     "Product",{
         "id": fields.Integer,
+        "idcategory": fields.Integer,
         "prodCode": fields.String,
         "barCode": fields.String,
         "refCode": fields.String,
@@ -26,6 +27,8 @@ prod_model = api.model(
         "ncm": fields.String,
         "image": fields.String,
         "price": fields.Float,
+        "measure_unit": fields.String,
+        "structure": fields.String,
         "sku": fields.List(fields.Nested(sku_model))
     }
 )
@@ -46,6 +49,8 @@ class Product(TypedDict):
     ncm:str
     image:str
     price:float
+    measure_unit:str
+    structure:str
     sku:list[ProductSku]
 
 
@@ -56,7 +61,7 @@ class Product(TypedDict):
 class ProductsList(Resource):
     @api.response(HTTPStatus.OK.value,"Obtem a listagem de produto",[prod_model])
     @api.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
-    @api.param("page","Número da página")
+    @api.param("page","Número da página de registros","query",type=int,required=True)
     @api.doc(description="Teste de documentacao")
     def get(self)-> list[Product]:
 
@@ -71,6 +76,8 @@ class ProductsList(Resource):
             "ncm": "10000",
             "image": "https://...",
             "price": 107.00,
+            "measure_unit": "UN",
+            "structure": "S",
             "sku":[{
                 "color": "#FFFFFF",
                 "size": "P"
@@ -146,7 +153,7 @@ class GridList(Resource):
 
     @apig.response(HTTPStatus.OK.value,"Obtem os registros de grades existentes",[grid_model])
     @apig.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
-    @apig.param("page","Número da página")
+    @api.param("page","Número da página de registros","query",type=int,required=True)
     def get(self)->list[Grid]:
 
         return [{
@@ -163,9 +170,9 @@ class GridList(Resource):
     @apig.response(HTTPStatus.OK.value,"Cria uma nova grade no sistema")
     @apig.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar nova grade!")
     @apig.doc(parser=grid_model)
-    def post(self)->bool:
+    def post(self)->int:
 
-        return False
+        return 0
 
 
 @apig.route("/<int:id>")

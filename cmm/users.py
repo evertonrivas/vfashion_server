@@ -42,7 +42,7 @@ class UsersList(Resource):
 
     @api.response(HTTPStatus.OK.value,"Obtem a listagem de usuários",[user_model])
     @api.doc(description="Teste de documentacao")
-    @api.param("page","Número da página de registros","query",type=int)
+    @api.param("page","Número da página de registros","query",type=int,required=True)
     def get(self)-> list[User]:
 
         return [{

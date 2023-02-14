@@ -13,7 +13,9 @@ cst_model = api.model(
         "name": fields.String,
         "taxvat": fields.String,
         "state_region": fields.String,
+        "city": fields.String,
         "postal_code": fields.String,
+        "neighborhood": fields.String,
         "phone": fields.String,
         "email": fields.String
     }
@@ -24,7 +26,9 @@ class Customer(TypedDict):
     name:str
     taxvat:str
     state_region:str
+    city:str
     postal_code:str
+    neighborhood:str
     phone:str
     email:str
 
@@ -35,7 +39,7 @@ class Customer(TypedDict):
 class CustomersList(Resource):
     @api.response(HTTPStatus.OK.value,"Obtem a listagem de clientes",[cst_model])
     @api.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
-    @api.param("page","Número da página de registros","query",type=int)
+    @api.param("page","Número da página de registros","query",type=int,required=True)
     def get(self)-> list[Customer]:
 
         return [{
@@ -44,6 +48,7 @@ class CustomersList(Resource):
             "taxvat": "01.111.222/0001-00",
             "state_region": "SC",
             "city": "Florianópolis",
+            "neighborhood": "Centro",
             "phone": "4899999-8888",
             "email": "josefina_ltda@gmail.com"
         }]
@@ -80,28 +85,43 @@ class CustomerApi(Resource):
 ####################################################################################
 #            INICIO DAS CLASSES QUE IRAO TRATAR OS GRUPOS DE CLIENTES.             #
 ####################################################################################
-group_model = apis.model(
+
+grp_cst_model = apis.model(
     "CustomerGroup",{
+        "id":fields.Integer
+    }
+)
+
+group_model = apis.model(
+    "Group",{
         "id": fields.Integer,
         "name": fields.String,
-        "rule": fields.String
+        "need_approval": fields.Boolean,
+        "customers": fields.List(fields.Nested(grp_cst_model))
     }
 )
 
 class CustomerGroup(TypedDict):
     id:int
     name:str
-    rule:str
+    need_approval:bool
 
 
 @apis.route("/")
 class UserGroupsApi(Resource):
     @api.response(HTTPStatus.OK.value,"Obtem um registro de um grupo de usuarios",[group_model])
     @api.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
-    @apis.param("page","Número da página de registros","query",type=int)
+    @api.param("page","Número da página de registros","query",type=int,required=True)
     def get(self)->list[CustomerGroup]:
 
-        return None
+        return [{
+            "id": request.args.get("page"),
+            "name": "Grupo com aprovacao",
+            "need_approval":True,
+            "customers":[{
+                "id":0
+            }]
+        }]
 
 
     @api.response(HTTPStatus.OK.value,"Cria um novo grupo de usuários no sistema")
@@ -114,13 +134,18 @@ class UserGroupsApi(Resource):
 @apis.route("/<int:id>")
 @apis.param("id","Id do registro")
 class UserGroupApi(Resource):
-    @apis.response(HTTPStatus.OK.value,"Salva dados de um grupo",group_model)
+    @apis.response(HTTPStatus.OK.value,"Salva dados de um grupo")
     @apis.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
     def get(self,id:int)->CustomerGroup:
 
-        return None
+        return {
+            "id": id,
+            "name": "Grupo com aprovacao",
+            "need_approval":True,
+            "customers":[{"id":"10"}]
+        }
     
-    @apis.response(HTTPStatus.OK.value,"Salva dados de um grupo")
+    @apis.response(HTTPStatus.OK.value,"Salva dados de um grupo",group_model)
     @apis.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
     def post(self,_id:int)->bool:
         return False
