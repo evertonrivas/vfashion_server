@@ -48,6 +48,7 @@ class CustomersList(Resource):
             "taxvat": "01.111.222/0001-00",
             "state_region": "SC",
             "city": "Florianópolis",
+            "postal_code": "88131300",
             "neighborhood": "Centro",
             "phone": "4899999-8888",
             "email": "josefina_ltda@gmail.com"
