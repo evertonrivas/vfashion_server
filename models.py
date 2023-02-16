@@ -65,9 +65,10 @@ class CmmCustomers(db.Model,SerializerMixin):
         return "<CmmCustomers %r>" % self.name
 
 
-class CmmCustomersGrupo(db.Model,SerializerMixin):
+class CmmCustomersGroup(db.Model,SerializerMixin):
     id = sa.Column(sa.Integer,primary_key=True,nullable=False,autoincrement=True)
     name = sa.Column(sa.String(128),nullable=False)
+    need_approvement = sa.Column(sa.Boolean,nullable=False,)
     date_created = sa.Column(sa.DateTime,nullable=False,server_default=func.now())
     date_updated = sa.Column(sa.DateTime,onupdate=func.now())
     trash    = sa.Column(sa.Boolean,nullable=False,default=False)
