@@ -13,6 +13,7 @@ class CmmUsers(db.Model,SerializerMixin):
     type     = sa.Column(sa.CHAR(1),nullable=False,default='L',comment='A = Administrador, L = Lojista, R = Representante')
     date_created = sa.Column(sa.DateTime,nullable=False,server_default=func.now())
     date_updated = sa.Column(sa.DateTime,onupdate=func.now())
+    active       = sa.Column(sa.Boolean,nullable=False,default=True)
     def __repr__(self) -> str:
         return "<CmmUser %r>" % self.username
 
@@ -33,6 +34,7 @@ class CmmProducts(db.Model,SerializerMixin):
     structure    = sa.Column(sa.CHAR(1),nullable=False,default='S',comment="S = Simples, C = Composto")
     date_created = sa.Column(sa.DateTime,nullable=False,server_default=func.now())
     date_updated = sa.Column(sa.DateTime,onupdate=func.now())
+    trash    = sa.Column(sa.Boolean,nullable=False,default=False)
     def __repr__(self) -> str:
         return "<CmmProducts %r>" % self.prodCode
 
@@ -58,6 +60,7 @@ class CmmCustomers(db.Model,SerializerMixin):
     email        = sa.Column(sa.String(150),nullable=False)
     date_created = sa.Column(sa.DateTime,nullable=False,server_default=func.now())
     date_updated = sa.Column(sa.DateTime,onupdate=func.now())
+    trash    = sa.Column(sa.Boolean,nullable=False,default=False)
     def __repr__(self) -> str:
         return "<CmmCustomers %r>" % self.name
 
@@ -65,6 +68,9 @@ class CmmCustomers(db.Model,SerializerMixin):
 class CmmCustomersGrupo(db.Model,SerializerMixin):
     id = sa.Column(sa.Integer,primary_key=True,nullable=False,autoincrement=True)
     name = sa.Column(sa.String(128),nullable=False)
+    date_created = sa.Column(sa.DateTime,nullable=False,server_default=func.now())
+    date_updated = sa.Column(sa.DateTime,onupdate=func.now())
+    trash    = sa.Column(sa.Boolean,nullable=False,default=False)
     def __repr__(self) -> str:
         return "<CmmCustomersGrupo %r>" % self.name
 
@@ -76,6 +82,7 @@ class B2bOrders(db.Model,SerializerMixin):
     make_online  = sa.Column(sa.Boolean,nullable=False,default=True,comment="Os pedidos do sistema podem ser online ou offline")
     date_created = sa.Column(sa.DateTime,nullable=False,server_default=func.now())
     date_updated = sa.Column(sa.DateTime,onupdate=func.now())
+    trash    = sa.Column(sa.Boolean,nullable=False,default=False)
     def __repr__(self) -> int:
         return "<B2bOrders %r>" % self.id
 
@@ -97,6 +104,7 @@ class B2bPaymentConditions(db.Model,SerializerMixin):
     installments  = sa.Column(sa.SmallInteger,nullable=False,default=1,comment="Número de parcelas")
     date_created  = sa.Column(sa.DateTime,nullable=False,server_default=func.now())
     date_updated  = sa.Column(sa.DateTime,onupdate=func.now())
+    trash    = sa.Column(sa.Boolean,nullable=False,default=False)
     def __repr__(self) -> str:
         return "<B2bPaymentConditions %r>" % self.name
 
@@ -106,6 +114,8 @@ class CrmFunnel(db.Model,SerializerMixin):
     name         = sa.Column(sa.String(128),nullable=False)
     date_created = sa.Column(sa.DateTime,nullable=False,server_default=func.now())
     date_updated = sa.Column(sa.DateTime,onupdate=func.now())
+    trash    = sa.Column(sa.Boolean,nullable=False,default=False)
+    trash    = sa.Column(sa.Boolean,nullable=False,default=False)
     def __repr__(self) -> str:
         return "<CrmFunnel %r>" % self.name
 
@@ -116,6 +126,7 @@ class CrmFunnelStage(db.Model,SerializerMixin):
     order        = sa.Column(sa.CHAR(2),nullable=False,default='CD',comment='CD = ')
     date_created = sa.Column(sa.DateTime,nullable=False,server_default=func.now())
     date_updated = sa.Column(sa.DateTime,onupdate=func.now())
+    trash    = sa.Column(sa.Boolean,nullable=False,default=False)
     def __repr__(self) -> str:
         return "<CrmFunnelStage %r>" % self.name
 
