@@ -1,10 +1,11 @@
 from flask_sqlalchemy import SQLAlchemy
 import sqlalchemy as sa
 from sqlalchemy import func
+from sqlalchemy_serializer import SerializerMixin
 
 db = SQLAlchemy()
 
-class CmmUsers(db.Model):
+class CmmUsers(db.Model,SerializerMixin):
     id       = sa.Column(sa.Integer,primary_key=True,nullable=False,autoincrement=True)
     username = sa.Column(sa.String(100), nullable=False)
     password = sa.Column(sa.String(255), nullable=False)
@@ -14,7 +15,7 @@ class CmmUsers(db.Model):
     date_updated = sa.Column(sa.DateTime,onupdate=func.now())
 
 
-class CmmProducts(db.Model):
+class CmmProducts(db.Model,SerializerMixin):
     id       = sa.Column(sa.Integer,primary_key=True,nullable=False,autoincrement=True)
     prodCode = sa.Column(sa.String(50),nullable=False)
     barCode  = sa.Column(sa.String(128))
@@ -32,14 +33,14 @@ class CmmProducts(db.Model):
     date_updated = sa.Column(sa.DateTime,onupdate=func.now())
 
 
-class CmmProductsSku(db.Model):
+class CmmProductsSku(db.Model,SerializerMixin):
     id_product = sa.Column(sa.Integer,primary_key=True,nullable=False)
     color      = sa.Column(sa.String(10),primary_key=True,nullable=False)
     size       = sa.Column(sa.String(5),primary_key=True,nullable=False)
     quantity   = sa.Column(sa.Integer)
 
 
-class CmmCustomers(db.Model):
+class CmmCustomers(db.Model,SerializerMixin):
     id           = sa.Column(sa.Integer,primary_key=True,nullable=False,autoincrement=True)
     name         = sa.Column(sa.String(255),nullable=False)
     taxvat       = sa.Column(sa.String(30),nullable=False,comment="CPF ou CNPJ no Brasil")
@@ -53,12 +54,12 @@ class CmmCustomers(db.Model):
     date_updated = sa.Column(sa.DateTime,onupdate=func.now())
 
 
-class CmmCustomersGrupo(db.Model):
+class CmmCustomersGrupo(db.Model,SerializerMixin):
     id = sa.Column(sa.Integer,primary_key=True,nullable=False,autoincrement=True)
     name = sa.Column(sa.String(128),nullable=False)
 
 
-class B2bOrders(db.Model):
+class B2bOrders(db.Model,SerializerMixin):
     id           = sa.Column(sa.Integer,primary_key=True,nullable=False,autoincrement=True)
     id_customer  = sa.Column(sa.Integer,nullable=False)
     id_payment_condition = sa.Column(sa.Integer,nullable=False)
@@ -67,13 +68,13 @@ class B2bOrders(db.Model):
     date_updated = sa.Column(sa.DateTime,onupdate=func.now())
 
 
-class B2bOrdersProducts(db.Model):
+class B2bOrdersProducts(db.Model,SerializerMixin):
     id_order   = sa.Column(sa.Integer,nullable=False,primary_key=True)
     id_product = sa.Column(sa.Integer,nullable=False,primary_key=True)
     quantity   = sa.Column(sa.Integer,nullable=False)
 
 
-class B2bPaymentConditions(db.Model):
+class B2bPaymentConditions(db.Model,SerializerMixin):
     id            = sa.Column(sa.Integer,primary_key=True,nullable=False,autoincrement=True)
     name          = sa.Column(sa.String(100),nullable=False)
     received_days = sa.Column(sa.SmallInteger,nullable=False,default=1,comment="Dias para receber o valor")
@@ -82,14 +83,14 @@ class B2bPaymentConditions(db.Model):
     date_updated  = sa.Column(sa.DateTime,onupdate=func.now())
 
 
-class CrmFunnel(db.Model):
+class CrmFunnel(db.Model,SerializerMixin):
     id           = sa.Column(sa.Integer,primary_key=True,nullable=False,autoincrement=True)
     name         = sa.Column(sa.String(128),nullable=False)
     date_created = sa.Column(sa.DateTime,nullable=False,server_default=func.now())
     date_updated = sa.Column(sa.DateTime,onupdate=func.now())
 
 
-class CrmFunnelStage(db.Model):
+class CrmFunnelStage(db.Model,SerializerMixin):
     id           = sa.Column(sa.Integer,primary_key=True,nullable=False,autoincrement=True)
     name         = sa.Column(sa.String(128),nullable=False)
     order        = sa.Column(sa.CHAR(2),nullable=False,default='CD',comment='CD = ')
@@ -97,7 +98,7 @@ class CrmFunnelStage(db.Model):
     date_updated = sa.Column(sa.DateTime,onupdate=func.now())
 
 
-class CrmFunnelStageCustomer(db.Model):
+class CrmFunnelStageCustomer(db.Model,SerializerMixin):
     id_funnel_stage = sa.Column(sa.Integer,primary_key=True,nullable=False)
     id_customer     = sa.Column(sa.Integer,primary_key=True,nullable=False)
     date_created    = sa.Column(sa.DateTime,nullable=False,server_default=func.now())
