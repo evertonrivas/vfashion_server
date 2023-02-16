@@ -16,10 +16,11 @@ prod_order = api.model(
 order_model = api.model(
     "Order",{
         "id": fields.Integer,
-        "date_created": fields.DateTime,
         "id_customer": fields.Integer,
         "make_online": fields.Boolean,
         "id_payment_condition": fields.Integer,
+        "date_created": fields.DateTime,
+        "date_updated": fields.DateTime,
         "products": fields.List(fields.Nested(prod_order))
     }
 )
