@@ -1,11 +1,11 @@
 from flask import Blueprint
 from flask_restx import Api
 from b2b.cart import ns_cart
-from b2b.orders import ns_order
+from b2b.orders import ns_order,ns_porder
 from b2b.payment_condition import ns_payment
 
 
-nss = [ns_cart,ns_order,ns_payment]
+nss = [ns_cart,ns_order,ns_payment,ns_porder]
 
 blueprint = Blueprint("b2b",__name__,url_prefix="/b2b/api/v1/")
 
