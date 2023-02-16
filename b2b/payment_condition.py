@@ -4,7 +4,7 @@ from flask_restx import Resource,fields,Namespace
 from flask import request
 from models import B2bPaymentConditions,db
 
-ns_payment = Namespace("payment-conditions",description="Operações para manipular dados de pedidos de compras (carrinho)")
+ns_payment = Namespace("payment-conditions",description="Operações para manipular dados de condições de pagamento")
 
 pag_model = ns_payment.model(
     "Pagination",{
