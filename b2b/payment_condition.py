@@ -84,6 +84,7 @@ class PaymentConditionsList(Resource):
             return 0
 
 @ns_payment.route("/<int:id>")
+@ns_payment.param("id","Id do registro")
 class PaymentConditionApi(Resource):
     @ns_payment.response(HTTPStatus.OK.value,"Obtem um registro de uma condição de pagamento",payment_model)
     @ns_payment.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
