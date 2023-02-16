@@ -113,7 +113,7 @@ class PaymentConditionApi(Resource):
     def delete(self,id:int)->bool:
         try:
             payCond = B2bPaymentConditions.query.get(id)
-            db.session.delete(payCond)
+            payCond.trash = True
             db.session.commit()
             return True
         except:
