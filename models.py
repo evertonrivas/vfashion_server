@@ -83,6 +83,8 @@ class B2bOrders(db.Model,SerializerMixin):
 class B2bOrdersProducts(db.Model,SerializerMixin):
     id_order   = sa.Column(sa.Integer,nullable=False,primary_key=True)
     id_product = sa.Column(sa.Integer,nullable=False,primary_key=True)
+    color      = sa.Column(sa.String(10),primary_key=True,nullable=False)
+    size       = sa.Column(sa.String(5),primary_key=True,nullable=False)
     quantity   = sa.Column(sa.Integer,nullable=False)
     def __repr__(self) -> int:
         return "<B2bOrdersProducts %r>" % self.id_order
