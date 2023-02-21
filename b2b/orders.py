@@ -3,6 +3,7 @@ from flask_restx import Resource,Namespace
 from flask import request
 from models import B2bOrders,B2bOrdersProducts,db
 from sqlalchemy import exc
+import sqlalchemy as sa
 
 ns_order = Namespace("orders",description="Operações para manipular dados de pedidos")
 ns_porder = Namespace("orders-products",description="Operações para manipular dados de produtos de pedidos")
@@ -16,14 +17,24 @@ class OrdersList(Resource):
     @ns_order.response(HTTPStatus.OK.value,"Obtem a listagem de pedidos")
     @ns_order.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
     @ns_order.param("page","Número da página de registros","query",type=int,required=True)
+    @ns_order.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
+    @ns_order.param("query","Texto para busca","query")
     def get(self):
+        pag_num  =  1 if request.args.get("page")!=None else int(request.args.get("page"))
+        pag_size = 25 if request.args.get("pageSize")!=None else int(request.args.get("pageSize"))
+        search   = "" if request.args.get("query")!=None else "{}%".format(request.args.get("query"))
 
-        rquery = B2bOrders.query.paginate(page=int(request.args.get("page")),per_page=25)
+        if request.args.get("query")!=None:
+            #pensar nos filtros para essa listagem
+            rquery = B2bOrders.query.paginate(page=pag_num,per_page=pag_size)
+        else:
+            rquery = B2bOrders.query.filter(B2bOrders.trash==False).paginate(page=pag_num,per_page=pag_size)
+
         return {
             "pagination":{
                 "registers": rquery.total,
-                "page": int(request.args.get("page")),
-                "per_page": rquery.per_page,
+                "page": pag_num,
+                "per_page": pag_size,
                 "pages": rquery.pages,
                 "has_next": rquery.has_next
             },
@@ -47,7 +58,7 @@ class OrdersList(Resource):
             order = B2bOrders()
             order.id_customer = request.form.get("id_customer")
             order.make_online = request.form.get("make_online")
-            order.id_payment_condition = request.form.get("id_payment_condition")
+            order.id_payment_condition = int(request.form.get("id_payment_condition"))
             db.session.add(order)
             db.session.commit()
             return order.id
@@ -101,13 +112,13 @@ class ProductsOrderList(Resource):
     @ns_porder.param("id_order","Número do pedido","query",type=int,required=True)
     def get(self):
         try:
-            rquery = B2bOrdersProducts.query.filter_by(id_order=int(request.args.get("id_order"))).all()
+            rquery = B2bOrdersProducts.query.filter_by(id_order=int(request.args.get("id_order")))
             return [{
                 "id_product": m.id_product,
                 "color": m.color,
                 "size" : m.size,
                 "quantity": m.quantity
-            }for m in rquery]
+            } for m in rquery.items]
             
         except exc.SQLAlchemyError as e:
             raise e
