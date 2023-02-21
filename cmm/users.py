@@ -1,13 +1,22 @@
 from http import HTTPStatus
-from typing import TypedDict
-from flask_restx import Resource,fields,Namespace
+from flask_restx import Resource,Namespace,fields
 from flask import request
 from models import CmmUsers,db
+import sqlalchemy as sa
 
-api = Namespace("users",description="Operações para manipular dados de usuários do sistema")
+ns_user = Namespace("users",description="Operações para manipular dados de usuários do sistema")
 
-#API Models
-user_model = api.model(
+usr_pag_mode = ns_user.model(
+    "Pagination",{
+        "registers": fields.Integer,
+        "page": fields.Integer,
+        "per_page": fields.Integer,
+        "pages": fields.Integer,
+        "has_next": fields.Boolean
+    }
+)
+
+usr_model = ns_user.model(
     "User",{
         "id": fields.Integer,
         "username": fields.String,
@@ -19,38 +28,37 @@ user_model = api.model(
     }
 )
 
-class User(TypedDict):
-    id:int
-    username:str
-    password:str
-    name:str
-    type:str
+usr_return = ns_user.model(
+    "UserReturn",{
+        "pagination": fields.Nested(usr_pag_mode),
+        "data": fields.List(fields.Nested(usr_model))
+    }
+)
 
-####################################################################################
-#            INICIO DAS CLASSES QUE IRAO TRATAR OS GRUPOS DE USUARIOS.             #
-####################################################################################
-@api.route("/")
+@ns_user.route("/")
 class UsersList(Resource):
-    username:str
-    password:str
 
-    @api.response(HTTPStatus.OK.value,"Obtem a listagem de usuários",[user_model])
-    @api.doc(description="Teste de documentacao")
-    @api.param("page","Número da página de registros","query",type=int,required=True)
-    @api.param("size","Número de registros por página","query",type=int,required=True,default=25)
+    @ns_user.response(HTTPStatus.OK.value,"Obtem a listagem de usuários",usr_return)
+    @ns_user.response(HTTPStatus.BAD_REQUEST.value,"Falha oa listar registros!")
+    @ns_user.param("page","Número da página de registros","query",type=int,required=True)
+    @ns_user.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
+    @ns_user.param("query","Texto para busca","query")
     def get(self):
+        pag_num  =  1 if request.args.get("page")!=None else int(request.args.get("page"))
+        pag_size = 25 if request.args.get("pageSize")!=None else int(request.args.get("pageSize"))
+        search   = "" if request.args.get("query")!=None else "{}%".format(request.args.get("query"))
 
-        rquery = CmmUsers.query.paginate(
-            page=int(request.args.get("page")),
-            per_page=int(request.args.get("per_page"))
-        )
+        if request.args.get("query")!=None:
+            rquery = CmmUsers.query.filter(sa.and_(CmmUsers.name.like(search),CmmUsers.active==False)).paginate(page=pag_num,per_page=pag_size)
+        else:
+            rquery = CmmUsers.query.filter(CmmUsers.active==False).paginate(page=pag_num,per_page=pag_size)
 
         #pedro maria
         return {
             "pagination":{
                 "registers": rquery.total,
-                "page": int(request.args.get("page")),
-                "per_page": rquery.per_page,
+                "page": pag_num,
+                "per_page": pag_size,
                 "pages": rquery.pages,
                 "has_next": rquery.has_next
             },
@@ -62,19 +70,19 @@ class UsersList(Resource):
                 "type": m.type,
                 "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                 "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S")
-            } for m in rquery.items ]
+            } for m in rquery.items]
         }
 
-    @api.response(HTTPStatus.OK.value,"Cria um novo usuário no sistema")
-    @api.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar novo usuário!")
-    @api.param("name","Nome da pessoa","formData",required=True)
-    @api.param("username","Login do usuário","formData",required=True)
-    @api.param("password","Senha do usuário","formData",required=True)
-    @api.param("type","Tipo do usuário","formData",required=True,type=chr)
+    @ns_user.response(HTTPStatus.OK.value,"Cria um novo usuário no sistema")
+    @ns_user.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar novo usuário!")
+    @ns_user.param("name","Nome da pessoa","formData",required=True)
+    @ns_user.param("username","Login do usuário","formData",required=True)
+    @ns_user.param("password","Senha do usuário","formData",required=True)
+    @ns_user.param("type","Tipo do usuário","formData",required=True)
     def post(self)->int:
         try:
             usr = CmmUsers()
-            usr.name = request.form.get("name")
+            usr.name     = request.form.get("name")
             usr.username = request.form.get("username")
             usr.password = request.form.get("password")
             usr.type     = request.form.get("type")
@@ -85,21 +93,24 @@ class UsersList(Resource):
             return 0
 
 
-@api.route("/<int:id>")
-@api.param("id","Id do registro")
+@ns_user.route("/<int:id>")
+@ns_user.param("id","Id do registro")
 class UserApi(Resource):
-
-    @api.response(HTTPStatus.OK.value,"Obtem um registro de usuario",user_model)
-    @api.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
-    def get(self,id:int)->User:
+    @ns_user.response(HTTPStatus.OK.value,"Obtem um registro de usuario",usr_model)
+    @ns_user.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
+    def get(self,id:int):
         return CmmUsers.query.get(id).to_dict()
 
-    @api.response(HTTPStatus.OK.value,"Salva dados de um usuario")
-    @api.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
+    @ns_user.response(HTTPStatus.OK.value,"Salva dados de um usuario")
+    @ns_user.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
+    @ns_user.param("name","Nome do usuário","formData",required=True)
+    @ns_user.param("username","Nome de login","formData",required=True)
+    @ns_user.param("password","Senha do usuário","formData",required=True)
+    @ns_user.param("type","Tipo do usuário","formData",required=True)
     def post(self,id:int)->bool:
         try:
             usr = CmmUsers.query.get(id)
-            usr.name = request.form.get("name")
+            usr.name     = request.form.get("name")
             usr.username = request.form.get("username")
             usr.password = request.form.get("password")
             usr.type     = request.form.get("type")
@@ -109,12 +120,13 @@ class UserApi(Resource):
         except:
             return False
     
-    @api.response(HTTPStatus.OK.value,"Exclui os dados de um usuario")
-    @api.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
+    @ns_user.response(HTTPStatus.OK.value,"Exclui os dados de um usuario")
+    @ns_user.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
     def delete(self,id:int)->bool:
         try:
             usr = CmmUsers.query.get(id)
-            db.session.delete(usr)
+            usr.active = False
+            db.session.add(usr)
             db.session.commit()
             return True
         except:
