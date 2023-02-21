@@ -1,58 +1,34 @@
 from http import HTTPStatus
-from typing import TypedDict
-from flask_restx import Resource,fields,Namespace
+from flask_restx import Resource,Namespace
 from flask import request
 from models import B2bPaymentConditions,db
+import sqlalchemy as sa
 
 ns_payment = Namespace("payment-conditions",description="Operações para manipular dados de condições de pagamento")
-
-pag_model = ns_payment.model(
-    "Pagination",{
-        "registers": fields.Integer,
-        "page": fields.Integer,
-        "per_page": fields.Integer,
-        "pages": fields.Integer,
-        "has_next": fields.Boolean
-    }
-)
-
-payment_model = ns_payment.model(
-    "PaymentCondition",{
-        "id": fields.Integer,
-        "name": fields.String,
-        "received_days": fields.Integer,
-        "installments": fields.Integer,
-        "date_created": fields.DateTime,
-        "date_updated": fields.DateTime
-    }
-)
-
-list_pay_model = ns_payment.model(
-    "Return",{
-        "pagination": fields.Nested(pag_model),
-        "data": fields.List(fields.Nested(payment_model))
-    }
-)
-
-class PaymentCondition(TypedDict):
-    id:int
-    name:str
-    received_days:int
-    installments:int
 
 @ns_payment.route("/")
 class PaymentConditionsList(Resource):
 
-    @ns_payment.response(HTTPStatus.OK.value,"Obtem a lista de condições de pagamento",list_pay_model)
+    @ns_payment.response(HTTPStatus.OK.value,"Obtem a lista de condições de pagamento")
     @ns_payment.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
     @ns_payment.param("page","Número da página de registros","query",type=int,required=True)
+    @ns_payment.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
+    @ns_payment.param("query","Texto para busca","query")
     def get(self):
-        rquery = B2bPaymentConditions.query.paginate(page=int(request.args.get("page")),per_page=25)
+        pag_num  =  1 if request.args.get("page")!=None else int(request.args.get("page"))
+        pag_size = 25 if request.args.get("pageSize")!=None else int(request.args.get("pageSize"))
+        search   = "" if request.args.get("query")!=None else "{}%".format(request.args.get("query"))
+
+        if search!="":
+            rquery = B2bPaymentConditions.query.filter(sa.and_(B2bPaymentConditions.name.like(search),B2bPaymentConditions.trash==False)).paginate(page=pag_num,per_page=pag_size)
+        else:
+            rquery = B2bPaymentConditions.query.filter(B2bPaymentConditions.trash==False).paginate(page=pag_num,per_page=pag_size)
+
         return {
             "pagination":{
                 "registers": rquery.total,
-                "page": int(request.args.get("page")),
-                "per_page": rquery.per_page,
+                "page": pag_num,
+                "per_page": pag_size,
                 "pages": rquery.pages,
                 "has_next": rquery.has_next
             },
@@ -86,9 +62,9 @@ class PaymentConditionsList(Resource):
 @ns_payment.route("/<int:id>")
 @ns_payment.param("id","Id do registro")
 class PaymentConditionApi(Resource):
-    @ns_payment.response(HTTPStatus.OK.value,"Obtem um registro de uma condição de pagamento",payment_model)
+    @ns_payment.response(HTTPStatus.OK.value,"Obtem um registro de uma condição de pagamento")
     @ns_payment.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
-    def get(self,id:int)->PaymentCondition:
+    def get(self,id:int):
         return B2bPaymentConditions.query.get(id).to_dict()
 
     @ns_payment.response(HTTPStatus.OK.value,"Salva dados de uma condição de pgamento")
@@ -114,6 +90,7 @@ class PaymentConditionApi(Resource):
         try:
             payCond = B2bPaymentConditions.query.get(id)
             payCond.trash = True
+            db.session.add(payCond)
             db.session.commit()
             return True
         except:
