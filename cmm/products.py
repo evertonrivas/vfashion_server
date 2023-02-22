@@ -93,7 +93,9 @@ class ProductsList(Resource):
                 "price": m.price,
                 "measure_unit": m.measure_unit,
                 "structure": m.structure,
-                "sku":self.get_sku(m.id)
+                "sku":self.get_sku(m.id),
+                "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+                "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S")
             } for m in rquery.items]
         }
 
