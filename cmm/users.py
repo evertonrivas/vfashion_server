@@ -22,7 +22,7 @@ usr_model = ns_user.model(
         "username": fields.String,
         "password": fields.String,
         "name": fields.String,
-        "type": fields.String,
+        "type": fields.String(enum=['A','L','R','V']),
         "date_created": fields.DateTime,
         "date_updated": fields.DateTime
     }
@@ -30,7 +30,7 @@ usr_model = ns_user.model(
 
 usr_return = ns_user.model(
     "UserReturn",{
-        "pagination": fields.Nested(usr_pag_mode),
+        "pagination": fields.Nested(usr_pag_model),
         "data": fields.List(fields.Nested(usr_model))
     }
 )
@@ -110,11 +110,11 @@ class UserApi(Resource):
     def post(self,id:int)->bool:
         try:
             usr = CmmUsers.query.get(id)
-            usr.name     = request.form.get("name")
-            usr.username = request.form.get("username")
-            usr.password = request.form.get("password")
-            usr.type     = request.form.get("type")
-            db.session.add(usr)
+            usr.name     = usr.name if request.form.get("name")==None else request.form.get("name")
+            usr.username = usr.username if request.form.get("username")==None else request.form.get("username")
+            usr.password = usr.password if request.form.get("password")==None else request.form.get("password")
+            usr.type     = usr.type if request.form.get("type")==None else request.form.get("type")
+            usr.active   = usr.active if request.form.get("active")==None else request.form.get("active")
             db.session.commit()
             return True
         except:
@@ -126,7 +126,6 @@ class UserApi(Resource):
         try:
             usr = CmmUsers.query.get(id)
             usr.active = False
-            db.session.add(usr)
             db.session.commit()
             return True
         except:

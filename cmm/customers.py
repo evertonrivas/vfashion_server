@@ -118,17 +118,15 @@ class CustomerApi(Resource):
     def post(self,id:int)->bool:
         try:
             cst = CmmCustomers.query.get(id)
-            cst.name         = request.form.get("name")
-            cst.taxvat       = request.form.get("taxvat")
-            cst.state_region = request.form.get("state_region")
-            cst.city         = request.form.get("city")
-            cst.postal_code  = request.form.get("postal_code")
-            cst.neighborhood = request.form.get("neighborhood")
-            cst.phone        = request.form.get("phone")
-            cst.email        = request.form.get("email")
-            if request.form.get("trash")!=None:
-                cst.trash = request.form.get("trash")
-            db.session.add(cst)
+            cst.name         = cst.name if request.form.get("name")==None else request.form.get("name")
+            cst.taxvat       = cst.taxvat if request.form.get("taxvat")==None else request.form.get("taxvat")
+            cst.state_region = cst.state_region if request.form.get("state_region")==None else request.form.get("state_region")
+            cst.city         = cst.city if request.form.get("city")==None else request.form.get("city")
+            cst.postal_code  = cst.postal_code if request.form.get("postal_code")==None else request.form.get("postal_code")
+            cst.neighborhood = cst.neighborhood if request.form.get("neighborhood")==None else request.form.get("neighborhood")
+            cst.phone        = cst.phone if request.form.get("phone")==None else request.form.get("phone")
+            cst.email        = cst.email if request.form.get("email")==None else request.form.get("email")
+            cst.trash        = cst.trash if request.form.get("trash")==None else request.form.get("trash")
             db.session.commit()
             return True
         except:
@@ -140,7 +138,6 @@ class CustomerApi(Resource):
         try:
             cst = CmmCustomers.query.get(id)
             cst.trash = True
-            db.session.add(cst)
             db.session.commit()
             return True
         except:
@@ -226,42 +223,68 @@ class UserGroupsList(Resource):
 
     @ns_group_customer.response(HTTPStatus.OK.value,"Cria um novo grupo de usuários no sistema")
     @ns_group_customer.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
+    @ns_group_customer.doc(body=cstg_model)
     def post(self)->int:
+        try:
+            req = request.get_json("customer_group")
+            grp = CmmCustomersGroup()
+            grp.name = req.name
+            db.session.add(grp)
+            db.session.commit()
 
-        return 0
+            for cst in grp.customers:
+                grpc = CmmCustomerGroupCustomer()
+                grpc.id_group    = grp.id
+                grpc.id_customer = cst.id
+                db.session.add(grpc)
+                db.session.commit()
+
+            return grp.id
+        except:
+            return 0
 
 @ns_group_customer.route("/<int:id>")
 @ns_group_customer.param("id","Id do registro")
 class UserGroupApi(Resource):
-    @ns_group_customer.response(HTTPStatus.OK.value,"Salva dados de um grupo",cstg_model)
-    @ns_group_customer.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
+    @ns_group_customer.response(HTTPStatus.OK.value,"Retorna os dados dados de um grupo de clientes")
+    @ns_group_customer.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
     def get(self,id:int):
         cgroup = CmmCustomersGroup.query.get(id)
+        squery = CmmCustomerGroupCustomer.query.filter_by(id_customer = id)
 
         return {
             "id": cgroup.id,
             "name": cgroup.name,
             "need_approval": cgroup.need_approval,
-            "customers": self.get_customers(id)
+            "customers": [{
+                "id": id
+            }for m in squery.items]
         }
-
-    def get_customers(self,id:int):
-        rquery = CmmCustomerGroupCustomer.query.filter_by(id_customer = id)
-        return [{
-            "id": id
-        } for m in rquery.items]
     
-    @ns_group_customer.response(HTTPStatus.OK.value,"Atualiza os dados de um grupo")
+    @ns_group_customer.response(HTTPStatus.OK.value,"Atualiza os dados de um grupo de clientes")
     @ns_group_customer.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
+    @ns_group_customer.doc(body=cstg_model)
     def post(self,id:int)->bool:
         try:
+            req = request.get_json("customer_group")
             grp = CmmCustomersGroup.query.get(id)
-            grp.name = request.form.get("name")
-            grp.need_approval = request.form.get("need_approval")
-            if request.form.get("trash")!=None:
-                grp.trash = request.form.get("trash")
-            db.session.add(grp)
+            grp.name          = grp.name if req.name==None else req.name
+            grp.need_approval = grp.need_approval if req.need_approval==None else req.need_approval
+            grp.trash         = grp.trash if req.trash==None else req.trash
             db.session.commit()
+
+
+            #apaga e recria os clientes dependentes
+            db.session.delete(CmmCustomerGroupCustomer()).where(CmmCustomerGroupCustomer().id_group==id)
+            db.session.commit()
+
+            for it in grp.customers:
+                cst = CmmCustomerGroupCustomer()
+                cst.id_customer = it.id
+                cst.id_group    = id
+                db.session.add(cst)
+                db.session.commit()
+
             return True
         except:
             return False
@@ -272,7 +295,6 @@ class UserGroupApi(Resource):
         try:
             grp = CmmCustomersGroup.query.get(id)
             grp.trash = True
-            db.session.add(grp)
             db.session.commit()
             return True
         except:

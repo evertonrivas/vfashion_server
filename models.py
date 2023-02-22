@@ -10,7 +10,7 @@ class CmmUsers(db.Model,SerializerMixin):
     username     = sa.Column(sa.String(100), nullable=False)
     password     = sa.Column(sa.String(255), nullable=False)
     name         = sa.Column(sa.String(255), nullable=False)
-    type         = sa.Column(sa.CHAR(1),nullable=False,default='L',comment='A = Administrador, L = Lojista, R = Representante')
+    type         = sa.Column(sa.CHAR(1),nullable=False,default='L',comment='A = Administrador, L = Lojista, R = Representante, V = Vendedor')
     date_created = sa.Column(sa.DateTime,nullable=False,server_default=func.now())
     date_updated = sa.Column(sa.DateTime,onupdate=func.now())
     active       = sa.Column(sa.Boolean,nullable=False,default=True)

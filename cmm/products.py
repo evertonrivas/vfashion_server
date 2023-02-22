@@ -1,6 +1,6 @@
 from http import HTTPStatus
 from typing import TypedDict
-from flask_restx import Resource,Namespace
+from flask_restx import Resource,Namespace,fields
 from flask import request
 from models import CmmProducts,CmmProductsSku,CmmProductsGrid,CmmProductsGridDistribution,db
 import sqlalchemy as sa
@@ -8,12 +8,58 @@ import sqlalchemy as sa
 ns_prod = Namespace("products",description="Operações para manipular dados de produtos")
 ns_gprod = Namespace("products-grid",description="Operações para manipular dados das grades de produtos")
 
+
+prd_pag_model = ns_prod.model(
+    "Pagination",{
+        "registers": fields.Integer,
+        "page": fields.Integer,
+        "per_page": fields.Integer,
+        "pages": fields.Integer,
+        "has_next": fields.Boolean
+    }
+)
+
+prd_sku_model = ns_prod.model(
+    "SKU",{
+        "id_product": fields.Integer,
+        "size": fields.String,
+        "color": fields.String
+    }
+)
+
+prd_model = ns_prod.model(
+    "Product",{
+        "id": fields.Integer,
+        "prodCode": fields.String,
+        "barCode": fields.String,
+        "refCode": fields.String,
+        "name": fields.String,
+        "description": fields.String,
+        "observation": fields.String,
+        "ncm": fields.String,
+        "image": fields.String,
+        "price": fields.Float,
+        "measure_unit": fields.String,
+        "structure": fields.String,
+        "date_created": fields.DateTime,
+        "date_updated": fields.DateTime,
+        "sku": fields.List(fields.Nested(prd_sku_model))
+    }
+)
+
+prd_return = ns_prod.model(
+    "ProductReturn",{
+        "pagination": fields.Nested(prd_pag_model),
+        "data": fields.List(fields.Nested(prd_model))
+    }
+)
+
 ####################################################################################
 #                INICIO DAS CLASSES QUE IRAO TRATAR OS PRODUTOS.                   #
 ####################################################################################
 @ns_prod.route("/")
 class ProductsList(Resource):
-    @ns_prod.response(HTTPStatus.OK.value,"Obtem a listagem de produto")
+    @ns_prod.response(HTTPStatus.OK.value,"Obtem a listagem de produto",prd_return)
     @ns_prod.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
     @ns_prod.param("page","Número da página de registros","query",type=int,required=True,default=1)
     @ns_prod.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
@@ -49,6 +95,8 @@ class ProductsList(Resource):
                 "price": m.price,
                 "measure_unit": m.measure_unit,
                 "structure": m.structure,
+                "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+                "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S"),
                 "sku": self.get_sku(m.id)
             } for m in rquery.items]
         }
@@ -62,46 +110,84 @@ class ProductsList(Resource):
 
     @ns_prod.response(HTTPStatus.OK.value,"Cria um novo produto no sistema")
     @ns_prod.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar novo produto!")
-    def post(self)->bool:
-        prod = CmmProducts()
-        prod.prodCode = request.form.get("prodCode")
-        prod.barCode  = request.form.get("barCode")
-        prod.refCode  = request.form.get("refCode")
-        prod.name     = request.form.get("name")
-        prod.description = request.form.get("description")
-        prod.observation = request.form.get("observation")
-        prod.ncm         = request.form.get("ncm")
-        prod.image       = request.form.get("image")
-        prod.price       = float(request.form.get("price"))
-        prod.measure_unit = request.form.get("measure_unit")
-        return False
+    @ns_prod.doc(body=prd_model)
+    def post(self)->int:
+        try:
+            req = request.get_json("product")
+            prod = CmmProducts()
+            prod.prodCode    = req.prodCode
+            prod.barCode     = req.barCode
+            prod.refCode     = req.refCode
+            prod.name        = req.name
+            prod.description = req.description
+            prod.observation = req.observation
+            prod.ncm         = req.ncm
+            prod.image       = req.image
+            prod.price       = float(req.price)
+            prod.measure_unit = req.measure_unit
+            db.session.add(prod)
+            db.session.commit()
+
+            for it in prod.sku:
+                sku = CmmProductsSku()
+                sku.id_product = prod.id
+                sku.color      = it.color
+                sku.size       = it.size
+                db.session.add(sku)
+                db.session.commit()
+
+            return prod.id
+        except:
+            return 0
 
 
 @ns_prod.route("/<int:id>")
 @ns_prod.param("id","Id do registro")
 class ProductApi(Resource):
 
-    @ns_prod.response(HTTPStatus.OK.value,"Obtem um registro de produto")
+    @ns_prod.response(HTTPStatus.OK.value,"Obtem um registro de produto",prd_model)
     @ns_prod.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
     def get(self,id:int):
-        return CmmProducts.query.get(id).to_dict()
+        rquery = CmmProducts.query.get(id)
+        squery = CmmProductsSku.query.filter_by(id_product=id)
+        return {
+            "id": rquery.id,
+            "prodCode": rquery.prodCode,
+            "barCode": rquery.barCode,
+            "refCode": rquery.refCode,
+            "name": rquery.Name,
+            "description": rquery.description,
+            "observation": rquery.observation,
+            "ncm": rquery.ncm,
+            "image": rquery.image,
+            "price": rquery.price,
+            "measure_unit": rquery.measure_unit,
+            "structure": rquery.structure,
+            "date_created": rquery.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+            "date_updated": rquery.date_updated.strftime("%Y-%m-%d %H:%M:%S"),
+            "sku": [{
+                "color": m.color,
+                "size" : m.size
+            }for m in squery.items]
+        }
 
     @ns_prod.response(HTTPStatus.OK.value,"Salva dados de um produto")
     @ns_prod.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
     def post(self,id:int)->bool:
         try:
+            req = request.get_json("Product")
             prod = CmmProducts.query.get(id)
-            prod.prodCode = request.form.get("prodCode")
-            prod.barCode  = request.form.get("barCode")
-            prod.refCode  = request.form.get("refCode")
-            prod.name     = request.form.get("name")
-            prod.description = request.form.get("description")
-            prod.observation = request.form.get("observation")
-            prod.ncm         = request.form.get("ncm")
-            prod.image       = request.form.get("image")
-            prod.price       = float(request.form.get("price"))
-            prod.measure_unit = request.form.get("measure_unit")
-            db.session.add(prod)
+            prod.prodCode     = prod.prodCode if req.prodCode==None else req.prodCode
+            prod.barCode      = prod.barCode if req.barCode==None else req.barCode
+            prod.refCode      = prod.refCode if req.refCode==None else req.refCode
+            prod.name         = prod.name if req.name==None else req.name
+            prod.description  = prod.description if req.description==None else req.description
+            prod.observation  = prod.observation if req.observation==None else req.observation
+            prod.ncm          = prod.ncm if req.ncm==None else req.ncm
+            prod.image        = prod.image if req.image==None else req.image
+            prod.price        = prod.price if req.price==None else float(req.price)
+            prod.measure_unit = prod.measure_unit if req.measure_unit==None else req.measure_unit
+            prod.trash        = prod.trash if req.trash==None else req.trash
             db.session.commit()
             return True
         except:
@@ -113,7 +199,6 @@ class ProductApi(Resource):
         try:
             prod = CmmProducts.query.get(id)
             prod.trash = True
-            db.session.add(prod)
             db.session.commit()
             return True
         except:
@@ -123,10 +208,45 @@ class ProductApi(Resource):
 #           INICIO DAS CLASSES QUE IRAO TRATAR AS GRADES DE  PRODUTOS.             #
 ####################################################################################
 
+grd_pag_model = ns_gprod.model(
+    "Pagination",{
+        "registers": fields.Integer,
+        "page": fields.Integer,
+        "per_page": fields.Integer,
+        "pages": fields.Integer,
+        "has_next": fields.Boolean
+    }
+)
+
+grd_dist_model = ns_gprod.model(
+    "Distribution",{
+        "size": fields.String,
+        "color": fields.String,
+        "value": fields.Integer,
+        "is_percent": fields.Boolean
+    }
+)
+
+grd_model = ns_gprod.model(
+    "Grid",{
+        "id": fields.Integer,
+        "name": fields.String,
+        "distribution": fields.List(fields.Nested(grd_dist_model))
+    }
+)
+
+grd_return = ns_gprod.model(
+    "GridReturn",{
+        "pagination": fields.Nested(grd_pag_model),
+        "data": fields.List(fields.Nested(grd_model))
+    }
+)
+
+
 @ns_gprod.route("/")
 class GridList(Resource):
 
-    @ns_gprod.response(HTTPStatus.OK.value,"Obtem os registros de grades existentes",)
+    @ns_gprod.response(HTTPStatus.OK.value,"Obtem os registros de grades existentes",grd_return)
     @ns_gprod.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
     @ns_gprod.param("page","Número da página de registros","query",type=int,required=True)
     @ns_gprod.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
@@ -168,20 +288,22 @@ class GridList(Resource):
 
     @ns_gprod.response(HTTPStatus.OK.value,"Cria uma nova grade no sistema")
     @ns_gprod.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar nova grade!")
+    @ns_gprod.doc(body=grd_model)
     def post(self)->int:
         try:
+            req = request.get_json("grid")
             grid = CmmProductsGrid()
-            grid.name = request.form.get("name")
+            grid.name = req.name
             db.session.add(grid)
             db.session.commit()
 
-            for dist in request.form.get("distribution"):
+            for dist in req.distribution:
                 gridd         = CmmProductsGridDistribution()
                 gridd.id_grid = grid.id
-                gridd.color   = dist["color"]
-                gridd.size    = dist["size"]
-                gridd.value   = dist["value"]
-                gridd.is_percent = dist["is_percent"]
+                gridd.color   = dist.color
+                gridd.size    = dist.size
+                gridd.value   = dist.value
+                gridd.is_percent = dist.is_percent
                 db.session.add(gridd)
                 db.session.commit()
 
@@ -193,15 +315,15 @@ class GridList(Resource):
 @ns_gprod.route("/<int:id>")
 @ns_prod.param("id","Id do registro")
 class GridApi(Resource):
-    @ns_gprod.response(HTTPStatus.OK.value,"Obtem um registro de uma grade")
+    @ns_gprod.response(HTTPStatus.OK.value,"Obtem um registro de uma grade",grd_model)
     @ns_gprod.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
     def get(self,id:int):
         grid = CmmProductsGrid.query.get(id)
         dist = CmmProductsGridDistribution.query.find_by(id_grid=id)
         return {
-            "id": grid.id,
+            "id": id,
             "name": grid.name,
-            "distribuition":[{
+            "distribution":[{
                 "size": m.size,
                 "color": m.color,
                 "value": m.value,
@@ -213,10 +335,24 @@ class GridApi(Resource):
     @ns_gprod.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
     def post(self,id:int)->bool:
         try:
+            req = request.get_json("grid")
             grid = CmmProductsGrid.query.get(id)
-            grid.name = request.form.get("name")
-            db.session.add(grid)
+            grid.name = grid.name if req.name==None else req.name
+            grid.trash = grid.trash if req.trash==None else req.trash
             db.session.commit()
+
+            #apaga e recria as distribuicoes
+            db.session.delete(CmmProductsGridDistribution()).where(CmmProductsGridDistribution().id_grid==id)
+            db.session.commit()
+            for dist in grid.distribution:
+                gridd         = CmmProductsGridDistribution()
+                gridd.id_grid = id
+                gridd.color   = dist.color
+                gridd.size    = dist.size
+                gridd.value   = dist.value
+                gridd.is_percent = dist.is_percent
+                db.session.add(gridd)
+                db.session.commit()
             return True
         except:
             return False
@@ -227,7 +363,6 @@ class GridApi(Resource):
         try:
             grid       = CmmProductsGrid.query.get(id)
             grid.trash = True
-            db.session.add(grid)
             db.session.commit()
             return True
         except:
