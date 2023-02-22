@@ -45,6 +45,8 @@ class CmmProductGrid(db.Model,SerializerMixin):
     id    = sa.Column(sa.Integer,primary_key=True,autoincrement=True)
     name  = sa.Column(sa.String(128),nullable=False)
     trash = sa.Column(sa.Boolean,nullable=False,default=False)
+    date_created = sa.Column(sa.DateTime,nullable=False,server_default=func.now())
+    date_updated = sa.Column(sa.DateTime,onupdate=func.now())
 
 
 class CmmProductGridDistribution(db.Model,SerializerMixin):
