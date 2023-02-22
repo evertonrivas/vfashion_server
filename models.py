@@ -41,9 +41,11 @@ class CmmProductsSku(db.Model,SerializerMixin):
     size       = sa.Column(sa.String(5),primary_key=True,nullable=False)
 
 class CmmProductsGrid(db.Model,SerializerMixin):
-    id    = sa.Column(sa.Integer,primary_key=True,autoincrement=True,nullable=False)
-    name  = sa.Column(sa.String(128))
-    trash = sa.Column(sa.Boolean,nullable=False,default=False)
+    id           = sa.Column(sa.Integer,primary_key=True,autoincrement=True,nullable=False)
+    name         = sa.Column(sa.String(128))
+    date_created = sa.Column(sa.DateTime,nullable=False,server_default=func.now())
+    date_updated = sa.Column(sa.DateTime,onupdate=func.now())
+    trash        = sa.Column(sa.Boolean,nullable=False,default=False)
 
 class CmmProductsGridDistribution(db.Model,SerializerMixin):
     id_grid    = sa.Column(sa.Integer,primary_key=True,nullable=False)
@@ -96,6 +98,7 @@ class B2bOrdersProducts(db.Model,SerializerMixin):
     color      = sa.Column(sa.String(10),primary_key=True,nullable=False)
     size       = sa.Column(sa.String(5),primary_key=True,nullable=False)
     quantity   = sa.Column(sa.Integer,nullable=False)
+    price      = sa.Column(sa.Float,nullable=False)
 
 class B2bPaymentConditions(db.Model,SerializerMixin):
     id            = sa.Column(sa.Integer,primary_key=True,nullable=False,autoincrement=True)
