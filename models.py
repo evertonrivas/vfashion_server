@@ -97,7 +97,6 @@ class B2bOrdersProducts(db.Model,SerializerMixin):
     size       = sa.Column(sa.String(5),primary_key=True,nullable=False)
     quantity   = sa.Column(sa.Integer,nullable=False)
 
-
 class B2bPaymentConditions(db.Model,SerializerMixin):
     id            = sa.Column(sa.Integer,primary_key=True,nullable=False,autoincrement=True)
     name          = sa.Column(sa.String(100),nullable=False)

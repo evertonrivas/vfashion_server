@@ -6,7 +6,8 @@ import sqlalchemy as sa
 
 ns_user = Namespace("users",description="Operações para manipular dados de usuários do sistema")
 
-usr_pag_mode = ns_user.model(
+#API Models
+usr_pag_model = ns_user.model(
     "Pagination",{
         "registers": fields.Integer,
         "page": fields.Integer,
@@ -15,7 +16,6 @@ usr_pag_mode = ns_user.model(
         "has_next": fields.Boolean
     }
 )
-
 usr_model = ns_user.model(
     "User",{
         "id": fields.Integer,

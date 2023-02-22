@@ -50,7 +50,7 @@ class PaymentConditionsList(Resource):
     def post(self)->int:
         try:
             payCond = B2bPaymentConditions()
-            payCond.name = request.form.get("name")
+            payCond.name          = request.form.get("name")
             payCond.received_days = request.form.get("received_days")
             payCond.installments  = request.form.get("installments")
             db.session.add(payCond)
@@ -75,9 +75,9 @@ class PaymentConditionApi(Resource):
     def post(self,id:int)->bool:
         try:
             payCond = B2bPaymentConditions.query.get(id)
-            payCond.name = request.form.get("name")
-            payCond.received_days = request.form.get("received_days")
-            payCond.installments  = request.form.get("installments")
+            payCond.name = payCond.name if request.form.get("name")==None else request.form.get("name")
+            payCond.received_days = payCond.received_days if request.form.get("received_days")==None else request.form.get("received_days")
+            payCond.installments  = payCond.installments if request.form.get("installments")==None else request.form.get("installments")
             db.session.add(payCond)
             db.session.commit()
             return True
