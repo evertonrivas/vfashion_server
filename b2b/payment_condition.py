@@ -3,6 +3,7 @@ from typing import TypedDict
 from flask_restx import Resource,fields,Namespace
 from flask import request
 from models import B2bPaymentConditions,db
+import sqlalchemy as sa
 
 ns_payment = Namespace("payment-conditions",description="Operações para manipular dados de condições de pagamento")
 
@@ -45,9 +46,18 @@ class PaymentConditionsList(Resource):
 
     @ns_payment.response(HTTPStatus.OK.value,"Obtem a lista de condições de pagamento",list_pay_model)
     @ns_payment.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
-    @ns_payment.param("page","Número da página de registros","query",type=int,required=True)
+    @ns_payment.param("page","Número da página de registros","query",type=int,required=True,default=1)
+    @ns_payment.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
+    @ns_payment.param("query","Texto a ser buscado","query")
     def get(self):
-        rquery = B2bPaymentConditions.query.paginate(page=int(request.args.get("page")),per_page=25)
+        pag_num  = 1 if request.args.get("page")==None else int(request.args.get("page"))
+        pag_size = 25 if request.args.get("pageSize")==None else int(request.args.get("pageSize"))
+        search   = "" if request.args.get("query")==None else "{}%".format(request.args.get("search"))
+
+        if search =="":
+            rquery = B2bPaymentConditions.query.filter(sa.and_(B2bPaymentConditions.trash==False,B2bPaymentConditions.name.like(search))).paginate(page=pag_num,per_page=pag_size)
+        else:
+            rquery = B2bPaymentConditions.query.filter(B2bPaymentConditions.trash==False).paginate(page=pag_num,per_page=pag_size)
         return {
             "pagination":{
                 "registers": rquery.total,
@@ -74,7 +84,7 @@ class PaymentConditionsList(Resource):
     def post(self)->int:
         try:
             payCond = B2bPaymentConditions()
-            payCond.name = request.form.get("name")
+            payCond.name          = request.form.get("name")
             payCond.received_days = request.form.get("received_days")
             payCond.installments  = request.form.get("installments")
             db.session.add(payCond)
@@ -99,9 +109,9 @@ class PaymentConditionApi(Resource):
     def post(self,id:int)->bool:
         try:
             payCond = B2bPaymentConditions.query.get(id)
-            payCond.name = request.form.get("name")
-            payCond.received_days = request.form.get("received_days")
-            payCond.installments  = request.form.get("installments")
+            payCond.name = payCond.name if request.form.get("name")==None else request.form.get("name")
+            payCond.received_days = payCond.received_days if request.form.get("received_days")==None else request.form.get("received_days")
+            payCond.installments  = payCond.installments if request.form.get("installments")==None else request.form.get("installments")
             db.session.add(payCond)
             db.session.commit()
             return True
