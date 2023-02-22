@@ -2,12 +2,24 @@ from http import HTTPStatus
 from typing import TypedDict
 from flask_restx import Resource,fields,Namespace
 from flask import request
+from models import CmmCustomers, CmmCustomersGroup, db
+import sqlalchemy as sa
 
-api = Namespace("customers",description="Operações para manipular dados de clientes")
-apis = Namespace("customer-groups",description="Operações para manipular grupos de clientes")
+ns_customer = Namespace("customers",description="Operações para manipular dados de clientes")
+ns_customerg = Namespace("customer-groups",description="Operações para manipular grupos de clientes")
 
 #API Models
-cst_model = api.model(
+cst_pag_model = ns_customer.model(
+    "Pagination",{
+        "registers": fields.Integer,
+        "page": fields.Integer,
+        "per_page": fields.Integer,
+        "pages": fields.Integer,
+        "has_next": fields.Boolean
+    }
+)
+
+cst_model = ns_customer.model(
     "Customer",{
         "id": fields.Integer,
         "name": fields.String,
@@ -21,80 +33,138 @@ cst_model = api.model(
     }
 )
 
-class Customer(TypedDict):
-    id:int
-    name:str
-    taxvat:str
-    state_region:str
-    city:str
-    postal_code:str
-    neighborhood:str
-    phone:str
-    email:str
+cst_return = ns_customer.model(
+    "CustomerReturn",{
+        "pagination": fields.Nested(cst_pag_model),
+        "data": fields.List(fields.Nested(cst_model))
+    }
+)
 
 ####################################################################################
 #            INICIO DAS CLASSES QUE IRAO TRATAR OS GRUPOS DE CLIENTES.             #
 ####################################################################################
-@api.route("/")
+@ns_customer.route("/")
 class CustomersList(Resource):
-    @api.response(HTTPStatus.OK.value,"Obtem a listagem de clientes",[cst_model])
-    @api.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
-    @api.param("page","Número da página de registros","query",type=int,required=True)
-    def get(self)-> list[Customer]:
+    @ns_customer.response(HTTPStatus.OK.value,"Obtem a listagem de clientes",cst_return)
+    @ns_customer.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
+    @ns_customer.param("page","Número da página de registros","query",type=int,required=True,default=1)
+    @ns_customer.param("pageSize","Número de registros da página (máximo: 200)",type=int,required=True,default=25)
+    @ns_customer.param("query","Texto a ser buscado")
+    def get(self):
+        pag_num  = 1 if request.args.get("page")==None else int(request.args.get("page"))
+        pag_size = 25 if request.args.get("pageSize")==None else int(request.args.get("pageSize"))
+        search   = "" if request.args.get("query")==None else "{}%".format(request.args.get("search")) 
 
-        return [{
-            "id":request.args.get("page"),
-            "name": "JOSEFINA LTDA",
-            "taxvat": "01.111.222/0001-00",
-            "state_region": "SC",
-            "city": "Florianópolis",
-            "postal_code": "88131300",
-            "neighborhood": "Centro",
-            "phone": "4899999-8888",
-            "email": "josefina_ltda@gmail.com"
-        }]
+        if search == "":
+            rquery = CmmCustomers.query.filter(CmmCustomers.trash==False).paginate(page=pag_num,per_page=pag_size)
+        else:
+            rquery = CmmCustomers.query.filter(sa.and_(CmmCustomers.trash==False),CmmCustomers.name.like(search)).paginate(page=pag_num,per_page=pag_size)
+        return {
+            "pagination":{
+                "registers": rquery.total,
+                "page": pag_num,
+                "per_page": pag_size,
+                "pages": rquery.pages,
+                "has_next": rquery.has_next
+            },
+            "data":[{
+                "id": m.id,
+                "name": m.name,
+                "taxvat": m.taxvat,
+                "state_region":m.state_region,
+                "city": m.city,
+                "postal_code":m.postal_code,
+                "neighborhood": m.neighborhood,
+                "phone": m.phone,
+                "email": m.email,
+                "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+                "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S")
+            } for m in rquery.items]
+        }
 
-    @api.doc(parser=cst_model)
-    @api.response(HTTPStatus.OK.value,"Cria um novo registro de cliente")
-    @api.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar um novo cliente!")
+    @ns_customer.response(HTTPStatus.OK.value,"Cria um novo registro de cliente")
+    @ns_customer.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar um novo cliente!")
     def post(self)->int:
-        return 0
+        try:
+            cst = CmmCustomers()
+            cst.name         = request.form.get("name")==None
+            cst.taxvat       = request.form.get("taxvat")==None
+            cst.state_region = request.form.get("state_region")==None
+            cst.city         = request.form.get("city")==None
+            cst.postal_code  = request.form.get("postal_code")==None
+            cst.neighborhood = request.form.get("neighborhood")==None
+            cst.phone        = request.form.get("phone")==None
+            cst.email        = request.form.get("email")==None
+            db.session.add(cst)
+            db.session.commit()
+            return cst.id
+        except:
+            return 0
 
 
-
-@api.route("/<int:id>")
-@api.param("id","Id do registro")
+@ns_customer.route("/<int:id>")
+@ns_customer.param("id","Id do registro")
 class CustomerApi(Resource):
 
-    @api.response(HTTPStatus.OK.value,"Obtem um registro de cliente",cst_model)
-    @api.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
-    def get(self,id:int)->Customer:
-        return None
+    @ns_customer.response(HTTPStatus.OK.value,"Obtem um registro de cliente",cst_model)
+    @ns_customer.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
+    def get(self,id:int):
+        return CmmCustomers.query.get(id).to_dict()
 
-    @api.doc(parser=cst_model)
-    @api.response(HTTPStatus.OK.value,"Salva dados de um cliente")
-    @api.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
+    @ns_customer.response(HTTPStatus.OK.value,"Salva dados de um cliente")
+    @ns_customer.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
     def post(self,id:int)->bool:
-        return False
+        try:
+            cst = CmmCustomers.query.get(id)
+            cst.name         = cst.name if request.form.get("name")==None else request.form.get("name")
+            cst.taxvat       = cst.taxvat if request.form.get("taxvat")==None else request.form.get("taxvat")
+            cst.state_region = cst.state_region if request.form.get("state_region")==None else request.form.get("state_region")
+            cst.city         = cst.city if request.form.get("city")==None else request.form.get("city")
+            cst.postal_code  = cst.postal_code if request.form.get("postal_code")==None else request.form.get("postal_code")
+            cst.neighborhood = cst.neighborhood if request.form.get("neighborhood")==None else request.form.get("neighborhood")
+            cst.phone        = cst.phone if request.form.get("phone")==None else request.form.get("phone")
+            cst.email        = cst.email if request.form.get("email")==None else request.form.get("email")
+            db.session.add(cst)
+            db.session.commit()
+            return True
+        except:
+            return False
     
-    @api.response(HTTPStatus.OK.value,"Exclui os dados de um cliente")
-    @api.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
+    @ns_customer.response(HTTPStatus.OK.value,"Exclui os dados de um cliente")
+    @ns_customer.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
     def delete(self,id:int)->bool:
-        return False
+        try:
+            cst = CmmCustomers.query.get(id)
+            cst.trash = True
+            db.session.add(cst)
+            db.session.commit()
+            return True
+        except:
+            return False
 
 
 ####################################################################################
 #            INICIO DAS CLASSES QUE IRAO TRATAR OS GRUPOS DE CLIENTES.             #
 ####################################################################################
 
-grp_cst_model = apis.model(
-    "CustomerGroup",{
+grp_pag_model = ns_customerg.model(
+    "Pagination",{
+        "registers": fields.Integer,
+        "page": fields.Integer,
+        "per_page": fields.Integer,
+        "pages": fields.Integer,
+        "has_next": fields.Boolean
+    }
+)
+
+grp_cst_model = ns_customerg.model(
+    "Customers",{
         "id":fields.Integer
     }
 )
 
-group_model = apis.model(
-    "Group",{
+grp_model = ns_customerg.model(
+    "CustomerGroup",{
         "id": fields.Integer,
         "name": fields.String,
         "need_approval": fields.Boolean,
@@ -102,56 +172,80 @@ group_model = apis.model(
     }
 )
 
-class CustomerGroup(TypedDict):
-    id:int
-    name:str
-    need_approval:bool
+grp_return = ns_customer.model(
+    "CustomerGroupReturn",{
+        "pagination": fields.Nested(cst_pag_model),
+        "data": fields.List(fields.Nested(cst_model))
+    }
+)
 
-
-@apis.route("/")
+@ns_customerg.route("/")
 class UserGroupsApi(Resource):
-    @api.response(HTTPStatus.OK.value,"Obtem um registro de um grupo de usuarios",[group_model])
-    @api.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
-    @api.param("page","Número da página de registros","query",type=int,required=True)
-    def get(self)->list[CustomerGroup]:
+    @ns_customerg.response(HTTPStatus.OK.value,"Obtem um registro de um grupo de usuarios",grp_return)
+    @ns_customerg.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
+    @ns_customer.param("page","Número da página de registros","query",type=int,required=True,default=1)
+    @ns_customer.param("pageSize","Número de registros da página (máximo: 200)",type=int,required=True,default=25)
+    @ns_customer.param("query","Texto a ser buscado")
+    def get(self):
+        pag_num  = 1 if request.args.get("page")==None else int(request.args.get("page"))
+        pag_size = 25 if request.args.get("pageSize")==None else int(request.args.get("pageSize"))
+        search   = "" if request.args.get("query")==None else "{}%".format(request.args.get("search"))
+
+        if search != "":
+            rquery = CmmCustomersGroup.query.filter(sa.and_(CmmCustomersGroup.trash==False,CmmCustomers.name.like(search))).paginate(page=pag_num,per_page=pag_size)
+        else:
+            rquery = CmmCustomers.query.filter(CmmCustomersGroup.trash==False).paginate(page=pag_num,per_page=pag_size)
 
         return [{
-            "id": request.args.get("page"),
-            "name": "Grupo com aprovacao",
-            "need_approval":True,
-            "customers":[{
-                "id":0
-            }]
-        }]
+            "id": m.id,
+            "name": m.name,
+            "need_approval":m.need_approval,
+            "customers":self.get_customers(m.id)
+        }for m in rquery.items]
+
+    def get_customers(self,id:int):
+        rquery = CmmCustomers.query.find(CmmCustomers.id==id)
+        return [{
+            "id":m.id
+        } for m in rquery.items]
 
 
-    @api.response(HTTPStatus.OK.value,"Cria um novo grupo de usuários no sistema")
-    @api.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
+    @ns_customerg.response(HTTPStatus.OK.value,"Cria um novo grupo de clientes no sistema")
+    @ns_customerg.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
     def post(self)->int:
 
         return 0
 
 
-@apis.route("/<int:id>")
-@apis.param("id","Id do registro")
+@ns_customerg.route("/<int:id>")
+@ns_customerg.param("id","Id do registro")
 class UserGroupApi(Resource):
-    @apis.response(HTTPStatus.OK.value,"Salva dados de um grupo")
-    @apis.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
-    def get(self,id:int)->CustomerGroup:
-
-        return {
-            "id": id,
-            "name": "Grupo com aprovacao",
-            "need_approval":True,
-            "customers":[{"id":"10"}]
-        }
+    @ns_customerg.response(HTTPStatus.OK.value,"Salva dados de um grupo",grp_model)
+    @ns_customerg.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
+    def get(self,id:int):
+        return CmmCustomersGroup.query.get(id).to_dict()
     
-    @apis.response(HTTPStatus.OK.value,"Salva dados de um grupo",group_model)
-    @apis.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
+    @ns_customerg.response(HTTPStatus.OK.value,"Salva dados de um grupo")
+    @ns_customerg.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
     def post(self,_id:int)->bool:
-        return False
+        try:
+            grp = CmmCustomersGroup.query.get(id)
+            grp.name          = grp.name if request.form.get("name")==None else request.form.get("name")
+            grp.need_approval = grp.need_approval if request.form.get("need_approval")==None else request.form.get("need_approval")
+            db.session.add(grp)
+            db.session.commit()
+            return True
+        except:
+            return False
     
-    @apis.response(HTTPStatus.OK.value,"Exclui os dados de um grupo")
-    @apis.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
+    @ns_customerg.response(HTTPStatus.OK.value,"Exclui os dados de um grupo")
+    @ns_customerg.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
     def delete(self,_id:int)->bool:
-        return False
+        try:
+            grp = CmmCustomersGroup.query.get(id)
+            grp.trash = True
+            db.session.add(grp)
+            db.session.commit()
+            return True
+        except:
+            return False
