@@ -29,7 +29,7 @@ payment_model = ns_payment.model(
 )
 
 list_pay_model = ns_payment.model(
-    "Return",{
+    "PaymentConditionReturn",{
         "pagination": fields.Nested(pag_model),
         "data": fields.List(fields.Nested(payment_model))
     }
