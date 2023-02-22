@@ -69,7 +69,7 @@ class CmmCustomers(db.Model,SerializerMixin):
     trash        = sa.Column(sa.Boolean,nullable=False,default=False)
 
 
-class CmmCustomersGroup(db.Model,SerializerMixin):
+class B2bCustomersGroup(db.Model,SerializerMixin):
     id               = sa.Column(sa.Integer,primary_key=True,nullable=False,autoincrement=True)
     name             = sa.Column(sa.String(128),nullable=False)
     need_approvement = sa.Column(sa.Boolean,nullable=False,)
@@ -78,7 +78,7 @@ class CmmCustomersGroup(db.Model,SerializerMixin):
     trash            = sa.Column(sa.Boolean,nullable=False,default=False)
 
 
-class CmmCustomerGroupCustomer(db.Model,SerializerMixin):
+class B2bCustomerGroupCustomer(db.Model,SerializerMixin):
     id_group    = sa.Column(sa.Integer,primary_key=True)
     id_customer = sa.Column(sa.Integer,primary_key=True)
 

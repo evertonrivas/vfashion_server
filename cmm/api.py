@@ -4,7 +4,6 @@ from cmm.users import ns_user
 from cmm.products import ns_prod
 from cmm.products import ns_gprod
 from cmm.customers import ns_customer
-from cmm.customers import ns_group_customer
 
 
 """ Módulo Common entre os sistemas
@@ -14,7 +13,7 @@ Keyword arguments: usuarios, produtos
 """
 
 #nss = [ns_user]
-nss = [ns_user,ns_prod,ns_gprod,ns_customer,ns_group_customer]
+nss = [ns_user,ns_prod,ns_gprod,ns_customer]
 
 blueprint = Blueprint("cmm",__name__,url_prefix="/cmm/api/v1/")
 

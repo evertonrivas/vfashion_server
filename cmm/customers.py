@@ -1,12 +1,10 @@
 from http import HTTPStatus
-
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import CmmCustomers,CmmCustomersGroup,CmmCustomerGroupCustomer,db
+from models import CmmCustomers,db
 import sqlalchemy as sa
 
 ns_customer = Namespace("customers",description="Operações para manipular dados de clientes")
-ns_group_customer = Namespace("customer-groups",description="Operações para manipular grupos de clientes")
 
 cst_pag_model = ns_customer.model(
     "Pagination",{
@@ -138,163 +136,6 @@ class CustomerApi(Resource):
         try:
             cst = CmmCustomers.query.get(id)
             cst.trash = True
-            db.session.commit()
-            return True
-        except:
-            return False
-
-
-####################################################################################
-#            INICIO DAS CLASSES QUE IRAO TRATAR OS GRUPOS DE CLIENTES.             #
-####################################################################################
-
-cstg_pag_model = ns_group_customer.model(
-    "Pagination",{
-        "registers": fields.Integer,
-        "page": fields.Integer,
-        "per_page": fields.Integer,
-        "pages": fields.Integer,
-        "has_next": fields.Integer
-    }
-)
-
-cst_id_model = ns_group_customer.model(
-    "Customers",{
-        "id": fields.Integer
-    }
-)
-
-cstg_model = ns_group_customer.model(
-    "CustomerGroup",{
-        "id": fields.Integer,
-        "name": fields.String,
-        "need_approval": fields.Boolean,
-        "customers": fields.List(fields.Nested(cst_id_model))
-    }
-)
-
-cstg_return = ns_group_customer.model(
-    "CustomerGroupReturn",{
-        "pagination": fields.Nested(cstg_pag_model),
-        "data": fields.List(fields.Nested(cstg_model))
-    }
-)
-
-
-
-@ns_group_customer.route("/")
-class UserGroupsList(Resource):
-    @ns_group_customer.response(HTTPStatus.OK.value,"Obtem um registro de um grupo de usuarios",cstg_return)
-    @ns_group_customer.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
-    @ns_group_customer.param("page","Número da página de registros","query",type=int,required=True)
-    @ns_group_customer.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
-    @ns_group_customer.param("query","Texto para busca","query")
-    def get(self):
-        pag_num =  1 if request.args.get("page")!=None else int(request.args.get("page"))
-        pag_size = 25 if request.args.get("pageSize")!=None else int(request.args.get("pageSize"))
-
-        if request.args.get("query")!=None:
-            search = "{}%".format(request.args.get("query"))
-            rquery = CmmCustomersGroup.query.filter(sa.and_(CmmCustomersGroup.trash == False,CmmCustomersGroup.name.like(search))).paginate(page=pag_num,per_page=pag_size)
-        else:
-            rquery = CmmCustomersGroup.query.filter(CmmCustomersGroup.trash == False).paginate(page=pag_num,per_page=pag_size)
-
-        return {
-            "pagination":{
-                "registers": rquery.total,
-                "page": pag_num,
-                "per_page": pag_size,
-                "pages": rquery.pages,
-                "has_next": rquery.has_next
-            },
-            "data":[{
-                "id": m.id,
-                "name": m.name,
-                "need_approval":m.need_approval,
-                "customers": self.get_customers(m.id)
-            } for m in rquery.items]
-        }
-
-    def get_customers(self,id:int):
-        rquery = CmmCustomerGroupCustomer.query.filter_by(id_customer = id)
-        return [{
-            "id": id
-        } for m in rquery.items]
-
-    @ns_group_customer.response(HTTPStatus.OK.value,"Cria um novo grupo de usuários no sistema")
-    @ns_group_customer.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
-    @ns_group_customer.doc(body=cstg_model)
-    def post(self)->int:
-        try:
-            req = request.get_json("customer_group")
-            grp = CmmCustomersGroup()
-            grp.name = req.name
-            db.session.add(grp)
-            db.session.commit()
-
-            for cst in grp.customers:
-                grpc = CmmCustomerGroupCustomer()
-                grpc.id_group    = grp.id
-                grpc.id_customer = cst.id
-                db.session.add(grpc)
-                db.session.commit()
-
-            return grp.id
-        except:
-            return 0
-
-@ns_group_customer.route("/<int:id>")
-@ns_group_customer.param("id","Id do registro")
-class UserGroupApi(Resource):
-    @ns_group_customer.response(HTTPStatus.OK.value,"Retorna os dados dados de um grupo de clientes")
-    @ns_group_customer.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
-    def get(self,id:int):
-        cgroup = CmmCustomersGroup.query.get(id)
-        squery = CmmCustomerGroupCustomer.query.filter_by(id_customer = id)
-
-        return {
-            "id": cgroup.id,
-            "name": cgroup.name,
-            "need_approval": cgroup.need_approval,
-            "customers": [{
-                "id": id
-            }for m in squery.items]
-        }
-    
-    @ns_group_customer.response(HTTPStatus.OK.value,"Atualiza os dados de um grupo de clientes")
-    @ns_group_customer.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
-    @ns_group_customer.doc(body=cstg_model)
-    def post(self,id:int)->bool:
-        try:
-            req = request.get_json("customer_group")
-            grp = CmmCustomersGroup.query.get(id)
-            grp.name          = grp.name if req.name==None else req.name
-            grp.need_approval = grp.need_approval if req.need_approval==None else req.need_approval
-            grp.trash         = grp.trash if req.trash==None else req.trash
-            db.session.commit()
-
-
-            #apaga e recria os clientes dependentes
-            db.session.delete(CmmCustomerGroupCustomer()).where(CmmCustomerGroupCustomer().id_group==id)
-            db.session.commit()
-
-            for it in grp.customers:
-                cst = CmmCustomerGroupCustomer()
-                cst.id_customer = it.id
-                cst.id_group    = id
-                db.session.add(cst)
-                db.session.commit()
-
-            return True
-        except:
-            return False
-    
-    @ns_group_customer.response(HTTPStatus.OK.value,"Exclui os dados de um grupo")
-    @ns_group_customer.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
-    def delete(self,id:int)->bool:
-        try:
-            grp = CmmCustomersGroup.query.get(id)
-            grp.trash = True
             db.session.commit()
             return True
         except:
