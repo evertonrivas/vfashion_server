@@ -88,14 +88,14 @@ class OrdersList(Resource):
 
     @ns_order.response(HTTPStatus.OK.value,"Cria um novo pedido")
     @ns_order.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar pedido!")
-    @ns_order.doc(parser=ord_model)
+    @ns_order.doc(body=ord_model)
     def post(self)->int:
         try:
-            req = request.get_json("order")
+            req = request.get_json()
             order = B2bOrders()
-            order.id_customer = request.form.get("id_customer")
-            order.make_online = request.form.get("make_online")
-            order.id_payment_condition = int(request.form.get("id_payment_condition"))
+            order.id_customer = req.id_customer
+            order.make_online = req.make_online
+            order.id_payment_condition = int(req.id_payment_condition)
             db.session.add(order)
             db.session.commit()
 
@@ -144,10 +144,11 @@ class OrderApi(Resource):
     @ns_order.doc(body=ord_model)
     def post(self,id:int)->bool:
         try:
+            req = request.get_json()
             order = B2bOrders.query.get(id)
-            order.id_customer          = order.id_customer if request.form.get("id_customer") else request.form.get("id_customer")
-            order.make_online          = order.make_online if request.form.get("make_online") else request.form.get("make_online")
-            order.id_payment_condition = order.id_payment_condition if request.form.get("id_payment_condition") else request.form.get("id_payment_condition")
+            order.id_customer          = order.id_customer if req.id_customer==None else req.id_customer
+            order.make_online          = order.make_online if req.make_online==None else req.make_online
+            order.id_payment_condition = order.id_payment_condition if req.id_payment_condition==None else req.id_payment_condition
             db.session.commit()
 
             #apaga e recria os produtos
