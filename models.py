@@ -34,7 +34,7 @@ class CmmUsers(db.Model,SerializerMixin):
 
     @staticmethod
     def check_token(token):
-        user = CmmUsers.query.filter_by(token=token).first()
+        user = CmmUsers.query.filter(CmmUsers.token==token).first()
         if user is None or user.token_expire < datetime.utcnow():
             return None
         return user
