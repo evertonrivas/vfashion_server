@@ -81,7 +81,7 @@ class CmmProductsGridDistribution(db.Model,SerializerMixin):
     is_percent = sa.Column(sa.Boolean,nullable=False,default=False)
 
 
-class CmmCustomers(db.Model,SerializerMixin):
+class CmmLegalEntities(db.Model,SerializerMixin):
     id           = sa.Column(sa.Integer,primary_key=True,nullable=False,autoincrement=True)
     name         = sa.Column(sa.String(255),nullable=False)
     taxvat       = sa.Column(sa.String(30),nullable=False,comment="CPF ou CNPJ no Brasil")
@@ -91,9 +91,10 @@ class CmmCustomers(db.Model,SerializerMixin):
     neighborhood = sa.Column(sa.String(150),nullable=False)
     phone        = sa.Column(sa.String(30),nullable=False)
     email        = sa.Column(sa.String(150),nullable=False)
+    type         = sa.Column(sa.CHAR(1),nullable=False,default='C',comment="C = Customer(Cliente), R = Representative(Representante), S = Supplier(Fornecedor)")
+    trash        = sa.Column(sa.Boolean,nullable=False,default=False)
     date_created = sa.Column(sa.DateTime,nullable=False,server_default=func.now())
     date_updated = sa.Column(sa.DateTime,onupdate=func.now())
-    trash        = sa.Column(sa.Boolean,nullable=False,default=False)
 
 
 class B2bCustomersGroup(db.Model,SerializerMixin):
@@ -107,7 +108,12 @@ class B2bCustomersGroup(db.Model,SerializerMixin):
 
 class B2bCustomerGroupCustomer(db.Model,SerializerMixin):
     id_group    = sa.Column(sa.Integer,primary_key=True)
-    id_customer = sa.Column(sa.Integer,primary_key=True)
+    id_customer = sa.Column(sa.Integer,primary_key=True,comment="Id da tabela CmmLegalEntities quando type=C")
+
+
+class B2bCustomerGroupRepresentative(db.Model,SerializerMixin):
+    id_group          = sa.Column(sa.Integer,primary_key=True)
+    id_representative = sa.Column(sa.Integer,primary_key=True,comment="Id da tabela CmmLegalEntities quando type=R")
 
 
 class B2bOrders(db.Model,SerializerMixin):
