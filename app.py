@@ -10,6 +10,8 @@ from flask_migrate import Migrate
 
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://venda_fashion:vd_fashion@localhost/venda_fashion"
+app.config["SECRET_KEY"] = 'top secret!'
+
 # $env:FLASK_APP="main.py" no powerShell do windows
 
 migrate = Migrate(app,db)
