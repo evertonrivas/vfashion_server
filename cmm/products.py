@@ -113,7 +113,7 @@ class ProductsList(Resource):
     @ns_prod.doc(body=prd_model)
     def post(self)->int:
         try:
-            req = request.get_json("product")
+            req = request.get_json()
             prod = CmmProducts()
             prod.prodCode    = req.prodCode
             prod.barCode     = req.barCode
@@ -175,7 +175,7 @@ class ProductApi(Resource):
     @ns_prod.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
     def post(self,id:int)->bool:
         try:
-            req = request.get_json("Product")
+            req = request.get_json()
             prod = CmmProducts.query.get(id)
             prod.prodCode     = prod.prodCode if req.prodCode==None else req.prodCode
             prod.barCode      = prod.barCode if req.barCode==None else req.barCode
@@ -291,7 +291,7 @@ class GridList(Resource):
     @ns_gprod.doc(body=grd_model)
     def post(self)->int:
         try:
-            req = request.get_json("grid")
+            req = request.get_json()
             grid = CmmProductsGrid()
             grid.name = req.name
             db.session.add(grid)
@@ -335,7 +335,7 @@ class GridApi(Resource):
     @ns_gprod.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
     def post(self,id:int)->bool:
         try:
-            req = request.get_json("grid")
+            req = request.get_json()
             grid = CmmProductsGrid.query.get(id)
             grid.name = grid.name if req.name==None else req.name
             grid.trash = grid.trash if req.trash==None else req.trash

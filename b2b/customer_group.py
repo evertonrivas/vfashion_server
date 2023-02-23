@@ -88,7 +88,7 @@ class UserGroupsList(Resource):
     @ns_group_customer.doc(body=cstg_model)
     def post(self)->int:
         try:
-            req = request.get_json("customer_group")
+            req = request.get_json()
             grp = B2bCustomersGroup()
             grp.name = req.name
             db.session.add(grp)
@@ -128,7 +128,7 @@ class UserGroupApi(Resource):
     @ns_group_customer.doc(body=cstg_model)
     def post(self,id:int)->bool:
         try:
-            req = request.get_json("customer_group")
+            req = request.get_json()
             grp = B2bCustomersGroup.query.get(id)
             grp.name          = grp.name if req.name==None else req.name
             grp.need_approval = grp.need_approval if req.need_approval==None else req.need_approval
