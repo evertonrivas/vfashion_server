@@ -1,15 +1,42 @@
 from http import HTTPStatus
-from flask_restx import Resource,Namespace
+from flask_restx import Resource,Namespace,fields
 from flask import request
 from models import B2bPaymentConditions,db
 import sqlalchemy as sa
 
 ns_payment = Namespace("payment-conditions",description="Operações para manipular dados de condições de pagamento")
 
+pay_pag_model = ns_payment.model(
+    "Pagination",{
+        "registers": fields.Integer,
+        "page": fields.Integer,
+        "per_page": fields.Integer,
+        "pages": fields.Integer,
+        "has_next": fields.Boolean
+    }
+)
+
+pay_model = ns_payment.model(
+    "PaymentCondition",{
+        "id": fields.Integer,
+        "name": fields.String,
+        "received_days": fields.Integer,
+        "installments": fields.Integer
+    }
+)
+
+pay_return = ns_payment.model(
+    "PaymentConditionsReturn",{
+        "pagination": fields.Nested(pay_pag_model),
+        "data": fields.List(fields.Nested(pay_model))
+    }
+)
+
+
 @ns_payment.route("/")
 class PaymentConditionsList(Resource):
 
-    @ns_payment.response(HTTPStatus.OK.value,"Obtem a lista de condições de pagamento")
+    @ns_payment.response(HTTPStatus.OK.value,"Obtem a lista de condições de pagamento",pay_return)
     @ns_payment.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
     @ns_payment.param("page","Número da página de registros","query",type=int,required=True)
     @ns_payment.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
@@ -62,7 +89,7 @@ class PaymentConditionsList(Resource):
 @ns_payment.route("/<int:id>")
 @ns_payment.param("id","Id do registro")
 class PaymentConditionApi(Resource):
-    @ns_payment.response(HTTPStatus.OK.value,"Obtem um registro de uma condição de pagamento")
+    @ns_payment.response(HTTPStatus.OK.value,"Obtem um registro de uma condição de pagamento",pay_model)
     @ns_payment.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
     def get(self,id:int):
         return B2bPaymentConditions.query.get(id).to_dict()
