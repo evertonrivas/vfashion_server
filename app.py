@@ -16,9 +16,10 @@ app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://venda_fashion:vd_fashio
 migrate = Migrate(app,db)
 
 db.init_app(app)
+migrate.init_app(app,db)
 
-with app.app_context():
-    db.create_all()
+#with app.app_context():
+#    db.create_all()
     
 
 app.register_blueprint(cmm)
