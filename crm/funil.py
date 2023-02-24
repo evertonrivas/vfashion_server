@@ -10,7 +10,11 @@ ns_fun_stg = Namespace("funnel-stages",description="Operações para manipular e
 
 fun_pag_model = ns_funil.model(
     "Pagination",{
-    
+        "registers": fields.Integer,
+        "page": fields.Integer,
+        "per_page": fields.Integer,
+        "pages": fields.Integer,
+        "has_next": fields.Boolean
     }
 )
 
