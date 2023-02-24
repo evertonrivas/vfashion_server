@@ -4,6 +4,7 @@ from sqlalchemy import func
 from sqlalchemy_serializer import SerializerMixin
 from datetime import datetime,timedelta
 import jwt
+import bcrypt
 
 db = SQLAlchemy()
 
@@ -15,19 +16,21 @@ class CmmUsers(db.Model,SerializerMixin):
     date_created = sa.Column(sa.DateTime,nullable=False,server_default=func.now())
     date_updated = sa.Column(sa.DateTime,onupdate=func.now())
     active       = sa.Column(sa.Boolean,nullable=False,default=True)
-    token        = sa.Column(sa.String(50),index=True,unique=True)
+    token        = sa.Column(sa.String(255),index=True,unique=True)
     token_expire = sa.Column(sa.DateTime)
+
+    def hash_pwd(self,pwd:str):
+        self.password = bcrypt.hashpw(pwd.encode(),bcrypt.gensalt())
     
     def get_token(self,expires_in:int=7200):
         now = datetime.utcnow()
-        if self.token and self.token_expire > now + timedelta(seconds=7200):
+        if self.token and self.token_expire > now + timedelta(seconds=expires_in):
             return self.token
-        try:
-            self.token = jwt.encode({"username":self.username,"exp": (now + timedelta(seconds=expires_in)) },"VENDA_FASHION",algorithm="HS256")
-            self.token_expire = now + timedelta(seconds=expires_in)
-            return self.token
-        except Exception as e:
-            return e
+
+        #encode e decode por causa da diferenca de versoes do windows que pode retornar byte array ao inves de str
+        self.token = jwt.encode({"username":str(self.username),"exp": (now + timedelta(seconds=expires_in)) },"VENDA_FASHION").encode().decode()
+        self.token_expire = (now + timedelta(seconds=expires_in))
+        return self.token
 
     def revoke_token(self):
         self.token_expire = datetime.utcnow() - timedelta(seconds=1)
