@@ -3,9 +3,6 @@ import sqlalchemy as sa
 from sqlalchemy import func
 from sqlalchemy_serializer import SerializerMixin
 from datetime import datetime,timedelta
-import base64
-import os
-import bcrypt
 import jwt
 
 db = SQLAlchemy()
@@ -42,6 +39,10 @@ class CmmUsers(db.Model,SerializerMixin):
             return None
         return user
 
+class CmmUserEntity(db.Model,SerializerMixin):
+    id_user     = sa.Column(sa.Integer,nullable=False,primary_key=True)
+    id_entity   = sa.Column(sa.Integer,nullable=False,primary_key=True,default=0)
+    id_consumer = sa.Column(sa.Integer,nullable=False,primary_key=True,default=0)
 
 class CmmProducts(db.Model,SerializerMixin):
     id           = sa.Column(sa.Integer,primary_key=True,nullable=False,autoincrement=True)
