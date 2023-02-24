@@ -22,10 +22,12 @@ class CmmUsers(db.Model,SerializerMixin):
         now = datetime.utcnow()
         if self.token and self.token_expire > now + timedelta(seconds=7200):
             return self.token
-        #self.token = base64.b64encode(os.urandom(24)).decode('utf-8')
-        self.token = jwt.encode({"username":self.username,"exp": (now + timedelta(seconds=expires_in)) },"VENDA_FASHION",algorithm="HS256")
-        self.token_expire = now + timedelta(seconds=expires_in)
-        return self.token
+        try:
+            self.token = jwt.encode({"username":self.username,"exp": (now + timedelta(seconds=expires_in)) },"VENDA_FASHION",algorithm="HS256")
+            self.token_expire = now + timedelta(seconds=expires_in)
+            return self.token
+        except Exception as e:
+            return e
 
     def revoke_token(self):
         self.token_expire = datetime.utcnow() - timedelta(seconds=1)
