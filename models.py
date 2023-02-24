@@ -25,8 +25,6 @@ class CmmUsers(db.Model,SerializerMixin):
         #self.token = base64.b64encode(os.urandom(24)).decode('utf-8')
         self.token = jwt.encode({"username":self.username,"exp": (now + timedelta(seconds=expires_in)) },"VENDA_FASHION",algorithm="HS256")
         self.token_expire = now + timedelta(seconds=expires_in)
-        db.session.add(self)
-        db.session.commit()
         return self.token
 
     def revoke_token(self):
@@ -179,6 +177,7 @@ class CrmFunnel(db.Model,SerializerMixin):
 
 class CrmFunnelStage(db.Model,SerializerMixin):
     id           = sa.Column(sa.Integer,primary_key=True,nullable=False,autoincrement=True)
+    id_funnel    = sa.Column(sa.Integer,nullable=False)
     name         = sa.Column(sa.String(128),nullable=False)
     order        = sa.Column(sa.CHAR(2),nullable=False,default='CD',comment='CD = ')
     date_created = sa.Column(sa.DateTime,nullable=False,server_default=func.now())
