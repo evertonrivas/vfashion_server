@@ -5,6 +5,8 @@ from sqlalchemy_serializer import SerializerMixin
 from datetime import datetime,timedelta
 import base64
 import os
+import bcrypt
+import jwt
 
 db = SQLAlchemy()
 
@@ -12,21 +14,22 @@ class CmmUsers(db.Model,SerializerMixin):
     id           = sa.Column(sa.Integer,primary_key=True,nullable=False,autoincrement=True)
     username     = sa.Column(sa.String(100), nullable=False)
     password     = sa.Column(sa.String(255), nullable=False)
-    name         = sa.Column(sa.String(255), nullable=False)
-    type         = sa.Column(sa.CHAR(1),nullable=False,default='L',comment='A = Administrador, L = Lojista, R = Representante, V = Vendedor')
+    type         = sa.Column(sa.CHAR(1),nullable=False,default='L',comment='A = Administrador, L = Lojista, R = Representante, V = Vendedor, U = User')
     date_created = sa.Column(sa.DateTime,nullable=False,server_default=func.now())
     date_updated = sa.Column(sa.DateTime,onupdate=func.now())
     active       = sa.Column(sa.Boolean,nullable=False,default=True)
     token        = sa.Column(sa.String(50),index=True,unique=True)
     token_expire = sa.Column(sa.DateTime)
     
-    def get_token(self,expires_in:int=3600):
+    def get_token(self,expires_in:int=7200):
         now = datetime.utcnow()
-        if self.token and self.token_expire > now + timedelta(seconds=60):
+        if self.token and self.token_expire > now + timedelta(seconds=7200):
             return self.token
-        self.token = base64.b64encode(os.urandom(24)).decode('utf-8')
+        #self.token = base64.b64encode(os.urandom(24)).decode('utf-8')
+        self.token = jwt.encode({"username":self.username,"exp": (now + timedelta(seconds=expires_in)) },"VENDA_FASHION",algorithm="HS256")
         self.token_expire = now + timedelta(seconds=expires_in)
         db.session.add(self)
+        db.session.commit()
         return self.token
 
     def revoke_token(self):
