@@ -54,11 +54,11 @@ class UserGroupsList(Resource):
     @ns_group_customer.param("query","Texto para busca","query")
     #@auth.login_required
     def get(self):
-        pag_num =  1 if request.args.get("page")!=None else int(request.args.get("page"))
-        pag_size = 25 if request.args.get("pageSize")!=None else int(request.args.get("pageSize"))
+        pag_num  =  1 if request.args.get("page") is None else int(request.args.get("page"))
+        pag_size = 25 if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        search   = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
 
-        if request.args.get("query")!=None:
-            search = "{}%".format(request.args.get("query"))
+        if search!="":
             rquery = B2bCustomersGroup.query.filter(sa.and_(B2bCustomersGroup.trash == False,B2bCustomersGroup.name.like(search))).paginate(page=pag_num,per_page=pag_size)
         else:
             rquery = B2bCustomersGroup.query.filter(B2bCustomersGroup.trash == False).paginate(page=pag_num,per_page=pag_size)
@@ -135,9 +135,9 @@ class UserGroupApi(Resource):
         try:
             req = request.get_json()
             grp = B2bCustomersGroup.query.get(id)
-            grp.name          = grp.name if req.name==None else req.name
-            grp.need_approval = grp.need_approval if req.need_approval==None else req.need_approval
-            grp.trash         = grp.trash if req.trash==None else req.trash
+            grp.name          = grp.name if req.name is None else req.name
+            grp.need_approval = grp.need_approval if req.need_approval is None else req.need_approval
+            grp.trash         = grp.trash if req.trash is None else req.trash
             db.session.commit()
 
 

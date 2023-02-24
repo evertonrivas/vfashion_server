@@ -59,9 +59,9 @@ class OrdersList(Resource):
     @ns_order.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_order.param("query","Texto para busca","query")
     def get(self):
-        pag_num  =  1 if request.args.get("page")!=None else int(request.args.get("page"))
-        pag_size = 25 if request.args.get("pageSize")!=None else int(request.args.get("pageSize"))
-        search   = "" if request.args.get("query")!=None else "{}%".format(request.args.get("query"))
+        pag_num  =  1 if request.args.get("page") is None else int(request.args.get("page"))
+        pag_size = 25 if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        search   = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
 
         if search!=None:
             #pensar nos filtros para essa listagem
@@ -149,9 +149,9 @@ class OrderApi(Resource):
         try:
             req = request.get_json()
             order = B2bOrders.query.get(id)
-            order.id_customer          = order.id_customer if req.id_customer==None else req.id_customer
-            order.make_online          = order.make_online if req.make_online==None else req.make_online
-            order.id_payment_condition = order.id_payment_condition if req.id_payment_condition==None else req.id_payment_condition
+            order.id_customer          = order.id_customer if req.id_customer is None else req.id_customer
+            order.make_online          = order.make_online if req.make_online is None else req.make_online
+            order.id_payment_condition = order.id_payment_condition if req.id_payment_condition is None else req.id_payment_condition
             db.session.commit()
 
             #apaga e recria os produtos

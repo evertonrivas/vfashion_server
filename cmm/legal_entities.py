@@ -53,11 +53,11 @@ class CustomersList(Resource):
     @ns_legal.param("query","Texto para busca","query")
     #@auth.login_required
     def get(self):
-        pag_num  =  1 if request.args.get("page")!=None else int(request.args.get("page"))
-        pag_size = 25 if request.args.get("pageSize")!=None else int(request.args.get("pageSize"))
-        search   = "" if request.args.get("query")!=None else "{}%".format(request.args.get("query"))
+        pag_num  =  1 if request.args.get("page") is None else int(request.args.get("page"))
+        pag_size = 25 if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        search   = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
 
-        if request.args.get("query")!=None:
+        if search!="":
             rquery = CmmLegalEntities.query.filter(sa.and_(CmmLegalEntities.trash == False,CmmLegalEntities.name.like(search))).paginate(page=pag_num,per_page=pag_size)
         else:
             rquery = CmmLegalEntities.query.filter(CmmLegalEntities.trash == False).paginate(page=pag_num,per_page=pag_size)
@@ -142,16 +142,16 @@ class CustomerApi(Resource):
     def post(self,id:int)->bool:
         try:
             cst = CmmLegalEntities.query.get(id)
-            cst.name         = cst.name if request.form.get("name")==None else request.form.get("name")
-            cst.taxvat       = cst.taxvat if request.form.get("taxvat")==None else request.form.get("taxvat")
-            cst.state_region = cst.state_region if request.form.get("state_region")==None else request.form.get("state_region")
-            cst.city         = cst.city if request.form.get("city")==None else request.form.get("city")
-            cst.postal_code  = cst.postal_code if request.form.get("postal_code")==None else request.form.get("postal_code")
-            cst.neighborhood = cst.neighborhood if request.form.get("neighborhood")==None else request.form.get("neighborhood")
-            cst.phone        = cst.phone if request.form.get("phone")==None else request.form.get("phone")
-            cst.email        = cst.email if request.form.get("email")==None else request.form.get("email")
-            cst.trash        = cst.trash if request.form.get("trash")==None else request.form.get("trash")
-            cst.is_representative = cst.is_representative if request.form.get("is_representative")==None else request.form.get("is_respresentative")
+            cst.name         = cst.name if request.form.get("name") is None else request.form.get("name")
+            cst.taxvat       = cst.taxvat if request.form.get("taxvat") is None else request.form.get("taxvat")
+            cst.state_region = cst.state_region if request.form.get("state_region") is None else request.form.get("state_region")
+            cst.city         = cst.city if request.form.get("city") is None else request.form.get("city")
+            cst.postal_code  = cst.postal_code if request.form.get("postal_code") is None else request.form.get("postal_code")
+            cst.neighborhood = cst.neighborhood if request.form.get("neighborhood") is None else request.form.get("neighborhood")
+            cst.phone        = cst.phone if request.form.get("phone") is None else request.form.get("phone")
+            cst.email        = cst.email if request.form.get("email") is None else request.form.get("email")
+            cst.trash        = cst.trash if request.form.get("trash") is None else request.form.get("trash")
+            cst.is_representative = cst.is_representative if request.form.get("is_representative") is None else request.form.get("is_respresentative")
             db.session.commit()
             return True
         except:

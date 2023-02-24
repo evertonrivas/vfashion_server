@@ -43,9 +43,9 @@ class PaymentConditionsList(Resource):
     @ns_payment.param("query","Texto para busca","query")
     #@auth.login_required
     def get(self):
-        pag_num  =  1 if request.args.get("page")!=None else int(request.args.get("page"))
-        pag_size = 25 if request.args.get("pageSize")!=None else int(request.args.get("pageSize"))
-        search   = "" if request.args.get("query")!=None else "{}%".format(request.args.get("query"))
+        pag_num  =  1 if request.args.get("page") is None else int(request.args.get("page"))
+        pag_size = 25 if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        search   = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
 
         if search!="":
             rquery = B2bPaymentConditions.query.filter(sa.and_(B2bPaymentConditions.name.like(search),B2bPaymentConditions.trash==False)).paginate(page=pag_num,per_page=pag_size)
@@ -105,9 +105,9 @@ class PaymentConditionApi(Resource):
     def post(self,id:int)->bool:
         try:
             payCond = B2bPaymentConditions.query.get(id)
-            payCond.name          = payCond.name if request.form.get("name")==None else request.form.get("name")
-            payCond.received_days = payCond.received_days if request.form.get("received_days")==None else request.form.get("received_days")
-            payCond.installments  = payCond.installments if request.form.get("installments")==None else request.form.get("installments")
+            payCond.name          = payCond.name if request.form.get("name") is None else request.form.get("name")
+            payCond.received_days = payCond.received_days if request.form.get("received_days") is None else request.form.get("received_days")
+            payCond.installments  = payCond.installments if request.form.get("installments") is None else request.form.get("installments")
             db.session.commit()
             return True
         except:

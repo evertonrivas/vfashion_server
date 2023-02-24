@@ -66,9 +66,9 @@ class ProductsList(Resource):
     @ns_prod.param("query","Texto para busca","query")
     #@auth.login_required
     def get(self):
-        pag_num  =  1 if request.args.get("page")!=None else int(request.args.get("page"))
-        pag_size = 25 if request.args.get("pageSize")!=None else int(request.args.get("pageSize"))
-        search   = "" if request.args.get("query")!=None else "{}%".format(request.args.get("query"))
+        pag_num  =  1 if request.args.get("page") is None else int(request.args.get("page"))
+        pag_size = 25 if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        search   = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
 
         if search!="":
             rquery = CmmProducts.query.filter(sa.and_(CmmProducts.trash==False,CmmProducts.name.like(search))).paginate(page=pag_num,per_page=pag_size)
@@ -181,17 +181,17 @@ class ProductApi(Resource):
         try:
             req = request.get_json()
             prod = CmmProducts.query.get(id)
-            prod.prodCode     = prod.prodCode if req.prodCode==None else req.prodCode
-            prod.barCode      = prod.barCode if req.barCode==None else req.barCode
-            prod.refCode      = prod.refCode if req.refCode==None else req.refCode
-            prod.name         = prod.name if req.name==None else req.name
-            prod.description  = prod.description if req.description==None else req.description
-            prod.observation  = prod.observation if req.observation==None else req.observation
-            prod.ncm          = prod.ncm if req.ncm==None else req.ncm
-            prod.image        = prod.image if req.image==None else req.image
-            prod.price        = prod.price if req.price==None else float(req.price)
-            prod.measure_unit = prod.measure_unit if req.measure_unit==None else req.measure_unit
-            prod.trash        = prod.trash if req.trash==None else req.trash
+            prod.prodCode     = prod.prodCode if req.prodCode is None else req.prodCode
+            prod.barCode      = prod.barCode if req.barCode is None else req.barCode
+            prod.refCode      = prod.refCode if req.refCode is None else req.refCode
+            prod.name         = prod.name if req.name is None else req.name
+            prod.description  = prod.description if req.description is None else req.description
+            prod.observation  = prod.observation if req.observation is None else req.observation
+            prod.ncm          = prod.ncm if req.ncm is None else req.ncm
+            prod.image        = prod.image if req.image is None else req.image
+            prod.price        = prod.price if req.price is None else float(req.price)
+            prod.measure_unit = prod.measure_unit if req.measure_unit is None else req.measure_unit
+            prod.trash        = prod.trash if req.trash is None else req.trash
             db.session.commit()
             return True
         except:
@@ -258,9 +258,9 @@ class GridList(Resource):
     @ns_gprod.param("query","Texto para busca","query")
     #@auth.login_required
     def get(self):
-        pag_num  =  1 if request.args.get("page")!=None else int(request.args.get("page"))
-        pag_size = 25 if request.args.get("pageSize")!=None else int(request.args.get("pageSize"))
-        search   = "" if request.args.get("query")!=None else "{}%".format(request.args.get("query"))
+        pag_num  =  1 if request.args.get("page") is None else int(request.args.get("page"))
+        pag_size = 25 if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        search   = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
 
         if search!="":
             rquery = CmmProductsGrid.query.filter(sa.and_(CmmProductsGrid.trash==False,CmmProductsGrid.name.like(search))).paginate(page=pag_num,per_page=pag_size)
@@ -346,8 +346,8 @@ class GridApi(Resource):
         try:
             req = request.get_json()
             grid = CmmProductsGrid.query.get(id)
-            grid.name = grid.name if req.name==None else req.name
-            grid.trash = grid.trash if req.trash==None else req.trash
+            grid.name = grid.name if req.name is None else req.name
+            grid.trash = grid.trash if req.trash is None else req.trash
             db.session.commit()
 
             #apaga e recria as distribuicoes

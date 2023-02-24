@@ -53,11 +53,11 @@ class PriceTableList(Resource):
     @ns_price.param("query","Texto para busca","query")
     #@auth.login_required
     def get(self):
-        pag_num  =  1 if request.args.get("page")!=None else int(request.args.get("page"))
-        pag_size = 25 if request.args.get("pageSize")!=None else int(request.args.get("pageSize"))
-        search   = "" if request.args.get("query")!=None else "{}%".format(request.args.get("query"))
+        pag_num  =  1 if request.args.get("page") is None else int(request.args.get("page"))
+        pag_size = 25 if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        search   = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
 
-        if search!=None:
+        if search!="":
             rquery = B2bTablePrice.query.filter(sa.and_(B2bTablePrice.active==True,B2bTablePrice.name.like(search))).paginate(page=pag_num,per_page=pag_size)
         else:
             rquery = B2bTablePrice.query.filter(B2bTablePrice.active==True).paginate(page=pag_num,per_page=pag_size)
@@ -130,10 +130,10 @@ class PriceTableApi(Resource):
         try:
             req = request.get_json()
             price = B2bTablePrice.query.get(id)
-            price.name       = price.name if req.name==None else req.name
-            price.start_date = price.start_date if req.start_date==None else req.start_date
-            price.end_date   = price.end_date if req.end_date==None else req.end_date
-            price.active     = price.active   if req.active==None else req.active
+            price.name       = price.name if req.name is None else req.name
+            price.start_date = price.start_date if req.start_date is None else req.start_date
+            price.end_date   = price.end_date if req.end_date is None else req.end_date
+            price.active     = price.active   if req.active is None else req.active
             db.session.commit()
             return True
         except:
