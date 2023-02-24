@@ -36,7 +36,7 @@ from pdv.consumer import apis as ns_consumer_group
         - Importar extrato bancario
     
 
-Keyword arguments: vendas, b2c, produtos, consumidor, 
+Keyword arguments: vendas, b2c, produtos, consumidor
 """
 
 nss = [ns_consumer,ns_consumer_group]
