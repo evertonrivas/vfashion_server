@@ -5,6 +5,17 @@ from b2b.orders import ns_order,ns_porder
 from b2b.payment_condition import ns_payment
 from b2b.customer_group import ns_group_customer
 
+""" Módulo Business to Business (Gestão de Vendas entre empresas)
+    Módulo para realizar pedidos que realiza:
+        - Gestão de cadastro de Grupos de clientes
+        - Gestão de Pedidos
+        - Gestão de condições de pagamento
+        - Gestão de tabelas de preços
+        - Gestão de produtos
+
+Keyword arguments: vendas, b2c, produtos, cliente, pedidos, condições de pagamento
+"""
+
 
 nss = [ns_price,ns_order,ns_payment,ns_porder,ns_group_customer]
 
