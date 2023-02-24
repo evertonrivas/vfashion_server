@@ -80,20 +80,19 @@ class UsersList(Resource):
     @ns_user.param("username","Login do usuário","formData",required=True)
     @ns_user.param("password","Senha do usuário","formData",required=True)
     @ns_user.param("type","Tipo do usuário","formData",required=True,enum=['A','L','R','V','U'])
-    @auth.login_required
+    #@auth.login_required
     def post(self):
         try:
-            passwd = bcrypt.hashpw(request.form.get("password").encode(),bcrypt.gensalt())
             usr = CmmUsers()
             usr.username = request.form.get("username")
-            usr.password = passwd
             usr.type     = request.form.get("type")
+            usr.hash_pwd(request.form.get("password"))
             usr.get_token()
             db.session.add(usr)
             db.session.commit()
-            return usr.id
-        except exc.DatabaseError as e:
-            return e.detail
+            return  usr.id
+        except Exception as e:
+            return e.__str__()
 
 
 @ns_user.route("/<int:id>")
@@ -115,7 +114,7 @@ class UserApi(Resource):
         try:
             usr = CmmUsers.query.get(id)
             usr.username = usr.username if request.form.get("username") is None else request.form.get("username")
-            usr.password = usr.password if request.form.get("password") is None else bcrypt.hashpw(request.form.get("password").encode(),bcrypt.gensalt())
+            usr.password = usr.password if request.form.get("password") is None else usr.hash_pwd(request.form.get("password"))
             usr.type     = usr.type if request.form.get("type") is None else request.form.get("type")
             usr.active   = usr.active if request.form.get("active") is None else request.form.get("active")
             db.session.commit()
