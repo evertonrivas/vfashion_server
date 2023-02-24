@@ -3,6 +3,7 @@ from flask_restx import Resource,Namespace,fields
 from flask import request
 from models import B2bPaymentConditions,db
 import sqlalchemy as sa
+from auth import auth
 
 ns_payment = Namespace("payment-conditions",description="Operações para manipular dados de condições de pagamento")
 
@@ -35,12 +36,12 @@ pay_return = ns_payment.model(
 
 @ns_payment.route("/")
 class PaymentConditionsList(Resource):
-
     @ns_payment.response(HTTPStatus.OK.value,"Obtem a lista de condições de pagamento",pay_return)
     @ns_payment.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
     @ns_payment.param("page","Número da página de registros","query",type=int,required=True)
     @ns_payment.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_payment.param("query","Texto para busca","query")
+    #@auth.login_required
     def get(self):
         pag_num  =  1 if request.args.get("page")!=None else int(request.args.get("page"))
         pag_size = 25 if request.args.get("pageSize")!=None else int(request.args.get("pageSize"))
@@ -74,6 +75,7 @@ class PaymentConditionsList(Resource):
     @ns_payment.param("name","Nome da condição de pagamento","formData",required=True)
     @ns_payment.param("received_days","Dias para recebimento","formData",type=int,required=True)
     @ns_payment.param("installments","Número de parcelas","formData",type=int,required=True)
+    #@auth.login_required
     def post(self)->int:
         try:
             payCond = B2bPaymentConditions()
@@ -99,6 +101,7 @@ class PaymentConditionApi(Resource):
     @ns_payment.param("name","Nome da condição de pagamento","formData",required=True)
     @ns_payment.param("received_days","Dias para recebimento","formData",type=int,required=True)
     @ns_payment.param("installments","Número de parcelas","formData",type=int,required=True)
+    #@auth.login_required
     def post(self,id:int)->bool:
         try:
             payCond = B2bPaymentConditions.query.get(id)
@@ -112,6 +115,7 @@ class PaymentConditionApi(Resource):
     
     @ns_payment.response(HTTPStatus.OK.value,"Exclui os dados de uma condição de pagamento")
     @ns_payment.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    #@auth.login_required
     def delete(self,id:int)->bool:
         try:
             payCond = B2bPaymentConditions.query.get(id)

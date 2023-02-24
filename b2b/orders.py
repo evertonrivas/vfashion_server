@@ -4,6 +4,7 @@ from flask import request
 from models import B2bOrders,B2bOrdersProducts,db
 from sqlalchemy import exc
 import sqlalchemy as sa
+from auth import auth
 
 ns_order = Namespace("orders",description="Operações para manipular dados de pedidos")
 ns_porder = Namespace("orders-products",description="Operações para manipular dados de produtos de pedidos")
@@ -120,6 +121,7 @@ class OrderApi(Resource):
 
     @ns_order.response(HTTPStatus.OK.value,"Obtem um registro de pedido",ord_model)
     @ns_order.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
+    #@auth.login_required
     def get(self,id:int):
         order = B2bOrders.query.get(id)
         squery = B2bOrdersProducts.query.filter_by(id_order=int(request.args.get("id_order"))).all()
@@ -142,6 +144,7 @@ class OrderApi(Resource):
     @ns_order.response(HTTPStatus.OK.value,"Atualiza os dados de um pedido")
     @ns_order.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
     @ns_order.doc(body=ord_model)
+    #@auth.login_required
     def post(self,id:int)->bool:
         try:
             req = request.get_json()
@@ -171,6 +174,7 @@ class OrderApi(Resource):
     
     @ns_order.response(HTTPStatus.OK.value,"Exclui os dados de um pedido")
     @ns_order.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
+    #@auth.login_required
     def delete(self,id:int)->bool:
         try:
             order = B2bOrders.query.get(id)
@@ -187,6 +191,7 @@ class ProductsOrderList(Resource):
     @ns_porder.response(HTTPStatus.OK.value,"Obtem a listagem de produtos de pedidos",[prd_ord_model])
     @ns_porder.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
     @ns_porder.param("id_order","Número do pedido","query",type=int,required=True)
+    #@auth.login_required
     def get(self,id:int):
         try:
             rquery = B2bOrdersProducts.query.filter_by(id_order=id)
@@ -206,6 +211,7 @@ class ProductsOrderList(Resource):
     @ns_porder.param("id_product","Id do Produto","formData",type=int,required=True)
     @ns_porder.param("color","Codigo ou nome da cor (hexa ou ingles)","formData",required=True)
     @ns_porder.param("size","Tamanho do produto","formData",required=True)
+    #@auth.login_required
     def delete(self,id:int):
         try:
             pOrder = B2bOrdersProducts.query.get([

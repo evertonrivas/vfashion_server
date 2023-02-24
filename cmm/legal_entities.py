@@ -3,6 +3,7 @@ from flask_restx import Resource,Namespace,fields
 from flask import request
 from models import CmmLegalEntities,db
 import sqlalchemy as sa
+from auth import auth
 
 ns_legal = Namespace("legal-entities",description="Operações para manipular dados de clientes/representantes")
 
@@ -50,6 +51,7 @@ class CustomersList(Resource):
     @ns_legal.param("page","Número da página de registros","query",type=int,required=True)
     @ns_legal.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_legal.param("query","Texto para busca","query")
+    #@auth.login_required
     def get(self):
         pag_num  =  1 if request.args.get("page")!=None else int(request.args.get("page"))
         pag_size = 25 if request.args.get("pageSize")!=None else int(request.args.get("pageSize"))
@@ -95,6 +97,7 @@ class CustomersList(Resource):
     @ns_legal.param("phone","Número do telefone","formData",required=True)
     @ns_legal.param("email","Endereço de e-mail","formData",required=True)
     @ns_legal.param("type","Indicativo do tipo de entidade legal",required=True,enum=['C','R','S'])
+    #@auth.login_required
     def post(self)->int:
         try:
             cst = CmmLegalEntities()
@@ -120,6 +123,7 @@ class CustomerApi(Resource):
 
     @ns_legal.response(HTTPStatus.OK.value,"Obtem um registro de cliente",lgl_model)
     @ns_legal.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
+    #@auth.login_required
     def get(self,id:int):
         return CmmLegalEntities.query.get(id).to_dict()
 
@@ -134,6 +138,7 @@ class CustomerApi(Resource):
     @ns_legal.param("phone","Número do telefone","formData",required=True)
     @ns_legal.param("email","Endereço de e-mail","formData",required=True)
     @ns_legal.param("type","Indicativo do tipo de entidade legal",required=True,enum=['C','R','S'])
+    #@auth.login_required
     def post(self,id:int)->bool:
         try:
             cst = CmmLegalEntities.query.get(id)
@@ -154,6 +159,7 @@ class CustomerApi(Resource):
     
     @ns_legal.response(HTTPStatus.OK.value,"Exclui os dados de um cliente/representante")
     @ns_legal.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    #@auth.login_required
     def delete(self,id:int)->bool:
         try:
             cst = CmmLegalEntities.query.get(id)

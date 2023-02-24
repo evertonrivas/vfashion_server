@@ -3,6 +3,7 @@ from flask import request
 from flask_restx import Resource,Namespace,fields
 from models import B2bTablePrice,B2bTablePriceProduct,db
 import sqlalchemy as sa
+from auth import auth
 
 ns_price = Namespace("price-table",description="Operações para manipular dados de tabelas de preços")
 
@@ -50,6 +51,7 @@ class PriceTableList(Resource):
     @ns_price.param("page","Número da página de registros","query",type=int,required=True)
     @ns_price.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_price.param("query","Texto para busca","query")
+    #@auth.login_required
     def get(self):
         pag_num  =  1 if request.args.get("page")!=None else int(request.args.get("page"))
         pag_size = 25 if request.args.get("pageSize")!=None else int(request.args.get("pageSize"))
@@ -90,6 +92,7 @@ class PriceTableList(Resource):
     @ns_price.response(HTTPStatus.OK.value,"Cria um novo pedido")
     @ns_price.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar pedido!")
     @ns_price.doc(body=prc_model)
+    #@auth.login_required
     def post(self)->int:
         return 0
 
@@ -99,9 +102,10 @@ class PriceTableApi(Resource):
     
     @ns_price.response(HTTPStatus.OK.value,"Obtem os dados de um carrinho")
     @ns_price.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    #@auth.login_required
     def get(self,id:int):
         rquery = B2bTablePrice.query.get(id)
-        squery = B2bTablePriceProduct.query.find(B2bTablePriceProduct.id_table_price==id)
+        squery = B2bTablePriceProduct.query.filter(B2bTablePriceProduct.id_table_price==id)
         return {
             "id": rquery.id,
             "name": rquery.name,
@@ -121,6 +125,7 @@ class PriceTableApi(Resource):
     @ns_price.response(HTTPStatus.OK.value,"Atualiza os dados de um pedido")
     @ns_price.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
     @ns_price.doc(body=prc_model)
+    #@auth.login_required
     def post(self,id:int)->bool:
         try:
             req = request.get_json()
@@ -136,6 +141,7 @@ class PriceTableApi(Resource):
 
     @ns_price.response(HTTPStatus.OK.value,"Exclui os dados de um carrinho")
     @ns_price.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    #@auth.login_required
     def delete(self,id:int)->bool:
         try:
             price = B2bTablePrice.query.get(id)

@@ -3,6 +3,7 @@ from flask_restx import Resource,Namespace,fields
 from flask import request
 from models import B2bCustomersGroup,B2bCustomerGroupCustomer,db
 import sqlalchemy as sa
+from auth import auth
 
 ns_group_customer = Namespace("customer-groups",description="Operações para manipular grupos de clientes")
 
@@ -51,6 +52,7 @@ class UserGroupsList(Resource):
     @ns_group_customer.param("page","Número da página de registros","query",type=int,required=True)
     @ns_group_customer.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_group_customer.param("query","Texto para busca","query")
+    #@auth.login_required
     def get(self):
         pag_num =  1 if request.args.get("page")!=None else int(request.args.get("page"))
         pag_size = 25 if request.args.get("pageSize")!=None else int(request.args.get("pageSize"))
@@ -86,6 +88,7 @@ class UserGroupsList(Resource):
     @ns_group_customer.response(HTTPStatus.OK.value,"Cria um novo grupo de usuários no sistema")
     @ns_group_customer.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
     @ns_group_customer.doc(body=cstg_model)
+    #@auth.login_required
     def post(self)->int:
         try:
             req = request.get_json()
@@ -110,6 +113,7 @@ class UserGroupsList(Resource):
 class UserGroupApi(Resource):
     @ns_group_customer.response(HTTPStatus.OK.value,"Retorna os dados dados de um grupo de clientes")
     @ns_group_customer.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    #@auth.login_required
     def get(self,id:int):
         cgroup = B2bCustomersGroup.query.get(id)
         squery = B2bCustomerGroupCustomer.query.filter_by(id_customer = id)
@@ -126,6 +130,7 @@ class UserGroupApi(Resource):
     @ns_group_customer.response(HTTPStatus.OK.value,"Atualiza os dados de um grupo de clientes")
     @ns_group_customer.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
     @ns_group_customer.doc(body=cstg_model)
+    #@auth.login_required
     def post(self,id:int)->bool:
         try:
             req = request.get_json()
@@ -153,6 +158,7 @@ class UserGroupApi(Resource):
     
     @ns_group_customer.response(HTTPStatus.OK.value,"Exclui os dados de um grupo")
     @ns_group_customer.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
+    #@auth.login_required
     def delete(self,id:int)->bool:
         try:
             grp = B2bCustomersGroup.query.get(id)

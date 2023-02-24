@@ -3,6 +3,8 @@ from flask_restx import Resource,Namespace,fields
 from flask import request
 from models import CmmUsers,db
 import sqlalchemy as sa
+import bcrypt
+from auth import auth
 
 ns_user = Namespace("users",description="Operações para manipular dados de usuários do sistema")
 
@@ -21,7 +23,6 @@ usr_model = ns_user.model(
         "id": fields.Integer,
         "username": fields.String,
         "password": fields.String,
-        "name": fields.String,
         "type": fields.String(enum=['A','L','R','V']),
         "date_created": fields.DateTime,
         "date_updated": fields.DateTime
@@ -43,6 +44,7 @@ class UsersList(Resource):
     @ns_user.param("page","Número da página de registros","query",type=int,required=True)
     @ns_user.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_user.param("query","Texto para busca","query")
+    #@auth.login_required
     def get(self):
         pag_num  =  1 if request.args.get("page")!=None else int(request.args.get("page"))
         pag_size = 25 if request.args.get("pageSize")!=None else int(request.args.get("pageSize"))
@@ -66,7 +68,6 @@ class UsersList(Resource):
                 "id": m.id,
                 "username": m.username,
                 "password": m.password,
-                "name": m.name,
                 "type": m.type,
                 "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                 "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S")
@@ -75,17 +76,16 @@ class UsersList(Resource):
 
     @ns_user.response(HTTPStatus.OK.value,"Cria um novo usuário no sistema")
     @ns_user.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar novo usuário!")
-    @ns_user.param("name","Nome da pessoa","formData",required=True)
     @ns_user.param("username","Login do usuário","formData",required=True)
     @ns_user.param("password","Senha do usuário","formData",required=True)
     @ns_user.param("type","Tipo do usuário","formData",required=True)
+    #@auth.login_required
     def post(self)->int:
         try:
             usr = CmmUsers()
-            usr.name     = request.form.get("name")
-            usr.username = request.form.get("username")
-            usr.password = request.form.get("password")
-            usr.type     = request.form.get("type")
+            usr.username = usr.username if request.form.get("username") is None else request.form.get("username")
+            usr.password = usr.password if request.form.get("password") is None else bcrypt.hashpw(request.form.get("password"),bcrypt.gensalt())
+            usr.type     = usr.type if request.form.get("type") is None else request.form.get("type")
             db.session.add(usr)
             db.session.commit()
             return usr.id
@@ -98,19 +98,19 @@ class UsersList(Resource):
 class UserApi(Resource):
     @ns_user.response(HTTPStatus.OK.value,"Obtem um registro de usuario",usr_model)
     @ns_user.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
+    #@auth.login_required
     def get(self,id:int):
         return CmmUsers.query.get(id).to_dict()
 
     @ns_user.response(HTTPStatus.OK.value,"Salva dados de um usuario")
     @ns_user.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
-    @ns_user.param("name","Nome do usuário","formData",required=True)
     @ns_user.param("username","Nome de login","formData",required=True)
     @ns_user.param("password","Senha do usuário","formData",required=True)
     @ns_user.param("type","Tipo do usuário","formData",required=True)
+    #@auth.login_required
     def post(self,id:int)->bool:
         try:
             usr = CmmUsers.query.get(id)
-            usr.name     = usr.name if request.form.get("name")==None else request.form.get("name")
             usr.username = usr.username if request.form.get("username")==None else request.form.get("username")
             usr.password = usr.password if request.form.get("password")==None else request.form.get("password")
             usr.type     = usr.type if request.form.get("type")==None else request.form.get("type")
@@ -122,6 +122,7 @@ class UserApi(Resource):
     
     @ns_user.response(HTTPStatus.OK.value,"Exclui os dados de um usuario")
     @ns_user.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
+    #@auth.login_required
     def delete(self,id:int)->bool:
         try:
             usr = CmmUsers.query.get(id)
@@ -130,3 +131,27 @@ class UserApi(Resource):
             return True
         except:
             return False
+
+class UserAuth(Resource):
+    @ns_user.response(HTTPStatus.OK.value,"Realiza login e retorna o token")
+    @ns_user.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_user.param("username","Login do sistema","formData",required=True)
+    @ns_user.param("password","Senha do sistema","formData",required=True)
+    def post(username:str,password:str):
+        usr = CmmUsers.query.filter(sa.and_(CmmUsers.username==username,CmmUsers.active==True)).first()
+        if usr:
+            #verifica a senha criptografada anteriormente
+            if bcrypt.checkpw(password,usr.password):
+                return {
+                    "token": usr.get_token(),
+                    "user": {
+                        "type": usr.type,
+                        "name": usr.name
+                    }
+                }
+            else:
+                return 0 #senha invalida
+        return 0 #usuario invalido
+
+
+ns_user.add_resource(UserAuth,"/auth")

@@ -2,6 +2,7 @@ from http import HTTPStatus
 from typing import TypedDict
 from flask_restx import Resource,fields,Namespace
 from flask import request
+from auth import auth
 
 api = Namespace("funil",description="Operações para manipular funis de clientes")
 
@@ -35,6 +36,7 @@ class FunnelList(Resource):
     @api.response(HTTPStatus.OK.value,"Obtem a listagem de funis",[funnel_model])
     @api.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
     @api.param("page","Número da página de registros","query",type=int,required=True)
+    #@auth.login_required
     def get(self)-> list[Funnel]:
         
         return [{
@@ -50,6 +52,7 @@ class FunnelList(Resource):
 
     @api.response(HTTPStatus.OK.value,"Salva os dados de um funil")
     @api.param("name","Nome do funil","formData",required=True)
+    #@auth.login_required
     def post(self)->int:
 
         return 0
@@ -58,6 +61,7 @@ class FunnelList(Resource):
 class FunnelApi(Resource):
     @api.response(HTTPStatus.OK.value,"Obtem um registro de um funil",funnel_model)
     @api.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
+    #@auth.login_required
     def get(self,id:int)->Funnel:
         return {
             "id": id,
@@ -73,10 +77,12 @@ class FunnelApi(Resource):
     @api.response(HTTPStatus.OK.value,"Atualiza dados de um funil")
     @api.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
     @api.doc(parser=funnel_model)
+    #@auth.login_required
     def post(self,id:int)->bool:
         return False
     
     @api.response(HTTPStatus.OK.value,"Exclui os dados de um funil")
     @api.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
+    #@auth.login_required
     def delete(self,id:int)->bool:
         return False

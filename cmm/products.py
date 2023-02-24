@@ -1,9 +1,9 @@
 from http import HTTPStatus
-from typing import TypedDict
 from flask_restx import Resource,Namespace,fields
 from flask import request
 from models import CmmProducts,CmmProductsSku,CmmProductsGrid,CmmProductsGridDistribution,db
 import sqlalchemy as sa
+from auth import auth
 
 ns_prod = Namespace("products",description="Operações para manipular dados de produtos")
 ns_gprod = Namespace("products-grid",description="Operações para manipular dados das grades de produtos")
@@ -64,6 +64,7 @@ class ProductsList(Resource):
     @ns_prod.param("page","Número da página de registros","query",type=int,required=True,default=1)
     @ns_prod.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_prod.param("query","Texto para busca","query")
+    #@auth.login_required
     def get(self):
         pag_num  =  1 if request.args.get("page")!=None else int(request.args.get("page"))
         pag_size = 25 if request.args.get("pageSize")!=None else int(request.args.get("pageSize"))
@@ -111,6 +112,7 @@ class ProductsList(Resource):
     @ns_prod.response(HTTPStatus.OK.value,"Cria um novo produto no sistema")
     @ns_prod.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar novo produto!")
     @ns_prod.doc(body=prd_model)
+    #@auth.login_required
     def post(self)->int:
         try:
             req = request.get_json()
@@ -147,6 +149,7 @@ class ProductApi(Resource):
 
     @ns_prod.response(HTTPStatus.OK.value,"Obtem um registro de produto",prd_model)
     @ns_prod.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
+    #@auth.login_required
     def get(self,id:int):
         rquery = CmmProducts.query.get(id)
         squery = CmmProductsSku.query.filter_by(id_product=id)
@@ -173,6 +176,7 @@ class ProductApi(Resource):
 
     @ns_prod.response(HTTPStatus.OK.value,"Salva dados de um produto")
     @ns_prod.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
+    #@auth.login_required
     def post(self,id:int)->bool:
         try:
             req = request.get_json()
@@ -195,6 +199,7 @@ class ProductApi(Resource):
     
     @ns_prod.response(HTTPStatus.OK.value,"Exclui os dados de um produto")
     @ns_prod.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
+    #@auth.login_required
     def delete(self,id:int)->bool:
         try:
             prod = CmmProducts.query.get(id)
@@ -251,6 +256,7 @@ class GridList(Resource):
     @ns_gprod.param("page","Número da página de registros","query",type=int,required=True)
     @ns_gprod.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_gprod.param("query","Texto para busca","query")
+    #@auth.login_required
     def get(self):
         pag_num  =  1 if request.args.get("page")!=None else int(request.args.get("page"))
         pag_size = 25 if request.args.get("pageSize")!=None else int(request.args.get("pageSize"))
@@ -289,6 +295,7 @@ class GridList(Resource):
     @ns_gprod.response(HTTPStatus.OK.value,"Cria uma nova grade no sistema")
     @ns_gprod.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar nova grade!")
     @ns_gprod.doc(body=grd_model)
+    #@auth.login_required
     def post(self)->int:
         try:
             req = request.get_json()
@@ -317,6 +324,7 @@ class GridList(Resource):
 class GridApi(Resource):
     @ns_gprod.response(HTTPStatus.OK.value,"Obtem um registro de uma grade",grd_model)
     @ns_gprod.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    #@auth.login_required
     def get(self,id:int):
         grid = CmmProductsGrid.query.get(id)
         dist = CmmProductsGridDistribution.query.find_by(id_grid=id)
@@ -333,6 +341,7 @@ class GridApi(Resource):
 
     @ns_gprod.response(HTTPStatus.OK.value,"Salva dados de uma grade")
     @ns_gprod.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    #@auth.login_required
     def post(self,id:int)->bool:
         try:
             req = request.get_json()
@@ -359,6 +368,7 @@ class GridApi(Resource):
     
     @ns_gprod.response(HTTPStatus.OK.value,"Exclui os dados de uma grade")
     @ns_gprod.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    #@auth.login_required
     def delete(self,id:int)->bool:
         try:
             grid       = CmmProductsGrid.query.get(id)
