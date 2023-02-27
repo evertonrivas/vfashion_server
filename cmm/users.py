@@ -4,6 +4,7 @@ from flask import request
 from models import CmmUsers,db
 import sqlalchemy as sa
 from sqlalchemy import exc
+from datetime import datetime
 import bcrypt
 from auth import auth
 
@@ -87,7 +88,8 @@ class UsersList(Resource):
             usr.username = request.form.get("username")
             usr.type     = request.form.get("type")
             usr.hash_pwd(request.form.get("password"))
-            usr.get_token()
+            usr.token = ""
+            usr.token_expire = datetime.now().utcnow()
             db.session.add(usr)
             db.session.commit()
             return  usr.id
