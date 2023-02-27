@@ -9,3 +9,4 @@ PyJWT==2.6.0
 python_bcrypt==0.3.2
 SQLAlchemy==2.0.3
 SQLAlchemy_serializer==1.4.1
+PyMySQL==1.0.2
