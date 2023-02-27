@@ -2,7 +2,6 @@ from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
 from models import CmmProducts,CmmProductsSku,CmmProductsGrid,CmmProductsGridDistribution,db
-from flask_sqlalchemy import ex
 import sqlalchemy as sa
 from sqlalchemy import exc
 from auth import auth
