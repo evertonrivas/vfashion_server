@@ -2,12 +2,13 @@
 
 Repositório para hospedar a versão server do sistema de Força de Vendas desenvolvido em Python.
 
-O sistema possui 5 níveis de acesso sendo:
-1. Administrador: possui acesso em todo o sistema.
-2. Lojista: apenas sinaliza devoluções/reclamçaões.
+O sistema possui 6 níveis de acesso sendo:
+1. Administrador: possui acesso em todos os sistemas.
+2. Lojista: apenas sinaliza devoluções e pedidos.
 3. Financeiro: consegue criar regras financeiras, bloqueia ou desbloqueia clientes e cancela pedidos.
-4. Representante: gerencia a vida completa do cliente
+4. Representante: relaiza pedidos, aprova ou desaprova pedidos
 5. Comercial (Empresa): gerencia a vida do representante e/ou lojista e condições de pedidos.
+6. Usuário: realiza acesso simplificado aos sistemas (ainda por definir)
 
 O sistema consiste em uma solução web para emissão de pedidos de venda. Dentro do sistema o setor comercial da empresa consegue acompanhar toda a vida do cliente que foi movimentada por representantes.
 
