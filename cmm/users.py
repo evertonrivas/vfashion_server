@@ -139,23 +139,24 @@ class UserAuth(Resource):
     @ns_user.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
     @ns_user.param("username","Login do sistema","formData",required=True)
     @ns_user.param("password","Senha do sistema","formData",required=True)
-    def post(username:str,password:str):
-        usr = CmmUsers.query.filter(sa.and_(CmmUsers.username==username,CmmUsers.active==True)).first()
+    def post(self):
+        usr = CmmUsers.query.filter(sa.and_(CmmUsers.username==request.form.get("username"),CmmUsers.active==True)).first()
         if usr:
             #verifica a senha criptografada anteriormente
-            if bcrypt.checkpw(password,usr.password):
+            pwd = request.form.get("password").encode()
+            if bcrypt.checkpw(pwd,str(usr.password).encode()):
                 obj_retorno = {
-                    "token": usr.get_token(),
                     "user": {
-                        "type": usr.type,
-                        "name": usr.name
+                        "token_access": usr.get_token(),
+                        "token_type": "Bearer",
+                        "token_expire": usr.token_expire.strftime("%Y-%m-%d %H:%M:%S"),
+                        "level": usr.type
                     }
                 }
                 db.session.commit()
                 return obj_retorno
             else:
                 return 0 #senha invalida
-        return 0 #usuario invalido
-
+        return request.form.get("password") #usuario invalido
 
 ns_user.add_resource(UserAuth,"/auth")
