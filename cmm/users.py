@@ -80,7 +80,7 @@ class UsersList(Resource):
     @ns_user.param("username","Login do usuário","formData",required=True)
     @ns_user.param("password","Senha do usuário","formData",required=True)
     @ns_user.param("type","Tipo do usuário","formData",required=True,enum=['A','L','R','V','U'])
-    #@auth.login_required
+    @auth.login_required
     def post(self):
         try:
             usr = CmmUsers()
