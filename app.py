@@ -1,7 +1,7 @@
 from flask import Flask
 from flask_cors import CORS
 from cmm.api import blueprint as cmm
-from pdv.api import blueprint as pdv
+from pos.api import blueprint as pos
 from crm.api import blueprint as crm
 from b2b.api import blueprint as b2b
 from fpr.api import blueprint as fpr
@@ -23,7 +23,7 @@ migrate.init_app(app,db)
     
 
 app.register_blueprint(cmm)
-app.register_blueprint(pdv)
+app.register_blueprint(pos)
 app.register_blueprint(crm)
 app.register_blueprint(b2b)
 app.register_blueprint(fpr)
@@ -53,7 +53,7 @@ def index():
                             Para acessar as documenta&ccedil;&otilde;es das APIS, clique nos links abaixo:<br/><br/>
                             VF_B2B - Business to Business <a href='/b2b/api/v1'>/b2b/api/v1</a><br/>
                             VF_FPR - Finished Product Return <a href='/fpr/api/v1'>/fpr/api/v1</a><br/>
-                            VF_PDV - Ponto de Venda <a href='/pdv/api/v1'>/pdv/api/v1</a><br/>
+                            VF_POS - Point Of Sale <a href='/pos/api/v1'>/pdv/api/v1</a><br/>
                             VF_CRM - Customer Relashionship Management <a href='/crm/api/v1'>/crm/api/v1</a><hr size='1'>
 
                             VF_CMM - M&oacute;dulo Common (Fun&ccedil;&otilde;es comuns dos m&oacute;dulos) <a href='/cmm/api/v1'>/cmm/api/v1</a>

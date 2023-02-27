@@ -1,10 +1,10 @@
 from flask import Blueprint
 from flask_restx import Api
-from pdv.consumer import api as ns_consumer
-from pdv.consumer import apis as ns_consumer_group
+from pos.consumer import api as ns_consumer
+from pos.consumer import apis as ns_consumer_group
 
 
-""" Módulo Ponto De Venda (Gestão de Força de Vendas). 
+""" Módulo Point Of Sale (Gestão de Força de Vendas). 
     Módulo para frente de loja onde realiza:
     - Gestão de Cadastros
         - Fornecedores
@@ -41,7 +41,7 @@ Keyword arguments: vendas, b2c, produtos, consumidor
 
 nss = [ns_consumer,ns_consumer_group]
 
-blueprint = Blueprint("pdv",__name__,url_prefix="/pdv/api/v1/")
+blueprint = Blueprint("pos",__name__,url_prefix="/pos/api/v1/")
 
 api = Api(blueprint,
     version="1.0",
