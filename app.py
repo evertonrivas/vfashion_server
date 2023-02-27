@@ -53,7 +53,7 @@ def index():
                             Para acessar as documenta&ccedil;&otilde;es das APIS, clique nos links abaixo:<br/><br/>
                             VF_B2B - Business to Business <a href='/b2b/api/v1'>/b2b/api/v1</a><br/>
                             VF_FPR - Finished Product Return <a href='/fpr/api/v1'>/fpr/api/v1</a><br/>
-                            VF_POS - Point Of Sale <a href='/pos/api/v1'>/pdv/api/v1</a><br/>
+                            VF_POS - Point Of Sale <a href='/pos/api/v1'>/pos/api/v1</a><br/>
                             VF_CRM - Customer Relashionship Management <a href='/crm/api/v1'>/crm/api/v1</a><hr size='1'>
 
                             VF_CMM - M&oacute;dulo Common (Fun&ccedil;&otilde;es comuns dos m&oacute;dulos) <a href='/cmm/api/v1'>/cmm/api/v1</a>
