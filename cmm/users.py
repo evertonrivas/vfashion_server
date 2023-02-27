@@ -52,29 +52,35 @@ class UsersList(Resource):
         pag_size = 25 if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
         search   = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
 
-        if request.args.get("query")!=None:
-            rquery = CmmUsers.query.filter(sa.and_(CmmUsers.name.like(search),CmmUsers.active==False)).paginate(page=pag_num,per_page=pag_size)
-        else:
-            rquery = CmmUsers.query.filter(CmmUsers.active==False).paginate(page=pag_num,per_page=pag_size)
+        try:
+            if request.args.get("query")!=None:
+                rquery = CmmUsers.query.filter(sa.and_(CmmUsers.name.like(search),CmmUsers.active==False)).paginate(page=pag_num,per_page=pag_size)
+            else:
+                rquery = CmmUsers.query.filter(CmmUsers.active==False).paginate(page=pag_num,per_page=pag_size)
 
-        #pedro maria
-        return {
-            "pagination":{
-                "registers": rquery.total,
-                "page": pag_num,
-                "per_page": pag_size,
-                "pages": rquery.pages,
-                "has_next": rquery.has_next
-            },
-            "data":[{
-                "id": m.id,
-                "username": m.username,
-                "password": m.password,
-                "type": m.type,
-                "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S")
-            } for m in rquery.items]
-        }
+            return {
+                "pagination":{
+                    "registers": rquery.total,
+                    "page": pag_num,
+                    "per_page": pag_size,
+                    "pages": rquery.pages,
+                    "has_next": rquery.has_next
+                },
+                "data":[{
+                    "id": m.id,
+                    "username": m.username,
+                    "password": m.password,
+                    "type": m.type,
+                    "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+                    "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S")
+                } for m in rquery.items]
+            }
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
 
     @ns_user.response(HTTPStatus.OK.value,"Cria um novo usuário no sistema")
     @ns_user.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar novo usuário!")
@@ -93,8 +99,12 @@ class UsersList(Resource):
             db.session.add(usr)
             db.session.commit()
             return  usr.id
-        except Exception as e:
-            return e.__str__()
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
 
 
 @ns_user.route("/<int:id>")
@@ -104,7 +114,14 @@ class UserApi(Resource):
     @ns_user.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
     @auth.login_required
     def get(self,id:int):
-        return CmmUsers.query.get(id).to_dict()
+        try:
+            return CmmUsers.query.get(id).to_dict()
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
 
     @ns_user.response(HTTPStatus.OK.value,"Salva dados de um usuario")
     @ns_user.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")

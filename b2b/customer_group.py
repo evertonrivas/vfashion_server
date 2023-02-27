@@ -3,6 +3,7 @@ from flask_restx import Resource,Namespace,fields
 from flask import request
 from models import B2bCustomersGroup,B2bCustomerGroupCustomer,db
 import sqlalchemy as sa
+from sqlalchemy import exc
 from auth import auth
 
 ns_group_customer = Namespace("customer-groups",description="Operações para manipular grupos de clientes")
@@ -58,26 +59,33 @@ class UserGroupsList(Resource):
         pag_size = 25 if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
         search   = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
 
-        if search!="":
-            rquery = B2bCustomersGroup.query.filter(sa.and_(B2bCustomersGroup.trash == False,B2bCustomersGroup.name.like(search))).paginate(page=pag_num,per_page=pag_size)
-        else:
-            rquery = B2bCustomersGroup.query.filter(B2bCustomersGroup.trash == False).paginate(page=pag_num,per_page=pag_size)
+        try:
+            if search!="":
+                rquery = B2bCustomersGroup.query.filter(sa.and_(B2bCustomersGroup.trash == False,B2bCustomersGroup.name.like(search))).paginate(page=pag_num,per_page=pag_size)
+            else:
+                rquery = B2bCustomersGroup.query.filter(B2bCustomersGroup.trash == False).paginate(page=pag_num,per_page=pag_size)
 
-        return {
-            "pagination":{
-                "registers": rquery.total,
-                "page": pag_num,
-                "per_page": pag_size,
-                "pages": rquery.pages,
-                "has_next": rquery.has_next
-            },
-            "data":[{
-                "id": m.id,
-                "name": m.name,
-                "need_approval":m.need_approval,
-                "customers": self.get_customers(m.id)
-            } for m in rquery.items]
-        }
+            return {
+                "pagination":{
+                    "registers": rquery.total,
+                    "page": pag_num,
+                    "per_page": pag_size,
+                    "pages": rquery.pages,
+                    "has_next": rquery.has_next
+                },
+                "data":[{
+                    "id": m.id,
+                    "name": m.name,
+                    "need_approval":m.need_approval,
+                    "customers": self.get_customers(m.id)
+                } for m in rquery.items]
+            }
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
 
     def get_customers(self,id:int):
         rquery = B2bCustomerGroupCustomer.query.filter_by(id_customer = id)
@@ -105,8 +113,12 @@ class UserGroupsList(Resource):
                 db.session.commit()
 
             return grp.id
-        except:
-            return 0
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
 
 @ns_group_customer.route("/<int:id>")
 @ns_group_customer.param("id","Id do registro")
@@ -115,17 +127,24 @@ class UserGroupApi(Resource):
     @ns_group_customer.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
     #@auth.login_required
     def get(self,id:int):
-        cgroup = B2bCustomersGroup.query.get(id)
-        squery = B2bCustomerGroupCustomer.query.filter_by(id_customer = id)
+        try:
+            cgroup = B2bCustomersGroup.query.get(id)
+            squery = B2bCustomerGroupCustomer.query.filter_by(id_customer = id)
 
-        return {
-            "id": cgroup.id,
-            "name": cgroup.name,
-            "need_approval": cgroup.need_approval,
-            "customers": [{
-                "id": id
-            }for m in squery.items]
-        }
+            return {
+                "id": cgroup.id,
+                "name": cgroup.name,
+                "need_approval": cgroup.need_approval,
+                "customers": [{
+                    "id": id
+                }for m in squery.items]
+            }
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
     
     @ns_group_customer.response(HTTPStatus.OK.value,"Atualiza os dados de um grupo de clientes")
     @ns_group_customer.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")

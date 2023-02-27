@@ -3,6 +3,7 @@ from flask import request
 from flask_restx import Resource,Namespace,fields
 from models import B2bTablePrice,B2bTablePriceProduct,db
 import sqlalchemy as sa
+from sqlalchemy import exc
 from auth import auth
 
 ns_price = Namespace("price-table",description="Operações para manipular dados de tabelas de preços")
@@ -57,28 +58,35 @@ class PriceTableList(Resource):
         pag_size = 25 if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
         search   = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
 
-        if search!="":
-            rquery = B2bTablePrice.query.filter(sa.and_(B2bTablePrice.active==True,B2bTablePrice.name.like(search))).paginate(page=pag_num,per_page=pag_size)
-        else:
-            rquery = B2bTablePrice.query.filter(B2bTablePrice.active==True).paginate(page=pag_num,per_page=pag_size)
+        try:
+            if search!="":
+                rquery = B2bTablePrice.query.filter(sa.and_(B2bTablePrice.active==True,B2bTablePrice.name.like(search))).paginate(page=pag_num,per_page=pag_size)
+            else:
+                rquery = B2bTablePrice.query.filter(B2bTablePrice.active==True).paginate(page=pag_num,per_page=pag_size)
 
-        return {
-            "pagination":{
-                "registers": rquery.total,
-                "page": pag_num,
-                "per_page": pag_size,
-                "pages": rquery.pages,
-                "has_next": rquery.has_next
-            },
-            "data":[{
-                "id": m.id,
-                "name": m.name,
-                "start_date": m.start_date,
-                "end_date": m.end_date,
-                "active": m.active,
-                "products": self.get_products(m.id)
-            }for m in rquery.items]
-        }
+            return {
+                "pagination":{
+                    "registers": rquery.total,
+                    "page": pag_num,
+                    "per_page": pag_size,
+                    "pages": rquery.pages,
+                    "has_next": rquery.has_next
+                },
+                "data":[{
+                    "id": m.id,
+                    "name": m.name,
+                    "start_date": m.start_date,
+                    "end_date": m.end_date,
+                    "active": m.active,
+                    "products": self.get_products(m.id)
+                }for m in rquery.items]
+            }
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
     
     def get_products(self,id:int):
         rquery = B2bTablePriceProduct.query.filter(B2bTablePriceProduct.id_table_price==id)
@@ -104,23 +112,30 @@ class PriceTableApi(Resource):
     @ns_price.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
     #@auth.login_required
     def get(self,id:int):
-        rquery = B2bTablePrice.query.get(id)
-        squery = B2bTablePriceProduct.query.filter(B2bTablePriceProduct.id_table_price==id)
-        return {
-            "id": rquery.id,
-            "name": rquery.name,
-            "start_date": rquery.start_date.strftime("%Y-%m-%d %H:%M:%S"),
-            "end_date": rquery.end_date.strftime("%Y-%m-%d %H:%M:%S"),
-            "active": rquery.active,
-            "date_created": rquery.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-            "date_updated": rquery.date_updated.strftime("%Y-%m-%d %H:%M:%S"),
-            "products": [{
-                "id_product": m.id_product,
-                "stock_quantity": m.stock_quantity,
-                "price": m.price,
-                "price_retail": m.price_retail
-            }for m in squery.items]
-        }
+        try:
+            rquery = B2bTablePrice.query.get(id)
+            squery = B2bTablePriceProduct.query.filter(B2bTablePriceProduct.id_table_price==id)
+            return {
+                "id": rquery.id,
+                "name": rquery.name,
+                "start_date": rquery.start_date.strftime("%Y-%m-%d %H:%M:%S"),
+                "end_date": rquery.end_date.strftime("%Y-%m-%d %H:%M:%S"),
+                "active": rquery.active,
+                "date_created": rquery.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+                "date_updated": rquery.date_updated.strftime("%Y-%m-%d %H:%M:%S"),
+                "products": [{
+                    "id_product": m.id_product,
+                    "stock_quantity": m.stock_quantity,
+                    "price": m.price,
+                    "price_retail": m.price_retail
+                }for m in squery.items]
+            }
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
     
     @ns_price.response(HTTPStatus.OK.value,"Atualiza os dados de um pedido")
     @ns_price.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")

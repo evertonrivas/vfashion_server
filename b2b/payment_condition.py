@@ -3,6 +3,7 @@ from flask_restx import Resource,Namespace,fields
 from flask import request
 from models import B2bPaymentConditions,db
 import sqlalchemy as sa
+from sqlalchemy import exc
 from auth import auth
 
 ns_payment = Namespace("payment-conditions",description="Operações para manipular dados de condições de pagamento")
@@ -47,28 +48,35 @@ class PaymentConditionsList(Resource):
         pag_size = 25 if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
         search   = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
 
-        if search!="":
-            rquery = B2bPaymentConditions.query.filter(sa.and_(B2bPaymentConditions.name.like(search),B2bPaymentConditions.trash==False)).paginate(page=pag_num,per_page=pag_size)
-        else:
-            rquery = B2bPaymentConditions.query.filter(B2bPaymentConditions.trash==False).paginate(page=pag_num,per_page=pag_size)
+        try:
+            if search!="":
+                rquery = B2bPaymentConditions.query.filter(sa.and_(B2bPaymentConditions.name.like(search),B2bPaymentConditions.trash==False)).paginate(page=pag_num,per_page=pag_size)
+            else:
+                rquery = B2bPaymentConditions.query.filter(B2bPaymentConditions.trash==False).paginate(page=pag_num,per_page=pag_size)
 
-        return {
-            "pagination":{
-                "registers": rquery.total,
-                "page": pag_num,
-                "per_page": pag_size,
-                "pages": rquery.pages,
-                "has_next": rquery.has_next
-            },
-            "data":[{
-                "id":m.id,
-                "name": m.name,
-                "received_days": m.received_days,
-                "installments": m.installments,
-                "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S")
-            } for m in rquery.items]
-        }
+            return {
+                "pagination":{
+                    "registers": rquery.total,
+                    "page": pag_num,
+                    "per_page": pag_size,
+                    "pages": rquery.pages,
+                    "has_next": rquery.has_next
+                },
+                "data":[{
+                    "id":m.id,
+                    "name": m.name,
+                    "received_days": m.received_days,
+                    "installments": m.installments,
+                    "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+                    "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S")
+                } for m in rquery.items]
+            }
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
 
     @ns_payment.response(HTTPStatus.OK.value,"Cria uma nova condição de pagamento no sistema")
     @ns_payment.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar nova condicao de pagamento!")
@@ -85,8 +93,12 @@ class PaymentConditionsList(Resource):
             db.session.add(payCond)
             db.session.commit()
             return payCond.id
-        except:
-            return 0
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
 
 @ns_payment.route("/<int:id>")
 @ns_payment.param("id","Id do registro")
@@ -94,7 +106,14 @@ class PaymentConditionApi(Resource):
     @ns_payment.response(HTTPStatus.OK.value,"Obtem um registro de uma condição de pagamento",pay_model)
     @ns_payment.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
     def get(self,id:int):
-        return B2bPaymentConditions.query.get(id).to_dict()
+        try:
+            return B2bPaymentConditions.query.get(id).to_dict()
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
 
     @ns_payment.response(HTTPStatus.OK.value,"Salva dados de uma condição de pgamento")
     @ns_payment.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")

@@ -63,29 +63,36 @@ class OrdersList(Resource):
         pag_size = 25 if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
         search   = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
 
-        if search!=None:
-            #pensar nos filtros para essa listagem
-            rquery = B2bOrders.query.paginate(page=pag_num,per_page=pag_size)
-        else:
-            rquery = B2bOrders.query.filter(B2bOrders.trash==False).paginate(page=pag_num,per_page=pag_size)
+        try:
+            if search!=None:
+                #pensar nos filtros para essa listagem
+                rquery = B2bOrders.query.paginate(page=pag_num,per_page=pag_size)
+            else:
+                rquery = B2bOrders.query.filter(B2bOrders.trash==False).paginate(page=pag_num,per_page=pag_size)
 
-        return {
-            "pagination":{
-                "registers": rquery.total,
-                "page": pag_num,
-                "per_page": pag_size,
-                "pages": rquery.pages,
-                "has_next": rquery.has_next
-            },
-            "data":[{
-                "id": m.id,
-                "id_customer": m.id_customer,
-                "make_online": m.make_online,
-                "id_payment_condition": m.id_payment_condition,
-                "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S")
-            } for m in rquery.items]
-        }
+            return {
+                "pagination":{
+                    "registers": rquery.total,
+                    "page": pag_num,
+                    "per_page": pag_size,
+                    "pages": rquery.pages,
+                    "has_next": rquery.has_next
+                },
+                "data":[{
+                    "id": m.id,
+                    "id_customer": m.id_customer,
+                    "make_online": m.make_online,
+                    "id_payment_condition": m.id_payment_condition,
+                    "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+                    "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S")
+                } for m in rquery.items]
+            }
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
 
     @ns_order.response(HTTPStatus.OK.value,"Cria um novo pedido")
     @ns_order.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar pedido!")
@@ -111,8 +118,12 @@ class OrdersList(Resource):
                 db.session.commit()
 
             return order.id
-        except:
-            return 0
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
 
 
 @ns_order.route("/<int:id>")
@@ -123,22 +134,29 @@ class OrderApi(Resource):
     @ns_order.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
     #@auth.login_required
     def get(self,id:int):
-        order = B2bOrders.query.get(id)
-        squery = B2bOrdersProducts.query.filter_by(id_order=int(request.args.get("id_order"))).all()
-        return {
-            "id": order.id,
-            "id_customer": order.id_customer,
-            "make_online": order.make_online,
-            "id_payment_condition": order.id_payment_condition,
-            "date_created": order.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-            "date_updated": order.date_updated.strftime("%Y-%m-%d %H:%M:%S"),
-            "products": [{
-                "id_product": m.id_product,
-                "color": m.color,
-                "size" : m.size,
-                "quantity": m.quantity
-            }for m in squery]
-        }
+        try:
+            order = B2bOrders.query.get(id)
+            squery = B2bOrdersProducts.query.filter_by(id_order=int(request.args.get("id_order"))).all()
+            return {
+                "id": order.id,
+                "id_customer": order.id_customer,
+                "make_online": order.make_online,
+                "id_payment_condition": order.id_payment_condition,
+                "date_created": order.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+                "date_updated": order.date_updated.strftime("%Y-%m-%d %H:%M:%S"),
+                "products": [{
+                    "id_product": m.id_product,
+                    "color": m.color,
+                    "size" : m.size,
+                    "quantity": m.quantity
+                }for m in squery]
+            }
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
 
 
     @ns_order.response(HTTPStatus.OK.value,"Atualiza os dados de um pedido")
@@ -203,7 +221,11 @@ class ProductsOrderList(Resource):
             } for m in rquery.items]
             
         except exc.SQLAlchemyError as e:
-            raise e
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
 
     
     @ns_porder.response(HTTPStatus.OK.value,"Remove um produto de um pedido")

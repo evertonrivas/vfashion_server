@@ -2,7 +2,9 @@ from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
 from models import CmmProducts,CmmProductsSku,CmmProductsGrid,CmmProductsGridDistribution,db
+from flask_sqlalchemy import ex
 import sqlalchemy as sa
+from sqlalchemy import exc
 from auth import auth
 
 ns_prod = Namespace("products",description="Operações para manipular dados de produtos")
@@ -70,37 +72,44 @@ class ProductsList(Resource):
         pag_size = 25 if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
         search   = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
 
-        if search!="":
-            rquery = CmmProducts.query.filter(sa.and_(CmmProducts.trash==False,CmmProducts.name.like(search))).paginate(page=pag_num,per_page=pag_size)
-        else:
-            rquery = CmmProducts.query.filter(CmmProducts.trash==False).paginate(page=pag_num,per_page=pag_size)
+        try:
+            if search!="":
+                rquery = CmmProducts.query.filter(sa.and_(CmmProducts.trash==False,CmmProducts.name.like(search))).paginate(page=pag_num,per_page=pag_size)
+            else:
+                rquery = CmmProducts.query.filter(CmmProducts.trash==False).paginate(page=pag_num,per_page=pag_size)
 
-        return {
-            "paginate":{
-                "registers": rquery.total,
-                "page": pag_num,
-                "per_page": pag_size,
-                "pages": rquery.pages,
-                "has_next": rquery.has_next
-            },
-            "data":[{
-                "id": m.id,
-                "prodCode": m.prodCode,
-                "barCode": m.barCode,
-                "refCode": m.refCode,
-                "name": m.Name,
-                "description": m.description,
-                "observation": m.observation,
-                "ncm": m.ncm,
-                "image": m.image,
-                "price": m.price,
-                "measure_unit": m.measure_unit,
-                "structure": m.structure,
-                "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S"),
-                "sku": self.get_sku(m.id)
-            } for m in rquery.items]
-        }
+            return {
+                "paginate":{
+                    "registers": rquery.total,
+                    "page": pag_num,
+                    "per_page": pag_size,
+                    "pages": rquery.pages,
+                    "has_next": rquery.has_next
+                },
+                "data":[{
+                    "id": m.id,
+                    "prodCode": m.prodCode,
+                    "barCode": m.barCode,
+                    "refCode": m.refCode,
+                    "name": m.Name,
+                    "description": m.description,
+                    "observation": m.observation,
+                    "ncm": m.ncm,
+                    "image": m.image,
+                    "price": m.price,
+                    "measure_unit": m.measure_unit,
+                    "structure": m.structure,
+                    "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+                    "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S"),
+                    "sku": self.get_sku(m.id)
+                } for m in rquery.items]
+            }
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
 
     def get_sku(self,id:int):
         rquery = CmmProductsSku.query.filter_by(id_product=id)
@@ -139,8 +148,12 @@ class ProductsList(Resource):
                 db.session.commit()
 
             return prod.id
-        except:
-            return 0
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
 
 
 @ns_prod.route("/<int:id>")
@@ -151,28 +164,35 @@ class ProductApi(Resource):
     @ns_prod.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
     #@auth.login_required
     def get(self,id:int):
-        rquery = CmmProducts.query.get(id)
-        squery = CmmProductsSku.query.filter_by(id_product=id)
-        return {
-            "id": rquery.id,
-            "prodCode": rquery.prodCode,
-            "barCode": rquery.barCode,
-            "refCode": rquery.refCode,
-            "name": rquery.Name,
-            "description": rquery.description,
-            "observation": rquery.observation,
-            "ncm": rquery.ncm,
-            "image": rquery.image,
-            "price": rquery.price,
-            "measure_unit": rquery.measure_unit,
-            "structure": rquery.structure,
-            "date_created": rquery.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-            "date_updated": rquery.date_updated.strftime("%Y-%m-%d %H:%M:%S"),
-            "sku": [{
-                "color": m.color,
-                "size" : m.size
-            }for m in squery.items]
-        }
+        try:
+            rquery = CmmProducts.query.get(id)
+            squery = CmmProductsSku.query.filter_by(id_product=id)
+            return {
+                "id": rquery.id,
+                "prodCode": rquery.prodCode,
+                "barCode": rquery.barCode,
+                "refCode": rquery.refCode,
+                "name": rquery.Name,
+                "description": rquery.description,
+                "observation": rquery.observation,
+                "ncm": rquery.ncm,
+                "image": rquery.image,
+                "price": rquery.price,
+                "measure_unit": rquery.measure_unit,
+                "structure": rquery.structure,
+                "date_created": rquery.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+                "date_updated": rquery.date_updated.strftime("%Y-%m-%d %H:%M:%S"),
+                "sku": [{
+                    "color": m.color,
+                    "size" : m.size
+                }for m in squery.items]
+            }
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
 
     @ns_prod.response(HTTPStatus.OK.value,"Salva dados de um produto")
     @ns_prod.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
@@ -262,25 +282,32 @@ class GridList(Resource):
         pag_size = 25 if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
         search   = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
 
-        if search!="":
-            rquery = CmmProductsGrid.query.filter(sa.and_(CmmProductsGrid.trash==False,CmmProductsGrid.name.like(search))).paginate(page=pag_num,per_page=pag_size)
-        else:
-            rquery = CmmProductsGrid.query.filter(CmmProductsGrid.trash==False).paginate(page=pag_num,per_page=pag_size)
+        try:
+            if search!="":
+                rquery = CmmProductsGrid.query.filter(sa.and_(CmmProductsGrid.trash==False,CmmProductsGrid.name.like(search))).paginate(page=pag_num,per_page=pag_size)
+            else:
+                rquery = CmmProductsGrid.query.filter(CmmProductsGrid.trash==False).paginate(page=pag_num,per_page=pag_size)
 
-        return {
-            "pagination":{
-                "registers": rquery.total,
-                "page": pag_num,
-                "per_page": pag_size,
-                "pages": rquery.pages,
-                "has_next": rquery.has_next
-            },
-            "data":[{
-                "id": m.id,
-                "name": m.name,
-                "distribution": self.get_grid_distribution(m.id)
-            }for m in rquery.items]
-        }
+            return {
+                "pagination":{
+                    "registers": rquery.total,
+                    "page": pag_num,
+                    "per_page": pag_size,
+                    "pages": rquery.pages,
+                    "has_next": rquery.has_next
+                },
+                "data":[{
+                    "id": m.id,
+                    "name": m.name,
+                    "distribution": self.get_grid_distribution(m.id)
+                }for m in rquery.items]
+            }
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
 
     def get_grid_distribution(self,id:int):
         rquery = CmmProductsGridDistribution.query.find_by(id_grid=id)
@@ -315,8 +342,12 @@ class GridList(Resource):
                 db.session.commit()
 
             return grid.id
-        except:
-            return 0
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
 
 
 @ns_gprod.route("/<int:id>")
@@ -326,18 +357,25 @@ class GridApi(Resource):
     @ns_gprod.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
     #@auth.login_required
     def get(self,id:int):
-        grid = CmmProductsGrid.query.get(id)
-        dist = CmmProductsGridDistribution.query.find_by(id_grid=id)
-        return {
-            "id": id,
-            "name": grid.name,
-            "distribution":[{
-                "size": m.size,
-                "color": m.color,
-                "value": m.value,
-                "is_percent": m.is_percent
-            } for m in dist.items]
-        }
+        try:
+            grid = CmmProductsGrid.query.get(id)
+            dist = CmmProductsGridDistribution.query.find_by(id_grid=id)
+            return {
+                "id": id,
+                "name": grid.name,
+                "distribution":[{
+                    "size": m.size,
+                    "color": m.color,
+                    "value": m.value,
+                    "is_percent": m.is_percent
+                } for m in dist.items]
+            }
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
 
     @ns_gprod.response(HTTPStatus.OK.value,"Salva dados de uma grade")
     @ns_gprod.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")

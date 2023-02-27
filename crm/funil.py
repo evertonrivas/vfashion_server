@@ -3,6 +3,7 @@ from flask_restx import Resource,fields,Namespace
 from flask import request
 from models import CrmFunnel,CrmFunnelStageCustomer,CrmFunnelStage,db
 import sqlalchemy as sa
+from sqlalchemy import exc
 from auth import auth
 
 ns_funil = Namespace("funnels",description="Operações para manipular funis de clientes")
@@ -59,26 +60,33 @@ class FunnelList(Resource):
         pag_size = 25 if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
         search   = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
     
-        if search!="":
-            rquery = CrmFunnel.query.filter(sa.and_(CrmFunnel.trash==False,CrmFunnel.name.like(search))).paginate(page=pag_num,per_page=pag_size)
-        else:
-            rquery = CrmFunnel.query.filter(CrmFunnel.trash==False).paginate(page=pag_num,per_page=pag_size)
-        return {
-            "pagination":{
-                "registers": rquery.total,
-                "page": pag_num,
-                "per_page": pag_size,
-                "pages": rquery.pages,
-                "has_next": rquery.has_next
-            },
-            "data":[{
-                "id": m.id,
-                "name": m.name,
-                "stages": self.get_stages(m.id),
-                "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S")
-            } for m in rquery.items]
-        }
+        try:
+            if search!="":
+                rquery = CrmFunnel.query.filter(sa.and_(CrmFunnel.trash==False,CrmFunnel.name.like(search))).paginate(page=pag_num,per_page=pag_size)
+            else:
+                rquery = CrmFunnel.query.filter(CrmFunnel.trash==False).paginate(page=pag_num,per_page=pag_size)
+            return {
+                "pagination":{
+                    "registers": rquery.total,
+                    "page": pag_num,
+                    "per_page": pag_size,
+                    "pages": rquery.pages,
+                    "has_next": rquery.has_next
+                },
+                "data":[{
+                    "id": m.id,
+                    "name": m.name,
+                    "stages": self.get_stages(m.id),
+                    "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+                    "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S")
+                } for m in rquery.items]
+            }
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
 
     def get_stages(self,id:int):
         rquery = CrmFunnelStage.query.filter(CrmFunnelStage.id_funnel==id)
@@ -110,8 +118,12 @@ class FunnelList(Resource):
                 db.session.add(stage)
                 db.session.commit()
             return fun.id
-        except:
-            return 0
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
 
 @ns_funil.route("/<int:id>")
 @ns_funil.param("id","Id do registro")
@@ -120,21 +132,28 @@ class FunnelApi(Resource):
     @ns_funil.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
     #@auth.login_required
     def get(self,id:int):
-        rquery = CrmFunnel.query.get(id)
-        squery = CrmFunnelStage.query.filter(CrmFunnelStage.id_funnel==id)
-        return {
-            "id": rquery.id,
-            "name": rquery.name,
-            "date_created": rquery.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-            "date_updated": rquery.date_updated.strftime("%Y-%m-%d %H:%M:%S"),
-            "stages": [{
-                "id": m.id,
-                "name": m.name,
-                "order": m.order,
-                "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S")
-            }for m in squery.items]
-        }
+        try:
+            rquery = CrmFunnel.query.get(id)
+            squery = CrmFunnelStage.query.filter(CrmFunnelStage.id_funnel==id)
+            return {
+                "id": rquery.id,
+                "name": rquery.name,
+                "date_created": rquery.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+                "date_updated": rquery.date_updated.strftime("%Y-%m-%d %H:%M:%S"),
+                "stages": [{
+                    "id": m.id,
+                    "name": m.name,
+                    "order": m.order,
+                    "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+                    "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S")
+                }for m in squery.items]
+            }
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
 
     @ns_funil.response(HTTPStatus.OK.value,"Atualiza dados de um funil")
     @ns_funil.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
@@ -145,6 +164,7 @@ class FunnelApi(Resource):
             fun = CrmFunnel.query.get(id)
             fun.name = fun.name if request.form.get("name") is None else request.form.get("name")
             db.session.commit()
+            return True
         except:
             return False
     
@@ -165,9 +185,16 @@ class FunnelApi(Resource):
 class FunnelStageApi(Resource):
     @ns_fun_stg.response(HTTPStatus.OK.value,"Exibe os dados de um estágio de um funil")
     @ns_fun_stg.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
-    #@auth.login_required
+    @auth.login_required
     def get(self,id:int):
-        return CrmFunnelStage.query.get(id).to_dict()
+        try:
+            return CrmFunnelStage.query.get(id).to_dict()
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
 
     @ns_fun_stg.response(HTTPStatus.OK.value,"Cria ou atualiza um estágio em um funil")
     @ns_fun_stg.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
@@ -192,8 +219,12 @@ class FunnelStageApi(Resource):
                 db.session.add(stage)
                 db.session.commit()
                 return stage.id
-        except:
-            return 0
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
 
     @ns_fun_stg.response(HTTPStatus.OK.value,"Exclui um estágio de um funil")
     @ns_fun_stg.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")

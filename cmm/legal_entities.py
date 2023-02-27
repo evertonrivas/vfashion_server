@@ -3,6 +3,7 @@ from flask_restx import Resource,Namespace,fields
 from flask import request
 from models import CmmLegalEntities,db
 import sqlalchemy as sa
+from sqlalchemy import exc
 from auth import auth
 
 ns_legal = Namespace("legal-entities",description="Operações para manipular dados de clientes/representantes")
@@ -57,34 +58,41 @@ class CustomersList(Resource):
         pag_size = 25 if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
         search   = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
 
-        if search!="":
-            rquery = CmmLegalEntities.query.filter(sa.and_(CmmLegalEntities.trash == False,CmmLegalEntities.name.like(search))).paginate(page=pag_num,per_page=pag_size)
-        else:
-            rquery = CmmLegalEntities.query.filter(CmmLegalEntities.trash == False).paginate(page=pag_num,per_page=pag_size)
+        try:
+            if search!="":
+                rquery = CmmLegalEntities.query.filter(sa.and_(CmmLegalEntities.trash == False,CmmLegalEntities.name.like(search))).paginate(page=pag_num,per_page=pag_size)
+            else:
+                rquery = CmmLegalEntities.query.filter(CmmLegalEntities.trash == False).paginate(page=pag_num,per_page=pag_size)
 
-        return {
-            "pagination":{
-                "registers": rquery.total,
-                "page": pag_num,
-                "per_page": pag_size,
-                "pages": rquery.pages,
-                "has_next": rquery.has_next
-            },
-            "data":[{
-                "id": m.id,
-                "name": m.name,
-                "taxvat": m.taxvat,
-                "state_region":m.state_region,
-                "city": m.city,
-                "postal_code": m.postal_code,
-                "neighborhood": m.neighborhood,
-                "phone": m.phone,
-                "email": m.email,
-                "is_representative": m.is_representative,
-                "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S")
-            } for m in rquery.items]
-        }
+            return {
+                "pagination":{
+                    "registers": rquery.total,
+                    "page": pag_num,
+                    "per_page": pag_size,
+                    "pages": rquery.pages,
+                    "has_next": rquery.has_next
+                },
+                "data":[{
+                    "id": m.id,
+                    "name": m.name,
+                    "taxvat": m.taxvat,
+                    "state_region":m.state_region,
+                    "city": m.city,
+                    "postal_code": m.postal_code,
+                    "neighborhood": m.neighborhood,
+                    "phone": m.phone,
+                    "email": m.email,
+                    "is_representative": m.is_representative,
+                    "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+                    "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S")
+                } for m in rquery.items]
+            }
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
 
     @ns_legal.response(HTTPStatus.OK.value,"Cria um novo registro de cliente/representante")
     @ns_legal.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar um novo cliente/representante!")
@@ -113,8 +121,12 @@ class CustomersList(Resource):
             db.session.add(cst)
             db.session.commit()
             return cst.id
-        except:
-            return 0
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
 
 
 @ns_legal.route("/<int:id>")
@@ -125,7 +137,14 @@ class CustomerApi(Resource):
     @ns_legal.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
     #@auth.login_required
     def get(self,id:int):
-        return CmmLegalEntities.query.get(id).to_dict()
+        try:
+            return CmmLegalEntities.query.get(id).to_dict()
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
 
     @ns_legal.response(HTTPStatus.OK.value,"Salva dados de um cliente/representante")
     @ns_legal.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
