@@ -7,11 +7,22 @@ from b2b.customer_group import ns_group_customer
 
 """ Módulo Business to Business (Gestão de Vendas entre empresas)
     Módulo para realizar pedidos que realiza:
-        - Gestão de cadastro de Grupos de clientes
-        - Gestão de Pedidos
+        - Gestão de cadastro
+            - Clientes
+            - Grupos de Clientes
+            - Representantes
+        - Gestão de pedidos
+            - Aprovação/Reprovação
         - Gestão de condições de pagamento
+            - Manutenção
         - Gestão de tabelas de preços
+            - Manuteção
         - Gestão de produtos
+            - Manuteção
+            - Configuração
+        - Gestão financeira do cliente 
+            - Reimpressão/envio de boletos
+            - Reimpressão/envio de NF-e
 
 Keyword arguments: vendas, b2c, produtos, cliente, pedidos, condições de pagamento
 """

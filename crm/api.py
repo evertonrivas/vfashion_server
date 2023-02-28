@@ -3,7 +3,7 @@ from flask_restx import Api
 from crm.funil import ns_funil,ns_fun_stg
 
 """ Módulo Customer Relationship Management (Gestão de Relacionamento com o Cliente). 
-    Módulo para gestão de contatos com o cliente incluindo vida financeira (emissão de boletos, 2ª via NF-e, qualificação)
+    Módulo para gestão de contatos com o cliente (qualificação)
 
 Keyword arguments: relacionamento, clientes, contatos, financeiro
 """
