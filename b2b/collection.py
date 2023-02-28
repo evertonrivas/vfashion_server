@@ -6,7 +6,7 @@ import sqlalchemy as sa
 from sqlalchemy import exc
 from auth import auth
 
-ns_collection = Namespace("collection",description="Operações para manipular grupos de clientes")
+ns_collection = Namespace("collection",description="Operações para manipular dados de coleções")
 
 ####################################################################################
 #            INICIO DAS CLASSES QUE IRAO TRATAR OS GRUPOS DE CLIENTES.             #
