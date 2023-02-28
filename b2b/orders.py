@@ -131,7 +131,7 @@ class OrdersList(Resource):
 class OrderApi(Resource):
 
     @ns_order.response(HTTPStatus.OK.value,"Obtem um registro de pedido",ord_model)
-    @ns_order.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
+    @ns_order.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
     #@auth.login_required
     def get(self,id:int):
         try:
@@ -160,7 +160,7 @@ class OrderApi(Resource):
 
 
     @ns_order.response(HTTPStatus.OK.value,"Atualiza os dados de um pedido")
-    @ns_order.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
+    @ns_order.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
     @ns_order.doc(body=ord_model)
     #@auth.login_required
     def post(self,id:int)->bool:
@@ -191,7 +191,7 @@ class OrderApi(Resource):
             return False
     
     @ns_order.response(HTTPStatus.OK.value,"Exclui os dados de um pedido")
-    @ns_order.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
+    @ns_order.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
     #@auth.login_required
     def delete(self,id:int)->bool:
         try:
