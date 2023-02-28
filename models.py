@@ -179,6 +179,10 @@ class B2bCollection(db.Model,SerializerMixin):
     date_updated  = sa.Column(sa.DateTime,onupdate=func.now())
     trash         = sa.Column(sa.Boolean,nullable=False,default=False)
 
+class B2bCollectionPrice(db.Model,SerializerMixin):
+    id_collection  = sa.Column(sa.Integer,primary_key=True,nullable=False)
+    id_table_price = sa.Column(sa.Integer,primary_key=True,nullable=False)
+
 
 class CrmFunnel(db.Model,SerializerMixin):
     id           = sa.Column(sa.Integer,primary_key=True,nullable=False,autoincrement=True)
