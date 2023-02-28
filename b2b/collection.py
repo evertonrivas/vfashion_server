@@ -120,7 +120,7 @@ class CollectionList(Resource):
 
 @ns_collection.route("/<int:id>")
 @ns_collection.param("id","Id do registro")
-class UserGroupApi(Resource):
+class CollectionApi(Resource):
     @ns_collection.response(HTTPStatus.OK.value,"Retorna os dados dados de uma coleção")
     @ns_collection.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
     #@auth.login_required
@@ -183,3 +183,41 @@ class UserGroupApi(Resource):
             return True
         except:
             return False
+        
+
+class ColletionPriceApi(Resource):
+
+    @ns_collection.response(HTTPStatus.OK.value,"Adiciona uma tabela de preço em uma coleção")
+    @ns_collection.response(HTTPStatus.BAD_REQUEST.value,"Falha ao adicionar preço!")
+    @ns_collection.param("id_table_price","Código da tabela de preço","formData",required=True)
+    @ns_collection.param("id_collection","Código da coleção","formData",required=True)
+    def post(self):
+        try:
+            colp = B2bCollectionPrice()
+            colp.id_collection  = int(request.form.get("id_collection"))
+            colp.id_table_price = int(request.form.get("id_table_price"))
+            db.session.add(colp)
+            db.session.commit()
+            return True
+        except exc.DatabaseError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
+        pass
+
+    @ns_collection.response(HTTPStatus.OK.value,"Remove uma tabela de preço em uma coleção")
+    @ns_collection.response(HTTPStatus.BAD_REQUEST.value,"Falha ao adicionar preço!")
+    @ns_collection.param("id_table_price","Código da tabela de preço","formData",required=True)
+    @ns_collection.param("id_collection","Código da coleção","formData",required=True)
+    def delete(self):
+        try:
+            grp = B2bCollection.query.get(id)
+            db.session.delete(grp)
+            db.session.commit()
+            return True
+        except:
+            return False
+
+ns_collection.add_resource(ColletionPriceApi,'/manage-price')
