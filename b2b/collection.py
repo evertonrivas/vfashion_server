@@ -9,7 +9,7 @@ from auth import auth
 ns_collection = Namespace("collection",description="Operações para manipular dados de coleções")
 
 ####################################################################################
-#            INICIO DAS CLASSES QUE IRAO TRATAR OS GRUPOS DE CLIENTES.             #
+#            INICIO DAS CLASSES QUE IRAO TRATAR AS COLEÇÕES DE PRODUTOS            #
 ####################################################################################
 
 coll_pag_model = ns_collection.model(
