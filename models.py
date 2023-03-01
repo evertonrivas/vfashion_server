@@ -42,6 +42,7 @@ class CmmUsers(db.Model,SerializerMixin):
             return None
         return user
 
+
 class CmmUserEntity(db.Model,SerializerMixin):
     id_user     = sa.Column(sa.Integer,nullable=False,primary_key=True)
     id_entity   = sa.Column(sa.Integer,nullable=False,primary_key=True,default=0)
@@ -89,6 +90,7 @@ class CmmProductsSku(db.Model,SerializerMixin):
     id_model   = sa.Column(sa.Integer,primary_key=True,nullable=False)
     color      = sa.Column(sa.String(10),primary_key=True,nullable=False)
     size       = sa.Column(sa.String(5),primary_key=True,nullable=False)
+
 
 class CmmProductsGrid(db.Model,SerializerMixin):
     id           = sa.Column(sa.Integer,primary_key=True,autoincrement=True,nullable=False)
