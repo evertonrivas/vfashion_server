@@ -23,6 +23,8 @@ prd_pag_model = ns_prod.model(
 prd_sku_model = ns_prod.model(
     "SKU",{
         "id_product": fields.Integer,
+        "id_type": fields.Integer,
+        "id_model": fields.Integer,
         "size": fields.String,
         "color": fields.String
     }
