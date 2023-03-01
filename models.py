@@ -47,6 +47,7 @@ class CmmUserEntity(db.Model,SerializerMixin):
     id_entity   = sa.Column(sa.Integer,nullable=False,primary_key=True,default=0)
     id_consumer = sa.Column(sa.Integer,nullable=False,primary_key=True,default=0)
 
+
 class CmmProducts(db.Model,SerializerMixin):
     id           = sa.Column(sa.Integer,primary_key=True,nullable=False,autoincrement=True)
     prodCode     = sa.Column(sa.String(50),nullable=False)
@@ -66,11 +67,28 @@ class CmmProducts(db.Model,SerializerMixin):
     trash        = sa.Column(sa.Boolean,nullable=False,default=False)
 
 
+class CmmProductType(db.Model,SerializerMixin):
+    id           = sa.Column(sa.Integer,nullable=False,primary_key=True,autoincrement=True)
+    name         = sa.Column(sa.String(128),nullable=False)
+    date_created = sa.Column(sa.DateTime,nullable=False,server_default=func.now())
+    date_updated = sa.Column(sa.DateTime,onupdate=func.now())
+    trash        = sa.Column(sa.Boolean,nullable=False,default=False)
+
+
+class CmmProductModel(db.Model,SerializerMixin):
+    id = sa.Column(sa.Integer,nullable=False,primary_key=True,autoincrement=True)
+    name = sa.Column(sa.String(255),nullable=False)
+    date_created = sa.Column(sa.DateTime,nullable=False,server_default=func.now())
+    date_updated = sa.Column(sa.DateTime,onupdate=func.now())
+    trash        = sa.Column(sa.Boolean,nullable=False,default=False)
+
+
 class CmmProductsSku(db.Model,SerializerMixin):
     id_product = sa.Column(sa.Integer,primary_key=True,nullable=False)
+    id_type    = sa.Column(sa.Integer,primary_key=True,nullable=False)
+    id_model   = sa.Column(sa.Integer,primary_key=True,nullable=False)
     color      = sa.Column(sa.String(10),primary_key=True,nullable=False)
     size       = sa.Column(sa.String(5),primary_key=True,nullable=False)
-
 
 class CmmProductsGrid(db.Model,SerializerMixin):
     id           = sa.Column(sa.Integer,primary_key=True,autoincrement=True,nullable=False)
@@ -178,6 +196,7 @@ class B2bCollection(db.Model,SerializerMixin):
     date_created  = sa.Column(sa.DateTime,nullable=False,server_default=func.now())
     date_updated  = sa.Column(sa.DateTime,onupdate=func.now())
     trash         = sa.Column(sa.Boolean,nullable=False,default=False)
+
 
 class B2bCollectionPrice(db.Model,SerializerMixin):
     id_collection  = sa.Column(sa.Integer,primary_key=True,nullable=False)
