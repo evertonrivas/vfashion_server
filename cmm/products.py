@@ -6,7 +6,7 @@ import sqlalchemy as sa
 from sqlalchemy import exc
 from auth import auth
 
-ns_prod = Namespace("products",description="Operações para manipular dados de produtos")
+ns_prod  = Namespace("products",description="Operações para manipular dados de produtos")
 ns_gprod = Namespace("products-grid",description="Operações para manipular dados das grades de produtos")
 
 
@@ -105,7 +105,7 @@ class ProductsList(Resource):
                     "sku": self.get_sku(m.id)
                 } for m in rquery.items]
             }
-        except exc.SQLAlchemyError as e:
+        except exc.DatabaseError as e:
             return {
                 "error_code": e.code,
                 "error_details": e._message(),
