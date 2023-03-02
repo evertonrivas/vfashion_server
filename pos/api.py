@@ -46,7 +46,7 @@ blueprint = Blueprint("pos",__name__,url_prefix="/pos/api/v1/")
 api = Api(blueprint,
     version="1.0",
     title="API Venda Fashion",
-    description="Uma API REST para sistema de vendas - Módulo PDV",
+    description="Uma API REST para sistema de vendas - Módulo POS",
     contact_email="evertonrivas@gmail.com",
     contact="Venda Fashion",
     contact_url="http://www.vendafashion.com")
