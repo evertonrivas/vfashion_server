@@ -1,8 +1,8 @@
 from flask import Blueprint
 from flask_restx import Api
 from cmm.users import ns_user
-from cmm.products import ns_prod
-from cmm.products import ns_gprod
+from cmm.products import ns_prod, ns_gprod
+from cmm.category import ns_cat
 from cmm.legal_entities import ns_legal
 
 
@@ -13,7 +13,7 @@ Keyword arguments: usuarios, produtos
 """
 
 #nss = [ns_user]
-nss = [ns_user,ns_prod,ns_gprod,ns_legal]
+nss = [ns_prod,ns_gprod,ns_cat,ns_user,ns_legal]
 
 blueprint = Blueprint("cmm",__name__,url_prefix="/cmm/api/v1/")
 
