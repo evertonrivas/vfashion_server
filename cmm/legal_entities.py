@@ -173,8 +173,12 @@ class CustomerApi(Resource):
             cst.is_representative = cst.is_representative if request.form.get("is_representative") is None else request.form.get("is_respresentative")
             db.session.commit()
             return True
-        except:
-            return False
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
     
     @ns_legal.response(HTTPStatus.OK.value,"Exclui os dados de um cliente/representante")
     @ns_legal.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
@@ -185,5 +189,9 @@ class CustomerApi(Resource):
             cst.trash = True
             db.session.commit()
             return True
-        except:
-            return False
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }

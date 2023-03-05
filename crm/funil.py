@@ -165,8 +165,12 @@ class FunnelApi(Resource):
             fun.name = fun.name if request.form.get("name") is None else request.form.get("name")
             db.session.commit()
             return True
-        except:
-            return False
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
     
     @ns_funil.response(HTTPStatus.OK.value,"Exclui os dados de um funil")
     @ns_funil.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
@@ -235,5 +239,9 @@ class FunnelStageApi(Resource):
             db.session.delete(stage)
             db.session.commit()
             return True
-        except:
-            return False
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }

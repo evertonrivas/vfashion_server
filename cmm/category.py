@@ -56,7 +56,7 @@ class CategoryList(Resource):
         search   = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
         try:
             rquery = ""
-        except exc.DatabaseError as e:
+        except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
                 "error_details": e._message(),

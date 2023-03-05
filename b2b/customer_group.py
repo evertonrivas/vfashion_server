@@ -172,8 +172,12 @@ class UserGroupApi(Resource):
                 db.session.commit()
 
             return True
-        except:
-            return False
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
     
     @ns_group_customer.response(HTTPStatus.OK.value,"Exclui os dados de um grupo de clientes")
     @ns_group_customer.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
@@ -184,5 +188,9 @@ class UserGroupApi(Resource):
             grp.trash = True
             db.session.commit()
             return True
-        except:
-            return False
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }

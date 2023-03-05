@@ -102,7 +102,32 @@ class PriceTableList(Resource):
     @ns_price.doc(body=prc_model)
     #@auth.login_required
     def post(self)->int:
-        return 0
+        try:
+            req = request.get_json()
+            table = B2bTablePrice()
+            table.name       = req.name
+            table.start_date = req.start_date
+            table.end_date   = req.end_date
+            table.active     = req.active
+            db.session.add(table)
+            db.session.commit()
+            for prod in table.products:
+                p = B2bTablePriceProduct()
+                p.id_product = prod.id_product
+                p.id_table_price = table.id
+                p.stock_quantity = prod.stock_quantity
+                p.price          = prod.price
+                p.price_retail   = prod.price_retail
+                db.session.add(p)
+
+            db.session.commit()           
+            return table.id
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
 
 @ns_price.route("/<int:id>")
 @ns_price.param("id","Id do registro")
@@ -151,8 +176,12 @@ class PriceTableApi(Resource):
             price.active     = price.active   if req.active is None else req.active
             db.session.commit()
             return True
-        except:
-            return False
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
 
     @ns_price.response(HTTPStatus.OK.value,"Exclui os dados de um carrinho")
     @ns_price.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
@@ -163,5 +192,9 @@ class PriceTableApi(Resource):
             price.active = False
             db.session.commit()
             return True
-        except:
-            return False
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }

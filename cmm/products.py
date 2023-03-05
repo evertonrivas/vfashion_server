@@ -105,7 +105,7 @@ class ProductsList(Resource):
                     "sku": self.get_sku(m.id)
                 } for m in rquery.items]
             }
-        except exc.DatabaseError as e:
+        except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
                 "error_details": e._message(),
@@ -215,8 +215,12 @@ class ProductApi(Resource):
             prod.trash        = prod.trash if req.trash is None else req.trash
             db.session.commit()
             return True
-        except:
-            return False
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
     
     @ns_prod.response(HTTPStatus.OK.value,"Exclui os dados de um produto")
     @ns_prod.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
@@ -227,8 +231,12 @@ class ProductApi(Resource):
             prod.trash = True
             db.session.commit()
             return True
-        except:
-            return False
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
 
 ####################################################################################
 #           INICIO DAS CLASSES QUE IRAO TRATAR AS GRADES DE  PRODUTOS.             #
@@ -402,8 +410,12 @@ class GridApi(Resource):
                 db.session.add(gridd)
                 db.session.commit()
             return True
-        except:
-            return False
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
     
     @ns_gprod.response(HTTPStatus.OK.value,"Exclui os dados de uma grade")
     @ns_gprod.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
@@ -414,5 +426,9 @@ class GridApi(Resource):
             grid.trash = True
             db.session.commit()
             return True
-        except:
-            return False
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }

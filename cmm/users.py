@@ -54,9 +54,9 @@ class UsersList(Resource):
 
         try:
             if request.args.get("query")!=None:
-                rquery = CmmUsers.query.filter(sa.and_(CmmUsers.name.like(search),CmmUsers.active==False)).paginate(page=pag_num,per_page=pag_size)
+                rquery = CmmUsers.query.filter(sa.and_(CmmUsers.username.like(search),CmmUsers.active==True)).paginate(page=pag_num,per_page=pag_size)
             else:
-                rquery = CmmUsers.query.filter(CmmUsers.active==False).paginate(page=pag_num,per_page=pag_size)
+                rquery = CmmUsers.query.filter(CmmUsers.active==True).paginate(page=pag_num,per_page=pag_size)
 
             return {
                 "pagination":{
@@ -69,7 +69,6 @@ class UsersList(Resource):
                 "data":[{
                     "id": m.id,
                     "username": m.username,
-                    "password": m.password,
                     "type": m.type,
                     "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                     "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S")
@@ -135,11 +134,15 @@ class UserApi(Resource):
             usr.username = usr.username if request.form.get("username") is None else request.form.get("username")
             usr.password = usr.password if request.form.get("password") is None else usr.hash_pwd(request.form.get("password"))
             usr.type     = usr.type if request.form.get("type") is None else request.form.get("type")
-            usr.active   = usr.active if request.form.get("active") is None else request.form.get("active")
+            usr.active   = usr.active if request.form.get("active") is None else bool(request.form.get("active"))
             db.session.commit()
             return True
-        except:
-            return False
+        except exc.DatabaseError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
     
     @ns_user.response(HTTPStatus.OK.value,"Exclui os dados de um usuario")
     @ns_user.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
@@ -150,8 +153,12 @@ class UserApi(Resource):
             usr.active = False
             db.session.commit()
             return True
-        except:
-            return False
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
 
 class UserAuth(Resource):
     @ns_user.response(HTTPStatus.OK.value,"Realiza login e retorna o token")
@@ -176,6 +183,6 @@ class UserAuth(Resource):
                 return obj_retorno
             else:
                 return 0 #senha invalida
-        return request.form.get("password") #usuario invalido
+        return -1 #usuario invalido
 
 ns_user.add_resource(UserAuth,"/auth")

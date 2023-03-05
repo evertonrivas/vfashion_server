@@ -187,8 +187,12 @@ class OrderApi(Resource):
                 db.session.commit()
 
             return True
-        except:
-            return False
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
     
     @ns_order.response(HTTPStatus.OK.value,"Exclui os dados de um pedido")
     @ns_order.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
@@ -199,8 +203,12 @@ class OrderApi(Resource):
             order.trash = True
             db.session.commit()
             return True
-        except:
-            return False
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
 
 
 @ns_porder.route("/<int:id>")
@@ -245,5 +253,9 @@ class ProductsOrderList(Resource):
             db.session.delete(pOrder)
             db.session.commit()
             return True
-        except:
-            return False
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }

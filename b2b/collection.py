@@ -169,8 +169,12 @@ class CollectionApi(Resource):
                 db.session.commit()
 
             return True
-        except:
-            return False
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
     
     @ns_collection.response(HTTPStatus.OK.value,"Exclui os dados de uma coleção")
     @ns_collection.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
@@ -181,8 +185,12 @@ class CollectionApi(Resource):
             grp.trash = True
             db.session.commit()
             return True
-        except:
-            return False
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
         
 
 class ColletionPriceApi(Resource):
@@ -217,7 +225,11 @@ class ColletionPriceApi(Resource):
             db.session.delete(grp)
             db.session.commit()
             return True
-        except:
-            return False
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
 
 ns_collection.add_resource(ColletionPriceApi,'/manage-price')

@@ -129,8 +129,12 @@ class PaymentConditionApi(Resource):
             payCond.installments  = payCond.installments if request.form.get("installments") is None else request.form.get("installments")
             db.session.commit()
             return True
-        except:
-            return False
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
     
     @ns_payment.response(HTTPStatus.OK.value,"Exclui os dados de uma condição de pagamento")
     @ns_payment.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
@@ -141,5 +145,9 @@ class PaymentConditionApi(Resource):
             payCond.trash = True
             db.session.commit()
             return True
-        except:
-            return False
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
