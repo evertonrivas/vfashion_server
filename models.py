@@ -67,7 +67,7 @@ class CmmProducts(db.Model,SerializerMixin):
     name         = sa.Column(sa.String(255),nullable=False)
     description  = sa.Column(sa.String(255))
     observation  = sa.Column(sa.Text)
-    ncm          = sa.Column(sa.String(50))
+    ncm          = sa.Column(sa.String(50),nullable=True)
     image        = sa.Column(sa.String(500))
     price        = sa.Column(sa.Float,nullable=False)
     price_pdv    = sa.Column(sa.Float,nullable=True)
