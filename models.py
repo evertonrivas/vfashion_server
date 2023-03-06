@@ -61,8 +61,6 @@ class CmmCategory(db.Model,SerializerMixin):
 class CmmProducts(db.Model,SerializerMixin):
     id           = sa.Column(sa.Integer,primary_key=True,nullable=False,autoincrement=True)
     id_category  = sa.Column(sa.Integer,nullable=False)
-    id_prod_type = sa.Column(sa.Integer,nullable=False)
-    id_prod_model= sa.Column(sa.Integer,nullable=True)
     prodCode     = sa.Column(sa.String(50),nullable=False)
     barCode      = sa.Column(sa.String(128))
     refCode      = sa.Column(sa.String(50),nullable=False)
