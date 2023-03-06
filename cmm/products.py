@@ -89,6 +89,9 @@ class ProductsList(Resource):
                 },
                 "data":[{
                     "id": m.id,
+                    "id_category": m.id_category,
+                    "id_prod_type": m.id_prod_type,
+                    "id_prod_model": m.id_prod_model,
                     "prodCode": m.prodCode,
                     "barCode": m.barCode,
                     "refCode": m.refCode,
@@ -125,28 +128,22 @@ class ProductsList(Resource):
     #@auth.login_required
     def post(self)->int:
         try:
-            req = request.get_json()
             prod = CmmProducts()
-            prod.prodCode    = req.prodCode
-            prod.barCode     = req.barCode
-            prod.refCode     = req.refCode
-            prod.name        = req.name
-            prod.description = req.description
-            prod.observation = req.observation
-            prod.ncm         = req.ncm
-            prod.image       = req.image
-            prod.price       = float(req.price)
-            prod.measure_unit = req.measure_unit
+            prod.id_category   = int(request.form.get("id_category"))
+            prod.id_prod_type  = int(request.form.get("id_prod_type"))
+            prod.id_prod_model = None if request.form.get("id_prod_model") is None else int(request.form.get("id_prod_model"))
+            prod.prodCode      = request.form.get("prodCode")
+            prod.barCode       = request.form.get("barCode")
+            prod.refCode       = request.form.get("refCode")
+            prod.name          = request.form.get("name")
+            prod.description   = request.form.get("description")
+            prod.observation   = request.form.get("observation")
+            prod.ncm           = request.form.get("ncm")
+            prod.image         = request.form.get("image")
+            prod.price         = float(request.form.get("price"))
+            prod.measure_unit  = request.form.get("measure_unit")
             db.session.add(prod)
             db.session.commit()
-
-            for it in prod.sku:
-                sku = CmmProductsSku()
-                sku.id_product = prod.id
-                sku.color      = it.color
-                sku.size       = it.size
-                db.session.add(sku)
-                db.session.commit()
 
             return prod.id
         except exc.SQLAlchemyError as e:
@@ -182,11 +179,7 @@ class ProductApi(Resource):
                 "measure_unit": rquery.measure_unit,
                 "structure": rquery.structure,
                 "date_created": rquery.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                "date_updated": rquery.date_updated.strftime("%Y-%m-%d %H:%M:%S"),
-                "sku": [{
-                    "color": m.color,
-                    "size" : m.size
-                }for m in squery.items]
+                "date_updated": rquery.date_updated.strftime("%Y-%m-%d %H:%M:%S")
             }
         except exc.SQLAlchemyError as e:
             return {
@@ -202,17 +195,20 @@ class ProductApi(Resource):
         try:
             req = request.get_json()
             prod = CmmProducts.query.get(id)
-            prod.prodCode     = prod.prodCode if req.prodCode is None else req.prodCode
-            prod.barCode      = prod.barCode if req.barCode is None else req.barCode
-            prod.refCode      = prod.refCode if req.refCode is None else req.refCode
-            prod.name         = prod.name if req.name is None else req.name
-            prod.description  = prod.description if req.description is None else req.description
-            prod.observation  = prod.observation if req.observation is None else req.observation
-            prod.ncm          = prod.ncm if req.ncm is None else req.ncm
-            prod.image        = prod.image if req.image is None else req.image
-            prod.price        = prod.price if req.price is None else float(req.price)
-            prod.measure_unit = prod.measure_unit if req.measure_unit is None else req.measure_unit
-            prod.trash        = prod.trash if req.trash is None else req.trash
+            prod.id_category   = prod.id_category if request.form.get("id_category") is None else int(request.form.get("id_category"))
+            prod.id_prod_type  = prod.id_prod_type if request.form.get("id_prod_type") is None else int(request.form.get("id_prod_type"))
+            prod.id_prod_model = prod.id_prod_model if request.form.get("id_prod_model") is None else int(request.form.get("id_prod_model"))
+            prod.prodCode      = prod.prodCode if request.form.get("prodCode") is None else request.form.get("prodCode")
+            prod.barCode       = prod.barCode if request.form.get("barCode") is None else request.form.get("barCode")
+            prod.refCode       = prod.refCode if request.form.get("refCode") is None else request.form.get("refCode")
+            prod.name          = prod.name if request.form.get("name") is None else request.form.get("name")
+            prod.description   = prod.description if request.form.get("description") is None else request.form.get("description")
+            prod.observation   = prod.observation if request.form.get("observation") is None else request.form.get("observation")
+            prod.ncm           = prod.ncm if request.form.get("ncm") is None else request.form.get("ncm")
+            prod.image         = prod.image if request.form.get("image") is None else request.form.get("image")
+            prod.price         = prod.price if request.form.get("price") is None else float(request.form.get("price"))
+            prod.measure_unit  = prod.measure_unit if request.form.get("measure_unit") is None else request.form.get("measure_unit")
+            prod.trash         = prod.trash if request.form.get("trash") is None else request.form.get("trash")
             db.session.commit()
             return True
         except exc.SQLAlchemyError as e:

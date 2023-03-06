@@ -19,19 +19,13 @@ cat_pag_model = ns_cat.model(
     }
 )
 
-cat_prd_model = ns_cat.model(
-    "ProductCategory",{
-        "id": fields.Integer
-    }
-)
-
 cat_model = ns_cat.model(
     "Category",{
         "id": fields.Integer,
         "name": fields.String,
+        "id_parent": fields.Integer,
         "date_created": fields.DateTime,
-        "date_updated": fields.DateTime,
-        "products": fields.List(fields.Nested(cat_prd_model))
+        "date_updated": fields.DateTime
     }
 )
 
@@ -55,7 +49,26 @@ class CategoryList(Resource):
         pag_size = 25 if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
         search   = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
         try:
-            rquery = ""
+            if search!="":
+                rquery = CmmCategory.query.filter(CmmCategory.trash==False).paginate(page=pag_num,per_page=pag_size)
+            else:
+                rquery = CmmCategory.query.filter(sa.and_(CmmCategory.trash==False,CmmCategory.name.like(search))).paginate(page=pag_num,per_page=pag_size)
+            return {
+                "pagination":{
+                    "registers": rquery.total,
+                    "page": pag_num,
+                    "per_page": pag_size,
+                    "pages": rquery.pages,
+                    "has_next": rquery.has_next
+                },
+                "data":[{
+                    "id": m.id,
+                    "name": m.name,
+                    "id_parent": m.id_parent,
+                    "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+                    "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S")
+                } for m in rquery.items]
+            }
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -68,7 +81,19 @@ class CategoryList(Resource):
     @ns_cat.doc(body=cat_model)
     #@auth.login_required
     def post(self):
-        return None
+        try:
+            cat = CmmCategory()
+            cat.name = request.form.get("name")
+            cat.id_parent = int(request.form.get("id_parent")) if request.form.get("id_parent")!=None else None
+            db.session.add(cat)
+            db.session.commit()
+            return cat.id
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
 
 @ns_cat.route("/<int:id>")
 class CategoryApi(Resource):
@@ -76,16 +101,44 @@ class CategoryApi(Resource):
     @ns_cat.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
     #@auth.login_required
     def get(self,id:int):
-        pass
+        try:
+            return CmmCategory.query.get(id).to_dict()
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
+            
 
     @ns_cat.response(HTTPStatus.OK.value,"Atualiza os dados de uma categoria")
     @ns_cat.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
     #@auth.login_required
     def post(self,id:int):
-        pass
+        try:
+            cat = CmmCategory.query.get(id)
+            cat.name      = cat.name if request.form.get("name") is None else request.form.get("name")
+            cat.id_parent = cat.id_parent if request.form.get("id_parent") is None else int(request.form.get("id_parent"))
+            db.session.commit() 
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
 
     @ns_cat.response(HTTPStatus.OK.value,"Exclui os dados de uma categoria")
     @ns_cat.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
     #@auth.login_required
     def delete(self,id:int):
-        pass
+        try:
+            cat = CmmCategory.query.get(id)
+            cat.trash = True
+            db.session.commit()
+            return True
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
