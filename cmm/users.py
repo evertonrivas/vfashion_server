@@ -179,6 +179,7 @@ class UserAuth(Resource):
 					"level_access": usr.type,
                     "user_id": usr.id
                 }
+                usr.is_authenticate = True
                 db.session.commit()
                 return obj_retorno
             else:
