@@ -166,18 +166,18 @@ class UserAuth(Resource):
     @ns_user.param("username","Login do sistema","formData",required=True)
     @ns_user.param("password","Senha do sistema","formData",required=True)
     def post(self):
+        #req = request.get_json()
         usr = CmmUsers.query.filter(sa.and_(CmmUsers.username==request.form.get("username"),CmmUsers.active==True)).first()
         if usr:
             #verifica a senha criptografada anteriormente
             pwd = request.form.get("password").encode()
             if bcrypt.checkpw(pwd,str(usr.password).encode()):
                 obj_retorno = {
-                    "user": {
-                        "token_access": usr.get_token(),
-                        "token_type": "Bearer",
-                        "token_expire": usr.token_expire.strftime("%Y-%m-%d %H:%M:%S"),
-                        "level": usr.type
-                    }
+					"token_access": usr.get_token(),
+					"token_type": "Bearer",
+					"token_expire": usr.token_expire.strftime("%Y-%m-%d %H:%M:%S"),
+					"level_access": usr.type,
+                    "user_id": usr.id
                 }
                 db.session.commit()
                 return obj_retorno
@@ -186,3 +186,25 @@ class UserAuth(Resource):
         return -1 #usuario invalido
 
 ns_user.add_resource(UserAuth,"/auth")
+
+class UserAuthCheck(Resource):
+	def post(self):
+		try:
+			return False if CmmUsers.check_token(request.form.get("token")) is None else True
+		except:
+			return False
+ns_user.add_resource(UserAuthCheck,"/auth-check")
+
+
+@ns_user.param("id","Id do registro")
+class UserAuthLogout(Resource):
+     def post(self,id:int):
+        try:
+            usr = CmmUsers.query.get(id)
+            usr.logout()
+            db.session.commit()
+            return True
+        except:
+            return False
+        
+ns_user.add_resource(UserAuthLogout,"/logout/<int:id>")
