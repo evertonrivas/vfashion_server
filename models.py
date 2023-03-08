@@ -9,15 +9,16 @@ import bcrypt
 db = SQLAlchemy()
 
 class CmmUsers(db.Model,SerializerMixin):
-    id           = sa.Column(sa.Integer,primary_key=True,nullable=False,autoincrement=True)
-    username     = sa.Column(sa.String(100), nullable=False)
-    password     = sa.Column(sa.String(255), nullable=False)
-    type         = sa.Column(sa.CHAR(1),nullable=False,default='L',comment='A = Administrador, L = Lojista, R = Representante, V = Vendedor, U = User')
-    date_created = sa.Column(sa.DateTime,nullable=False,server_default=func.now())
-    date_updated = sa.Column(sa.DateTime,onupdate=func.now())
-    active       = sa.Column(sa.Boolean,nullable=False,default=True)
-    token        = sa.Column(sa.String(255),index=True,unique=True)
-    token_expire = sa.Column(sa.DateTime)
+    id              = sa.Column(sa.Integer,primary_key=True,nullable=False,autoincrement=True)
+    username        = sa.Column(sa.String(100), nullable=False)
+    password        = sa.Column(sa.String(255), nullable=False)
+    type            = sa.Column(sa.CHAR(1),nullable=False,default='L',comment='A = Administrador, L = Lojista, R = Representante, V = Vendedor, U = User')
+    date_created    = sa.Column(sa.DateTime,nullable=False,server_default=func.now())
+    date_updated    = sa.Column(sa.DateTime,onupdate=func.now())
+    active          = sa.Column(sa.Boolean,nullable=False,default=True)
+    token           = sa.Column(sa.String(255),index=True,unique=True)
+    token_expire    = sa.Column(sa.DateTime)
+    is_authenticate = sa.Column(sa.Boolean,nullable=False,default=False)
 
     def hash_pwd(self,pwd:str):
         self.password = bcrypt.hashpw(pwd.encode(),bcrypt.gensalt())
@@ -34,6 +35,10 @@ class CmmUsers(db.Model,SerializerMixin):
 
     def revoke_token(self):
         self.token_expire = datetime.utcnow() - timedelta(seconds=1)
+
+    def logout(self):
+        self.is_authenticate = False
+        self.token = None
 
     @staticmethod
     def check_token(token):
