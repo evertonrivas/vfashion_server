@@ -99,7 +99,7 @@ class UserGroupsList(Resource):
     #@auth.login_required
     def post(self)->int:
         try:
-            req = request.get_json()
+            req = json.dumps(request.get_json())
             grp = B2bCustomersGroup()
             grp.name = req.name
             db.session.add(grp)
@@ -152,7 +152,7 @@ class UserGroupApi(Resource):
     #@auth.login_required
     def post(self,id:int)->bool:
         try:
-            req = request.get_json()
+            req = json.dumps(request.get_json())
             grp = B2bCustomersGroup.query.get(id)
             grp.name          = grp.name if req.name is None else req.name
             grp.need_approval = grp.need_approval if req.need_approval is None else req.need_approval

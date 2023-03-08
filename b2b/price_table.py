@@ -103,7 +103,7 @@ class PriceTableList(Resource):
     #@auth.login_required
     def post(self)->int:
         try:
-            req = request.get_json()
+            req = json.dumps(request.get_json())
             table = B2bTablePrice()
             table.name       = req.name
             table.start_date = req.start_date
@@ -168,7 +168,7 @@ class PriceTableApi(Resource):
     #@auth.login_required
     def post(self,id:int)->bool:
         try:
-            req = request.get_json()
+            req = json.dumps(request.get_json())
             price = B2bTablePrice.query.get(id)
             price.name       = price.name if req.name is None else req.name
             price.start_date = price.start_date if req.start_date is None else req.start_date

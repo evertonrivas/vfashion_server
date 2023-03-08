@@ -129,7 +129,7 @@ class ProductsList(Resource):
     #@auth.login_required
     def post(self)->int:
         try:
-            req = request.get_json()
+            req = json.dumps(request.get_json())
             prod = CmmProducts()
             prod.id_category   = int(req.id_category)
             prod.prodCode      = req.prodCode
@@ -202,7 +202,7 @@ class ProductApi(Resource):
     #@auth.login_required
     def post(self,id:int)->bool:
         try:
-            req = request.get_json()
+            req = json.dumps(request.get_json())
             prod = CmmProducts.query.get(id)
             prod.id_category   = prod.id_category if req.id_category is None else int(req.id_category)
             prod.id_prod_type  = prod.id_prod_type if req.id_prod_type is None else int(req.id_prod_type)
@@ -355,7 +355,7 @@ class GridList(Resource):
     #@auth.login_required
     def post(self)->int:
         try:
-            req = request.get_json()
+            req = json.dumps(request.get_json())
             grid = CmmProductsGrid()
             grid.name = req.name
             db.session.add(grid)
@@ -412,7 +412,7 @@ class GridApi(Resource):
     #@auth.login_required
     def post(self,id:int)->bool:
         try:
-            req = request.get_json()
+            req = json.dumps(request.get_json())
             grid = CmmProductsGrid.query.get(id)
             grid.name = grid.name if req.name is None else req.name
             grid.trash = grid.trash if req.trash is None else req.trash

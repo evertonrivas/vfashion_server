@@ -99,7 +99,7 @@ class OrdersList(Resource):
     @ns_order.doc(body=ord_model)
     def post(self)->int:
         try:
-            req = request.get_json()
+            req = json.dumps(request.get_json())
             order = B2bOrders()
             order.id_customer = req.id_customer
             order.make_online = req.make_online
@@ -165,7 +165,7 @@ class OrderApi(Resource):
     #@auth.login_required
     def post(self,id:int)->bool:
         try:
-            req = request.get_json()
+            req = json.dumps(request.get_json())
             order = B2bOrders.query.get(id)
             order.id_customer          = order.id_customer if req.id_customer is None else req.id_customer
             order.make_online          = order.make_online if req.make_online is None else req.make_online

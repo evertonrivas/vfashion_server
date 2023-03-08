@@ -104,7 +104,7 @@ class FunnelList(Resource):
     #@auth.login_required
     def post(self)->int:
         try:
-            req = request.get_json()
+            req = json.dumps(request.get_json())
             fun = CrmFunnel()
             fun.name = req.name
             db.session.add(fun)

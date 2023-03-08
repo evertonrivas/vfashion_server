@@ -97,7 +97,7 @@ class CollectionList(Resource):
     #@auth.login_required
     def post(self)->int:
         try:
-            req = request.get_json()
+            req = json.dumps(request.get_json())
             col = B2bCollection()
             col.name = req.name
             db.session.add(col)
@@ -150,7 +150,7 @@ class CollectionApi(Resource):
     #@auth.login_required
     def post(self,id:int)->bool:
         try:
-            req = request.get_json()
+            req = json.dumps(request.get_json())
             col = B2bCollection.query.get(id)
             col.name          = col.name if req.name is None else req.name
             col.trash         = col.trash if req.trash is None else req.trash
