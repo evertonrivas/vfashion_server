@@ -38,7 +38,7 @@ cat_return = ns_cat.model(
 
 @ns_cat.route("/")
 class CategoryList(Resource):
-    @ns_cat.response(HTTPStatus.OK.value,"Obtem a listagem de produto",cat_return)
+    @ns_cat.response(HTTPStatus.OK.value,"Obtem a listagem de categorias de produto",cat_return)
     @ns_cat.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
     @ns_cat.param("page","Número da página de registros","query",type=int,required=True,default=1)
     @ns_cat.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
@@ -49,7 +49,7 @@ class CategoryList(Resource):
         pag_size = 25 if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
         search   = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
         try:
-            if search!="":
+            if search=="":
                 rquery = CmmCategory.query.filter(CmmCategory.trash==False).paginate(page=pag_num,per_page=pag_size)
             else:
                 rquery = CmmCategory.query.filter(sa.and_(CmmCategory.trash==False,CmmCategory.name.like(search))).paginate(page=pag_num,per_page=pag_size)
@@ -66,7 +66,7 @@ class CategoryList(Resource):
                     "name": m.name,
                     "id_parent": m.id_parent,
                     "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                    "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S")
+                    "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
                 } for m in rquery.items]
             }
         except exc.SQLAlchemyError as e:

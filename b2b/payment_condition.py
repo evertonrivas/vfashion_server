@@ -68,7 +68,7 @@ class PaymentConditionsList(Resource):
                     "received_days": m.received_days,
                     "installments": m.installments,
                     "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                    "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S")
+                    "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
                 } for m in rquery.items]
             }
         except exc.SQLAlchemyError as e:

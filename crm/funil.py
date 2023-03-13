@@ -3,6 +3,7 @@ from flask_restx import Resource,fields,Namespace
 from flask import request
 from models import CrmFunnel,CrmFunnelStageCustomer,CrmFunnelStage,db
 import sqlalchemy as sa
+import json
 from sqlalchemy import exc
 from auth import auth
 
@@ -78,7 +79,7 @@ class FunnelList(Resource):
                     "name": m.name,
                     "stages": self.get_stages(m.id),
                     "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                    "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S")
+                    "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
                 } for m in rquery.items]
             }
         except exc.SQLAlchemyError as e:

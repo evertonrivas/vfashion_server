@@ -3,6 +3,7 @@ from flask_restx import Resource,Namespace,fields
 from flask import request
 from models import B2bOrders,B2bOrdersProducts,db
 from sqlalchemy import exc
+import json
 import sqlalchemy as sa
 from auth import auth
 
@@ -84,7 +85,7 @@ class OrdersList(Resource):
                     "make_online": m.make_online,
                     "id_payment_condition": m.id_payment_condition,
                     "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                    "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S")
+                    "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
                 } for m in rquery.items]
             }
         except exc.SQLAlchemyError as e:

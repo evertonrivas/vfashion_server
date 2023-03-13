@@ -3,6 +3,7 @@ from flask import request
 from flask_restx import Resource,Namespace,fields
 from models import B2bTablePrice,B2bTablePriceProduct,db
 import sqlalchemy as sa
+import json
 from sqlalchemy import exc
 from auth import auth
 

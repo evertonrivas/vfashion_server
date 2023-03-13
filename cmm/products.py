@@ -1,4 +1,5 @@
 from http import HTTPStatus
+import json
 from flask_restx import Resource,Namespace,fields
 from flask import request
 from models import CmmProducts,CmmProductsSku,CmmProductsGrid,CmmProductsGridDistribution,db
@@ -103,7 +104,7 @@ class ProductsList(Resource):
                     "measure_unit": m.measure_unit,
                     "structure": m.structure,
                     "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                    "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S"),
+                    "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None,
                     "sku": self.get_sku(m.id)
                 } for m in rquery.items]
             }
@@ -188,7 +189,7 @@ class ProductApi(Resource):
                 "measure_unit": rquery.measure_unit,
                 "structure": rquery.structure,
                 "date_created": rquery.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                "date_updated": rquery.date_updated.strftime("%Y-%m-%d %H:%M:%S")
+                "date_updated": rquery.date_updated.strftime("%Y-%m-%d %H:%M:%S") if rquery.date_updated!=None else None
             }
         except exc.SQLAlchemyError as e:
             return {

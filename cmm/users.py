@@ -71,7 +71,7 @@ class UsersList(Resource):
                     "username": m.username,
                     "type": m.type,
                     "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                    "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S")
+                    "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
                 } for m in rquery.items]
             }
         except exc.SQLAlchemyError as e:
@@ -177,7 +177,7 @@ class UserAuth(Resource):
 					"token_type": "Bearer",
 					"token_expire": usr.token_expire.strftime("%Y-%m-%d %H:%M:%S"),
 					"level_access": usr.type,
-                    "user_id": usr.id
+                    "id_user": usr.id
                 }
                 usr.is_authenticate = True
                 db.session.commit()
