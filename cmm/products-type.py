@@ -42,7 +42,7 @@ class CategoryList(Resource):
     @ns_type.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_type.param("query","Texto para busca","query")
     @ns_type.param("list_all","Ignora as paginas e lista todos os registros",type=bool,default=False)
-    #@auth.login_required
+    @auth.login_required
     def get(self):
         pag_num  =  1 if request.args.get("page") is None else int(request.args.get("page"))
         pag_size = 25 if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
@@ -82,7 +82,7 @@ class CategoryList(Resource):
     @ns_type.response(HTTPStatus.OK.value,"Cria um novo tipo de produto no sistema")
     @ns_type.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar novo tipo de produto!")
     @ns_type.doc(body=type_model)
-    #@auth.login_required
+    @auth.login_required
     def post(self):
         try:
             type = CmmProductType()
@@ -101,7 +101,7 @@ class CategoryList(Resource):
 class CategoryApi(Resource):
     @ns_type.response(HTTPStatus.OK.value,"Obtem um registro de um tipo de produto",type_model)
     @ns_type.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
-    #@auth.login_required
+    @auth.login_required
     def get(self,id:int):
         try:
             return CmmProductType.query.get(id).to_dict()
@@ -115,7 +115,7 @@ class CategoryApi(Resource):
 
     @ns_type.response(HTTPStatus.OK.value,"Atualiza os dados de um tipo de produto")
     @ns_type.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
-    #@auth.login_required
+    @auth.login_required
     def post(self,id:int):
         try:
             cat = CmmProductType.query.get(id)
@@ -130,7 +130,7 @@ class CategoryApi(Resource):
 
     @ns_type.response(HTTPStatus.OK.value,"Exclui os dados de um tipo de produto")
     @ns_type.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
-    #@auth.login_required
+    @auth.login_required
     def delete(self,id:int):
         try:
             cat = CmmProductType.query.get(id)
