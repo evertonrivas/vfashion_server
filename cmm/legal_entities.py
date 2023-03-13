@@ -1,8 +1,8 @@
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import CmmLegalEntities,db
-import sqlalchemy as sa
+from models import CmmLegalEntities,CmmUserEntity,db
+from sqlalchemy import Select,and_
 from sqlalchemy import exc
 from auth import auth
 
@@ -60,7 +60,7 @@ class CustomersList(Resource):
 
         try:
             if search!="":
-                rquery = CmmLegalEntities.query.filter(sa.and_(CmmLegalEntities.trash == False,CmmLegalEntities.name.like(search))).paginate(page=pag_num,per_page=pag_size)
+                rquery = CmmLegalEntities.query.filter(and_(CmmLegalEntities.trash == False,CmmLegalEntities.name.like(search))).paginate(page=pag_num,per_page=pag_size)
             else:
                 rquery = CmmLegalEntities.query.filter(CmmLegalEntities.trash == False).paginate(page=pag_num,per_page=pag_size)
 
@@ -130,15 +130,16 @@ class CustomersList(Resource):
 
 
 @ns_legal.route("/<int:id>")
-@ns_legal.param("id","Id do registro")
 class CustomerApi(Resource):
 
     @ns_legal.response(HTTPStatus.OK.value,"Obtem um registro de cliente",lgl_model)
     @ns_legal.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
-    #@auth.login_required
+    @ns_legal.param("id","Id do usuário do sistema (tabela CmmUser)")
+    @auth.login_required
     def get(self,id:int):
         try:
-            return CmmLegalEntities.query.get(id).to_dict()
+                retorno = Select(CmmLegalEntities).join(CmmUserEntity,CmmLegalEntities.id==CmmUserEntity.id_entity).where(CmmUserEntity.id_user==id)
+                return db.session.scalar(retorno).to_dict()
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -148,6 +149,7 @@ class CustomerApi(Resource):
 
     @ns_legal.response(HTTPStatus.OK.value,"Salva dados de um cliente/representante")
     @ns_legal.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_legal.param("id","Id do registro")
     @ns_legal.param("name","Nome do Cliente/Representante","formData",required=True)
     @ns_legal.param("taxvat","Número do CNPJ ou CPF no Brasil","formData",required=True)
     @ns_legal.param("state_region","Nome ou sigla do Estado","formData",required=True)
@@ -182,6 +184,7 @@ class CustomerApi(Resource):
     
     @ns_legal.response(HTTPStatus.OK.value,"Exclui os dados de um cliente/representante")
     @ns_legal.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_legal.param("id","Id do registro")
     #@auth.login_required
     def delete(self,id:int)->bool:
         try:
