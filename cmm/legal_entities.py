@@ -22,6 +22,7 @@ lgl_model = ns_legal.model(
     "LegalEntity",{
         "id": fields.Integer,
         "name": fields.String,
+        "instagram": fields.String,
         "taxvat": fields.String,
         "state_region": fields.String,
         "city": fields.String,
@@ -82,6 +83,7 @@ class CustomersList(Resource):
                     "neighborhood": m.neighborhood,
                     "phone": m.phone,
                     "email": m.email,
+                    "instagram": m.instagram,
                     "is_representative": m.is_representative,
                     "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                     "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
@@ -117,6 +119,7 @@ class CustomersList(Resource):
             cst.neighborhood = request.form.get("neighborhood")
             cst.phone        = request.form.get("phone")
             cst.email        = request.form.get("email")
+            cst.instagram    = request.form.get("instagram")
             cst.is_representative = request.form.get("is_representative")
             db.session.add(cst)
             db.session.commit()
@@ -159,6 +162,7 @@ class CustomerApi(Resource):
     @ns_legal.param("phone","Número do telefone","formData",required=True)
     @ns_legal.param("email","Endereço de e-mail","formData",required=True)
     @ns_legal.param("type","Indicativo do tipo de entidade legal",required=True,enum=['C','R','S'])
+    @ns_legal.param("instagram","Usuário do instagram (sem a url completa)")
     #@auth.login_required
     def post(self,id:int)->bool:
         try:
@@ -173,6 +177,7 @@ class CustomerApi(Resource):
             cst.email        = cst.email if request.form.get("email") is None else request.form.get("email")
             cst.trash        = cst.trash if request.form.get("trash") is None else request.form.get("trash")
             cst.is_representative = cst.is_representative if request.form.get("is_representative") is None else request.form.get("is_respresentative")
+            cst.instagram    = cst.instagram if request.form.get("instagram") is None else request.form.get("instagram")
             db.session.commit()
             return True
         except exc.SQLAlchemyError as e:
