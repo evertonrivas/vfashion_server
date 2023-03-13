@@ -43,7 +43,7 @@ class CategoryList(Resource):
     @ns_cat.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_cat.param("query","Texto para busca","query")
     @ns_cat.param("list_all","Ignora as paginas e lista todos os registros",type=bool,default=False)
-    #@auth.login_required
+    @auth.login_required
     def get(self):
         pag_num  =  1 if request.args.get("page") is None else int(request.args.get("page"))
         pag_size = 25 if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
@@ -83,7 +83,7 @@ class CategoryList(Resource):
     @ns_cat.response(HTTPStatus.OK.value,"Cria uma nova categoria de produto no sistema")
     @ns_cat.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar nova categoria de produto!")
     @ns_cat.doc(body=cat_model)
-    #@auth.login_required
+    @auth.login_required
     def post(self):
         try:
             cat = CmmCategory()
@@ -103,7 +103,7 @@ class CategoryList(Resource):
 class CategoryApi(Resource):
     @ns_cat.response(HTTPStatus.OK.value,"Obtem um registro de uma categoria",cat_model)
     @ns_cat.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
-    #@auth.login_required
+    @auth.login_required
     def get(self,id:int):
         try:
             return CmmCategory.query.get(id).to_dict()
@@ -117,7 +117,7 @@ class CategoryApi(Resource):
 
     @ns_cat.response(HTTPStatus.OK.value,"Atualiza os dados de uma categoria")
     @ns_cat.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
-    #@auth.login_required
+    @auth.login_required
     def post(self,id:int):
         try:
             cat = CmmCategory.query.get(id)
@@ -133,7 +133,7 @@ class CategoryApi(Resource):
 
     @ns_cat.response(HTTPStatus.OK.value,"Exclui os dados de uma categoria")
     @ns_cat.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
-    #@auth.login_required
+    @auth.login_required
     def delete(self,id:int):
         try:
             cat = CmmCategory.query.get(id)
