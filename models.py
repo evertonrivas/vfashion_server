@@ -126,7 +126,7 @@ class CmmProductsGridDistribution(db.Model,SerializerMixin):
 class CmmLegalEntities(db.Model,SerializerMixin):
     id           = sa.Column(sa.Integer,primary_key=True,nullable=False,autoincrement=True)
     name         = sa.Column(sa.String(255),nullable=False)
-    instagram    = sa.Column(sa.String(100),nullable=False)
+    instagram    = sa.Column(sa.String(100),nullable=True)
     taxvat       = sa.Column(sa.String(30),nullable=False,comment="CPF ou CNPJ no Brasil")
     state_region = sa.Column(sa.CHAR(2),nullable=False)
     city         = sa.Column(sa.String(100),nullable=False)
