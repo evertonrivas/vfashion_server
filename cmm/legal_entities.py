@@ -176,7 +176,7 @@ class CustomerApi(Resource):
             cst.phone        = cst.phone if request.form.get("phone") is None else request.form.get("phone")
             cst.email        = cst.email if request.form.get("email") is None else request.form.get("email")
             cst.trash        = cst.trash if request.form.get("trash") is None else request.form.get("trash")
-            cst.is_representative = cst.is_representative if request.form.get("is_representative") is None else request.form.get("is_respresentative")
+            cst.type         = cst.type if request.form.get("type") is None else request.form.get("type")
             cst.instagram    = cst.instagram if request.form.get("instagram") is None else request.form.get("instagram")
             db.session.commit()
             return True
