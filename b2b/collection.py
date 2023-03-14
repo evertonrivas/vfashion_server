@@ -2,9 +2,8 @@ from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
 from models import B2bCollection,B2bCollectionPrice,db
-import sqlalchemy as sa
 import json
-from sqlalchemy import exc
+from sqlalchemy import exc,and_
 from auth import auth
 
 ns_collection = Namespace("collection",description="Operações para manipular dados de coleções")
@@ -53,32 +52,45 @@ class CollectionList(Resource):
     @ns_collection.param("page","Número da página de registros","query",type=int,required=True)
     @ns_collection.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_collection.param("query","Texto para busca","query")
+    @ns_collection.param("list_all","",type=bool,default=False)
     #@auth.login_required
     def get(self):
         pag_num  =  1 if request.args.get("page") is None else int(request.args.get("page"))
         pag_size = 25 if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
         search   = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
+        list_all = False if request.args.get("list_all") is None else True
 
         try:
-            if search!="":
-                rquery = B2bCollection.query.filter(sa.and_(B2bCollection.trash == False,B2bCollection.name.like(search))).paginate(page=pag_num,per_page=pag_size)
+            if search=="":
+                rquery = B2bCollection.query.filter(B2bCollection.trash == False).order_by(B2bCollection.name)
+                
             else:
-                rquery = B2bCollection.query.filter(B2bCollection.trash == False).paginate(page=pag_num,per_page=pag_size)
+                rquery = B2bCollection.query.filter(and_(B2bCollection.trash == False,B2bCollection.name.like(search))).order_by(B2bCollection.name)
 
-            return {
-                "pagination":{
-                    "registers": rquery.total,
-                    "page": pag_num,
-                    "per_page": pag_size,
-                    "pages": rquery.pages,
-                    "has_next": rquery.has_next
-                },
-                "data":[{
-                    "id": m.id,
-                    "name": m.name,
-                    "table_prices": self.get_customers(m.id)
-                } for m in rquery.items]
-            }
+            if list_all==False:
+                rquery = rquery.paginate(page=pag_num,per_page=pag_size)
+
+                retorno = {
+                    "pagination":{
+                        "registers": rquery.total,
+                        "page": pag_num,
+                        "per_page": pag_size,
+                        "pages": rquery.pages,
+                        "has_next": rquery.has_next
+                    },
+                    "data":[{
+                        "id": m.id,
+                        "name": m.name,
+                        "table_prices": ''
+                    } for m in rquery.items]
+                }
+            else:
+                retorno = [{
+                        "id":m.id,
+                        "name":m.name,
+                        "table_prices": ''
+                    } for m in rquery]
+            return retorno
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -90,7 +102,7 @@ class CollectionList(Resource):
         rquery = B2bCollectionPrice.query.filter_by(id_collection = id)
         return [{
             "id": m.id_table_price
-        } for m in rquery.items]
+        } for m in rquery]
 
     @ns_collection.response(HTTPStatus.OK.value,"Cria uma nova coleção")
     @ns_collection.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar registro!")
