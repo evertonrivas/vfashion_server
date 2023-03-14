@@ -59,28 +59,39 @@ class UserGroupsList(Resource):
         pag_num  =  1 if request.args.get("page") is None else int(request.args.get("page"))
         pag_size = 25 if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
         search   = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
+        list_all = False if request.args.get("list_all") is None else True
 
         try:
-            if search!="":
-                rquery = B2bCustomersGroup.query.filter(sa.and_(B2bCustomersGroup.trash == False,B2bCustomersGroup.name.like(search))).paginate(page=pag_num,per_page=pag_size)
+            if search=="":
+                rquery = B2bCustomersGroup.query.filter(B2bCustomersGroup.trash == False).order_by(B2bCustomersGroup.name)
             else:
-                rquery = B2bCustomersGroup.query.filter(B2bCustomersGroup.trash == False).paginate(page=pag_num,per_page=pag_size)
+                rquery = B2bCustomersGroup.query.filter(sa.and_(B2bCustomersGroup.trash == False,B2bCustomersGroup.name.like(search))).order_by(B2bCustomersGroup.name)
+                
+            if list_all==False:
+                rquery = rquery.paginate(page=pag_num,per_page=pag_size)
 
-            return {
-                "pagination":{
-                    "registers": rquery.total,
-                    "page": pag_num,
-                    "per_page": pag_size,
-                    "pages": rquery.pages,
-                    "has_next": rquery.has_next
-                },
-                "data":[{
+                retorno = {
+                    "pagination":{
+                        "registers": rquery.total,
+                        "page": pag_num,
+                        "per_page": pag_size,
+                        "pages": rquery.pages,
+                        "has_next": rquery.has_next
+                    },
+                    "data":[{
+                        "id": m.id,
+                        "name": m.name,
+                        "need_approval":m.need_approval,
+                        "customers": self.get_customers(m.id)
+                    } for m in rquery.items]
+                }
+            else:
+                retorno =[{
                     "id": m.id,
                     "name": m.name,
                     "need_approval":m.need_approval,
                     "customers": self.get_customers(m.id)
-                } for m in rquery.items]
-            }
+                } for m in rquery]
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
