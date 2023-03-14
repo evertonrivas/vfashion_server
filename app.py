@@ -11,6 +11,7 @@ from flask_migrate import Migrate
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://venda_fashion:vd_fashion@localhost/venda_fashion"
 
+
 # $env:FLASK_APP="main.py" no powerShell do windows
 
 migrate = Migrate(app,db)
@@ -28,7 +29,7 @@ app.register_blueprint(crm)
 app.register_blueprint(b2b)
 app.register_blueprint(fpr)
 
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "*"}},supports_credentials=True)
 
 @app.route("/")
 def index():
