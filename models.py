@@ -66,6 +66,7 @@ class CmmCategory(db.Model,SerializerMixin):
 class CmmProducts(db.Model,SerializerMixin):
     id           = sa.Column(sa.Integer,primary_key=True,nullable=False,autoincrement=True)
     id_category  = sa.Column(sa.Integer,nullable=False)
+    id_type      = sa.Column(sa.Integer,nullable=False)
     prodCode     = sa.Column(sa.String(50),nullable=False)
     barCode      = sa.Column(sa.String(128))
     refCode      = sa.Column(sa.String(50),nullable=False)
@@ -73,7 +74,6 @@ class CmmProducts(db.Model,SerializerMixin):
     description  = sa.Column(sa.String(255))
     observation  = sa.Column(sa.Text)
     ncm          = sa.Column(sa.String(50),nullable=True)
-    image        = sa.Column(sa.String(500))
     price        = sa.Column(sa.Float,nullable=False)
     price_pdv    = sa.Column(sa.Float,nullable=True)
     measure_unit = sa.Column(sa.CHAR(2),nullable=False)
@@ -81,6 +81,12 @@ class CmmProducts(db.Model,SerializerMixin):
     date_created = sa.Column(sa.DateTime,nullable=False,server_default=func.now())
     date_updated = sa.Column(sa.DateTime,onupdate=func.now())
     trash        = sa.Column(sa.Boolean,nullable=False,default=False)
+
+
+class CmmProductsImage(db.Model,SerializerMixin):
+    id         = sa.Column(sa.Integer,nullable=False,primary_key=True,autoincrement=True)
+    id_product = sa.Column(sa.Integer,nullable=False)
+    img_url    = sa.Column(sa.String(255),nullable=False)
 
 
 class CmmProductType(db.Model,SerializerMixin):
