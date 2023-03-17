@@ -52,7 +52,7 @@ class CollectionList(Resource):
     @ns_collection.param("page","Número da página de registros","query",type=int,required=True)
     @ns_collection.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_collection.param("query","Texto para busca","query")
-    @ns_collection.param("list_all","",type=bool,default=False)
+    @ns_collection.param("list_all","Ignora as paginas e lista todos os registros",type=bool,default=False)
     #@auth.login_required
     def get(self):
         pag_num  =  1 if request.args.get("page") is None else int(request.args.get("page"))

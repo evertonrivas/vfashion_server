@@ -53,35 +53,48 @@ class PriceTableList(Resource):
     @ns_price.param("page","Número da página de registros","query",type=int,required=True)
     @ns_price.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_price.param("query","Texto para busca","query")
-    #@auth.login_required
+    @ns_price.param("list_all","Ignora as paginas e lista todos os registros",type=bool,default=False)
+    @auth.login_required
     def get(self):
         pag_num  =  1 if request.args.get("page") is None else int(request.args.get("page"))
         pag_size = 25 if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
         search   = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
+        list_all = False if request.args.get("list_all") is None else True
 
         try:
-            if search!="":
-                rquery = B2bTablePrice.query.filter(sa.and_(B2bTablePrice.active==True,B2bTablePrice.name.like(search))).paginate(page=pag_num,per_page=pag_size)
+            if search=="":
+                rquery = B2bTablePrice.query.filter(B2bTablePrice.active==True).order_by(B2bTablePrice.name)
             else:
-                rquery = B2bTablePrice.query.filter(B2bTablePrice.active==True).paginate(page=pag_num,per_page=pag_size)
+                rquery = B2bTablePrice.query.filter(sa.and_(B2bTablePrice.active==True,B2bTablePrice.name.like(search))).order_by(B2bTablePrice.name)
 
-            return {
-                "pagination":{
-                    "registers": rquery.total,
-                    "page": pag_num,
-                    "per_page": pag_size,
-                    "pages": rquery.pages,
-                    "has_next": rquery.has_next
-                },
-                "data":[{
-                    "id": m.id,
-                    "name": m.name,
-                    "start_date": m.start_date,
-                    "end_date": m.end_date,
-                    "active": m.active,
-                    "products": self.get_products(m.id)
-                }for m in rquery.items]
-            }
+            if list_all==False:
+                rquery = rquery.paginate(page=pag_num,per_page=pag_size)
+
+                retorno = {
+                    "pagination":{
+                        "registers": rquery.total,
+                        "page": pag_num,
+                        "per_page": pag_size,
+                        "pages": rquery.pages,
+                        "has_next": rquery.has_next
+                    },
+                    "data":[{
+                        "id": m.id,
+                        "name": m.name,
+                        "start_date": m.start_date,
+                        "end_date": m.end_date,
+                        "active": m.active
+                    }for m in rquery.items]
+                }
+            else:
+                retorno = [{
+                        "id": m.id,
+                        "name": m.name,
+                        "start_date": m.start_date,
+                        "end_date": m.end_date,
+                        "active": m.active
+                    }for m in rquery]
+            return retorno
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -96,12 +109,12 @@ class PriceTableList(Resource):
             "stock_quantity": m.stock_quantity,
             "price": m.price,
             "price_retail": m.price_retail
-        }for m in rquery.items]
+        }for m in rquery]
 
     @ns_price.response(HTTPStatus.OK.value,"Cria um novo pedido")
     @ns_price.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar pedido!")
     @ns_price.doc(body=prc_model)
-    #@auth.login_required
+    @auth.login_required
     def post(self)->int:
         try:
             req = json.dumps(request.get_json())
@@ -136,7 +149,7 @@ class PriceTableApi(Resource):
     
     @ns_price.response(HTTPStatus.OK.value,"Obtem os dados de um carrinho")
     @ns_price.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
-    #@auth.login_required
+    @auth.login_required
     def get(self,id:int):
         try:
             rquery = B2bTablePrice.query.get(id)
@@ -166,7 +179,7 @@ class PriceTableApi(Resource):
     @ns_price.response(HTTPStatus.OK.value,"Atualiza os dados de um pedido")
     @ns_price.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
     @ns_price.doc(body=prc_model)
-    #@auth.login_required
+    @auth.login_required
     def post(self,id:int)->bool:
         try:
             req = json.dumps(request.get_json())
@@ -186,7 +199,7 @@ class PriceTableApi(Resource):
 
     @ns_price.response(HTTPStatus.OK.value,"Exclui os dados de um carrinho")
     @ns_price.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
-    #@auth.login_required
+    @auth.login_required
     def delete(self,id:int)->bool:
         try:
             price = B2bTablePrice.query.get(id)
