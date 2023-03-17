@@ -2,9 +2,8 @@ from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
 from models import B2bCustomersGroup,B2bCustomerGroupCustomer,db
-import sqlalchemy as sa
 import json
-from sqlalchemy import exc
+from sqlalchemy import exc, and_
 from auth import auth
 
 ns_group_customer = Namespace("customer-groups",description="Operações para manipular grupos de clientes")
@@ -65,7 +64,7 @@ class UserGroupsList(Resource):
             if search=="":
                 rquery = B2bCustomersGroup.query.filter(B2bCustomersGroup.trash == False).order_by(B2bCustomersGroup.name)
             else:
-                rquery = B2bCustomersGroup.query.filter(sa.and_(B2bCustomersGroup.trash == False,B2bCustomersGroup.name.like(search))).order_by(B2bCustomersGroup.name)
+                rquery = B2bCustomersGroup.query.filter(and_(B2bCustomersGroup.trash == False,B2bCustomersGroup.name.like(search))).order_by(B2bCustomersGroup.name)
                 
             if list_all==False:
                 rquery = rquery.paginate(page=pag_num,per_page=pag_size)

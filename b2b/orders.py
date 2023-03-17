@@ -2,9 +2,8 @@ from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
 from models import B2bOrders,B2bOrdersProducts,db
-from sqlalchemy import exc
+from sqlalchemy import exc,and_
 import json
-import sqlalchemy as sa
 from auth import auth
 
 ns_order = Namespace("orders",description="Operações para manipular dados de pedidos")

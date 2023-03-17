@@ -2,8 +2,7 @@ from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
 from models import CmmCategory,db
-from sqlalchemy import and_
-from sqlalchemy import exc
+from sqlalchemy import exc,and_
 from auth import auth
 
 ns_cat  = Namespace("products-category",description="Operações para manipular dados de categorias de produtos")

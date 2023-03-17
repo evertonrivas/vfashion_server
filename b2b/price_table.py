@@ -2,9 +2,8 @@ from http import HTTPStatus
 from flask import request
 from flask_restx import Resource,Namespace,fields
 from models import B2bTablePrice,B2bTablePriceProduct,db
-import sqlalchemy as sa
 import json
-from sqlalchemy import exc
+from sqlalchemy import exc,and_
 from auth import auth
 
 ns_price = Namespace("price-table",description="Operações para manipular dados de tabelas de preços")
@@ -65,7 +64,7 @@ class PriceTableList(Resource):
             if search=="":
                 rquery = B2bTablePrice.query.filter(B2bTablePrice.active==True).order_by(B2bTablePrice.name)
             else:
-                rquery = B2bTablePrice.query.filter(sa.and_(B2bTablePrice.active==True,B2bTablePrice.name.like(search))).order_by(B2bTablePrice.name)
+                rquery = B2bTablePrice.query.filter(and_(B2bTablePrice.active==True,B2bTablePrice.name.like(search))).order_by(B2bTablePrice.name)
 
             if list_all==False:
                 rquery = rquery.paginate(page=pag_num,per_page=pag_size)

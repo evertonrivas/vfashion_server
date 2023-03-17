@@ -2,8 +2,7 @@ from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
 from models import CmmProductModel,db
-import sqlalchemy as sa
-from sqlalchemy import exc
+from sqlalchemy import exc, and_
 from auth import auth
 
 ns_model = Namespace("products-model",description="Operações para manipular dados de modelos de produtos")
@@ -52,7 +51,7 @@ class CategoryList(Resource):
             if search=="":
                 rquery = CmmProductModel.query.filter(CmmProductModel.trash==False).order_by(CmmProductModel.name)
             else:
-                rquery = CmmProductModel.query.filter(sa.and_(CmmProductModel.trash==False,CmmProductModel.name.like(search))).order_by(CmmProductModel.name)
+                rquery = CmmProductModel.query.filter(and_(CmmProductModel.trash==False,CmmProductModel.name.like(search))).order_by(CmmProductModel.name)
 
             if list_all==False:
                 rquery = rquery.paginate(page=pag_num,per_page=pag_size)

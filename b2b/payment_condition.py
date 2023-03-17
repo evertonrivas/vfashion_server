@@ -2,8 +2,7 @@ from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
 from models import B2bPaymentConditions,db
-import sqlalchemy as sa
-from sqlalchemy import exc
+from sqlalchemy import exc,and_
 from auth import auth
 
 ns_payment = Namespace("payment-conditions",description="Operações para manipular dados de condições de pagamento")
@@ -50,7 +49,7 @@ class PaymentConditionsList(Resource):
 
         try:
             if search!="":
-                rquery = B2bPaymentConditions.query.filter(sa.and_(B2bPaymentConditions.name.like(search),B2bPaymentConditions.trash==False)).paginate(page=pag_num,per_page=pag_size)
+                rquery = B2bPaymentConditions.query.filter(and_(B2bPaymentConditions.name.like(search),B2bPaymentConditions.trash==False)).paginate(page=pag_num,per_page=pag_size)
             else:
                 rquery = B2bPaymentConditions.query.filter(B2bPaymentConditions.trash==False).paginate(page=pag_num,per_page=pag_size)
 

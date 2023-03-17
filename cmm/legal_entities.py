@@ -2,8 +2,7 @@ from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
 from models import CmmLegalEntities,CmmUserEntity,db
-from sqlalchemy import Select,and_
-from sqlalchemy import exc
+from sqlalchemy import Select,and_,exc
 from auth import auth
 
 ns_legal = Namespace("legal-entities",description="Operações para manipular dados de clientes/representantes")

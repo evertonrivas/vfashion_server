@@ -2,9 +2,8 @@ from http import HTTPStatus
 from flask_restx import Resource,fields,Namespace
 from flask import request
 from models import CrmFunnel,CrmFunnelStageCustomer,CrmFunnelStage,db
-import sqlalchemy as sa
 import json
-from sqlalchemy import exc
+from sqlalchemy import exc,and_
 from auth import auth
 
 ns_funil = Namespace("funnels",description="Operações para manipular funis de clientes")
@@ -63,7 +62,7 @@ class FunnelList(Resource):
     
         try:
             if search!="":
-                rquery = CrmFunnel.query.filter(sa.and_(CrmFunnel.trash==False,CrmFunnel.name.like(search))).paginate(page=pag_num,per_page=pag_size)
+                rquery = CrmFunnel.query.filter(and_(CrmFunnel.trash==False,CrmFunnel.name.like(search))).paginate(page=pag_num,per_page=pag_size)
             else:
                 rquery = CrmFunnel.query.filter(CrmFunnel.trash==False).paginate(page=pag_num,per_page=pag_size)
             return {

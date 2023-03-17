@@ -2,8 +2,7 @@ from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
 from models import CmmUsers,db
-import sqlalchemy as sa
-from sqlalchemy import exc
+from sqlalchemy import exc, and_
 from datetime import datetime
 import bcrypt
 from auth import auth
@@ -54,7 +53,7 @@ class UsersList(Resource):
 
         try:
             if request.args.get("query")!=None:
-                rquery = CmmUsers.query.filter(sa.and_(CmmUsers.username.like(search),CmmUsers.active==True)).paginate(page=pag_num,per_page=pag_size)
+                rquery = CmmUsers.query.filter(and_(CmmUsers.username.like(search),CmmUsers.active==True)).paginate(page=pag_num,per_page=pag_size)
             else:
                 rquery = CmmUsers.query.filter(CmmUsers.active==True).paginate(page=pag_num,per_page=pag_size)
 
@@ -167,7 +166,7 @@ class UserAuth(Resource):
     @ns_user.param("password","Senha do sistema","formData",required=True)
     def post(self):
         #req = request.get_json()
-        usr = CmmUsers.query.filter(sa.and_(CmmUsers.username==request.form.get("username"),CmmUsers.active==True)).first()
+        usr = CmmUsers.query.filter(and_(CmmUsers.username==request.form.get("username"),CmmUsers.active==True)).first()
         if usr:
             #verifica a senha criptografada anteriormente
             pwd = request.form.get("password").encode()
