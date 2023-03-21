@@ -1,10 +1,14 @@
 from http import HTTPStatus
-import json
+import simplejson as json
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import CmmProducts,CmmProductsSku,CmmProductsImage,db
-from sqlalchemy import exc, and_
+from models import B2bCollectionPrice, CmmProducts, CmmProductsCategory,\
+    CmmProductsSku,CmmProductsImage, CmmProductType, \
+    CmmProductModel, B2bCollection, B2bTablePrice, \
+    B2bTablePriceProduct,db
+from sqlalchemy import desc, exc, and_, asc,Select,or_
 from auth import auth
+from decimal import Decimal
 
 ns_prod  = Namespace("products",description="Operações para manipular dados de produtos")
 
@@ -74,17 +78,29 @@ class ProductsList(Resource):
     @ns_prod.param("page","Número da página de registros","query",type=int,required=True,default=1)
     @ns_prod.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_prod.param("query","Texto para busca","query")
+    @ns_prod.param("order_by","Campo de ordenacao","query")
+    @ns_prod.param("order_dir","Direção da ordenação","query",enum=['ASC','DESC'])
     @auth.login_required
     def get(self):
-        pag_num  =  1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size = 25 if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_num  = 1 if request.args.get("page") is None else int(request.args.get("page"))
+        pag_size = 4 if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
         search   = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
+        order_by = "name" if request.args.get("order_by") is None else request.args.get("order_by")
+        direction = asc if request.args.get("order_dir") == 'ASC' else desc
 
         try:
             if search!="":
-                rquery = CmmProducts.query.filter(and_(CmmProducts.trash==False,CmmProducts.name.like(search))).paginate(page=pag_num,per_page=pag_size)
+                rquery = CmmProducts\
+                    .query\
+                    .filter(and_(CmmProducts.trash==False,CmmProducts.name.like(search)))\
+                    .order_by(direction(getattr(CmmProducts, order_by)))\
+                    .paginate(page=pag_num,per_page=pag_size)
             else:
-                rquery = CmmProducts.query.filter(CmmProducts.trash==False).paginate(page=pag_num,per_page=pag_size)
+                rquery = CmmProducts\
+                    .query\
+                    .filter(CmmProducts.trash==False)\
+                    .order_by(direction(getattr(CmmProducts, order_by)))\
+                    .paginate(page=pag_num,per_page=pag_size)
 
             return {
                 "paginate":{
@@ -100,11 +116,11 @@ class ProductsList(Resource):
                     "prodCode": m.prodCode,
                     "barCode": m.barCode,
                     "refCode": m.refCode,
-                    "name": m.Name,
+                    "name": m.name,
                     "description": m.description,
                     "observation": m.observation,
                     "ncm": m.ncm,
-                    "price": m.price,
+                    "price": json.dumps(Decimal(m.price)),
                     "measure_unit": m.measure_unit,
                     "structure": m.structure,
                     "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
@@ -199,8 +215,7 @@ class ProductApi(Resource):
                 "description": rquery.description,
                 "observation": rquery.observation,
                 "ncm": rquery.ncm,
-                "image": rquery.image,
-                "price": rquery.price,
+                "price": json.dumps(Decimal(rquery.price)),
                 "measure_unit": rquery.measure_unit,
                 "structure": rquery.structure,
                 "date_created": rquery.date_created.strftime("%Y-%m-%d %H:%M:%S"),
@@ -283,3 +298,135 @@ class ProductApi(Resource):
                 "error_details": e._message(),
                 "error_sql": e._sql_message()
             }
+
+
+from sqlalchemy.ext.declarative import DeclarativeMeta
+
+class AlchemyEncoder(json.JSONEncoder):
+
+    def default(self, obj):
+        if isinstance(obj.__class__, DeclarativeMeta):
+            # an SQLAlchemy class
+            fields = {}
+            for field in [x for x in dir(obj) if not x.startswith('_') and x != 'metadata']:
+                data = obj.__getattribute__(field)
+                try:
+                    json.dumps(data) # this will fail on non-encodable values, like other classes
+                    fields[field] = data
+                except TypeError:
+                    fields[field] = None
+            # a json-encodable dict
+            return fields
+
+        return json.JSONEncoder.default(self, obj)
+
+#busca especifica para a galeria de produtos do B2B, jah que precisa buscar mais coisas além do nome
+class ProductsGallery(Resource):
+    @ns_prod.response(HTTPStatus.OK.value,"Obtem a listagem de produto",prd_return)
+    @ns_prod.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
+    @ns_prod.param("page","Número da página de registros","query",type=int,required=True,default=1)
+    @ns_prod.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
+    @ns_prod.param("collection","Código da coleção",type=int)
+    @ns_prod.param("category","Código da categoria",type=int)
+    @ns_prod.param("model","Código do modelo",type=int)
+    @ns_prod.param("type","Código do tipo",type=int)
+    @ns_prod.param("query","Texto para busca","query")
+    @ns_prod.param("order_by","Campo de ordenacao","query")
+    @ns_prod.param("order_dir","Direção da ordenação","query",enum=['ASC','DESC'])
+    #@auth.login_required
+    def get(self):
+        pag_num    = 1 if request.args.get("page") is None else int(request.args.get("page"))
+        pag_size   = 25 if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        search     = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
+        collection = None if request.args.get("collection") is None else request.args.get("collection")
+        category   = None if request.args.get("category") is None else request.args.get("category")
+        model      = None if request.args.get("model") is None else request.args.get("model")
+        type       = None if request.args.get("type") is None else request.args.get("type")
+        color      = None if request.args.get("color") is None else request.args.get("color")
+        size       = None if request.args.get("size") is None else request.args.get("size")
+        order_by   = "id" if request.args.get("order_by") is None else request.args.get("order_by")
+        direction  = desc if request.args.get("order_dir") == 'DESC' else asc
+
+        try:
+            query = Select(CmmProducts)\
+                .join(CmmProductsCategory,CmmProducts.id_category==CmmProductsCategory.id)\
+                .join(CmmProductType,CmmProductType.id==CmmProducts.id_type)\
+                .join(CmmProductModel,CmmProductModel.id==CmmProducts.id_model)\
+                .outerjoin(B2bTablePriceProduct,B2bTablePriceProduct.id_product==CmmProducts.id)\
+                .outerjoin(B2bTablePrice,B2bTablePrice.id==B2bTablePriceProduct.id_table_price)\
+                .outerjoin(B2bCollectionPrice,B2bCollectionPrice.id_table_price==B2bTablePrice.id)\
+                .outerjoin(B2bCollection,B2bCollection.id==B2bCollectionPrice.id_collection)
+            if search!="":
+                query = query.where(or_(
+                    CmmProducts.trash==False,
+                    CmmProducts.name.like(search),
+                    CmmProducts.description.like(search),
+                    CmmProducts.barCode.like(search),
+                    CmmProducts.observation.like(search),
+                    CmmProductsCategory.name.like(search),
+                    CmmProductModel.name.like(search),
+                    CmmProductType.name.like(search)
+                ))
+            if collection != None: query = query.where(B2bCollection.id.in_([collection]))
+            if category!= None:    query = query.where(CmmProductsCategory.id.in_([category]))
+            if model!=None:        query = query.where(CmmProductModel.id.in_([model]))
+            if type != None:       query = query.where(CmmProductType.id.in_([type]))
+
+            query = query.order_by(direction(getattr(CmmProducts, order_by)))
+
+            rquery = db.paginate(query,page=pag_num,per_page=pag_size)
+
+            return {
+                "paginate":{
+                    "registers": rquery.total,
+                    "page": pag_num,
+                    "per_page": pag_size,
+                    "pages": rquery.pages,
+                    "has_next": rquery.has_next
+                },
+                "data":[{
+                    "id": m.id,
+                    "id_category": m.id_category,
+                    "prodCode": m.prodCode,
+                    "barCode": m.barCode,
+                    "refCode": m.refCode,
+                    "name": m.name,
+                    "description": m.description,
+                    "observation": m.observation,
+                    "ncm": m.ncm,
+                    "price": json.dumps(Decimal(m.price)),
+                    "measure_unit": m.measure_unit,
+                    "structure": m.structure,
+                    "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+                    "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None,
+                    "sku": self.get_sku(m.id),
+                    "images": self.get_images(m.id)
+                } for m in rquery]
+            }
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
+
+
+    def get_sku(self,id:int):
+        rquery = CmmProductsSku.query.filter_by(id_product=id)
+        return [{
+            "id_type": m.id_type,
+            "id_model": m.id_model,
+            "color": m.color,
+            "size" : m.size
+        }for m in rquery]
+    
+
+    def get_images(self,id:int):
+        rquery = CmmProductsImage.query.filter_by(id_product=id)
+        return [{
+            "id": m.id,
+            "img_url":m.img_url
+        }for m in rquery]
+
+
+ns_prod.add_resource(ProductsGallery,'/gallery/')
