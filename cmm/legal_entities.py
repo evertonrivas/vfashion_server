@@ -140,7 +140,9 @@ class CustomerApi(Resource):
     @auth.login_required
     def get(self,id:int):
         try:
-                retorno = Select(CmmLegalEntities).join(CmmUserEntity,CmmLegalEntities.id==CmmUserEntity.id_entity).where(CmmUserEntity.id_user==id)
+                retorno = Select(CmmLegalEntities)\
+                    .join(CmmUserEntity,CmmLegalEntities.id==CmmUserEntity.id_entity)\
+                    .where(CmmUserEntity.id_user==id)
                 return db.session.scalar(retorno).to_dict()
         except exc.SQLAlchemyError as e:
             return {
