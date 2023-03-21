@@ -2,7 +2,7 @@ from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
 from models import CmmUsers,db
-from sqlalchemy import exc, and_
+from sqlalchemy import desc, exc, and_, asc
 from datetime import datetime
 import bcrypt
 from auth import auth
@@ -45,17 +45,21 @@ class UsersList(Resource):
     @ns_user.param("page","Número da página de registros","query",type=int,required=True)
     @ns_user.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_user.param("query","Texto para busca","query")
+    @ns_user.param("order_by","Campo de ordenacao","query")
+    @ns_user.param("order_dir","Direção da ordenação","query",enum=['ASC','DESC'])
     @auth.login_required
     def get(self):
-        pag_num  =  1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size = 25 if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
-        search   = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
+        pag_num   =  1 if request.args.get("page") is None else int(request.args.get("page"))
+        pag_size  = 25 if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        search    = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
+        order_by  = "username" if request.args.get("order_by") is None else request.args.get("order_by")
+        direction = asc if request.args.get("order_dir") == 'ASC' else desc
 
         try:
             if request.args.get("query")!=None:
-                rquery = CmmUsers.query.filter(and_(CmmUsers.username.like(search),CmmUsers.active==True)).paginate(page=pag_num,per_page=pag_size)
+                rquery = CmmUsers.query.filter(and_(CmmUsers.username.like(search),CmmUsers.active==True)).order_by(direction(getattr(CmmUsers, order_by))).paginate(page=pag_num,per_page=pag_size)
             else:
-                rquery = CmmUsers.query.filter(CmmUsers.active==True).paginate(page=pag_num,per_page=pag_size)
+                rquery = CmmUsers.query.filter(CmmUsers.active==True).order_by(direction(getattr(CmmUsers, order_by))).paginate(page=pag_num,per_page=pag_size)
 
             return {
                 "pagination":{
