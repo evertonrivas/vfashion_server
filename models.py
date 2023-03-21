@@ -81,7 +81,7 @@ class CmmProductsImage(db.Model,SerializerMixin):
     img_url    = sa.Column(sa.String(255),nullable=False)
 
 
-class CmmProductType(db.Model,SerializerMixin):
+class CmmProductsType(db.Model,SerializerMixin):
     id           = sa.Column(sa.Integer,nullable=False,primary_key=True,autoincrement=True)
     name         = sa.Column(sa.String(128),nullable=False)
     date_created = sa.Column(sa.DateTime,nullable=False,server_default=func.now())
@@ -89,7 +89,7 @@ class CmmProductType(db.Model,SerializerMixin):
     trash        = sa.Column(sa.Boolean,nullable=False,default=False)
 
 
-class CmmProductModel(db.Model,SerializerMixin):
+class CmmProductsModel(db.Model,SerializerMixin):
     id = sa.Column(sa.Integer,nullable=False,primary_key=True,autoincrement=True)
     name = sa.Column(sa.String(255),nullable=False)
     date_created = sa.Column(sa.DateTime,nullable=False,server_default=func.now())
