@@ -1,7 +1,7 @@
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import CmmCategory,db
+from models import CmmProductsCategory,db
 from sqlalchemy import exc,and_
 from auth import auth
 
@@ -50,9 +50,9 @@ class CategoryList(Resource):
         list_all = False if request.args.get("list_all") is None else True
         try:
             if search=="":
-                rquery = CmmCategory.query.filter(CmmCategory.trash==False).order_by(CmmCategory.name)
+                rquery = CmmProductsCategory.query.filter(CmmProductsCategory.trash==False).order_by(CmmProductsCategory.name)
             else:
-                rquery = CmmCategory.query.filter(and_(CmmCategory.trash==False,CmmCategory.name.like(search))).order_by(CmmCategory.name)
+                rquery = CmmProductsCategory.query.filter(and_(CmmProductsCategory.trash==False,CmmProductsCategory.name.like(search))).order_by(CmmProductsCategory.name)
 
             if list_all==False:
                 rquery = rquery.paginate(page=pag_num,per_page=pag_size)
@@ -94,7 +94,7 @@ class CategoryList(Resource):
     @auth.login_required
     def post(self):
         try:
-            cat = CmmCategory()
+            cat = CmmProductsCategory()
             cat.name = request.form.get("name")
             cat.id_parent = int(request.form.get("id_parent")) if request.form.get("id_parent")!=None else None
             db.session.add(cat)
@@ -116,7 +116,7 @@ class CategoryApi(Resource):
     @auth.login_required
     def get(self,id:int):
         try:
-            return CmmCategory.query.get(id).to_dict()
+            return CmmProductsCategory.query.get(id).to_dict()
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -130,7 +130,7 @@ class CategoryApi(Resource):
     @auth.login_required
     def post(self,id:int):
         try:
-            cat = CmmCategory.query.get(id)
+            cat = CmmProductsCategory.query.get(id)
             cat.name      = cat.name if request.form.get("name") is None else request.form.get("name")
             cat.id_parent = cat.id_parent if request.form.get("id_parent") is None else int(request.form.get("id_parent"))
             db.session.commit() 
@@ -146,7 +146,7 @@ class CategoryApi(Resource):
     @auth.login_required
     def delete(self,id:int):
         try:
-            cat = CmmCategory.query.get(id)
+            cat = CmmProductsCategory.query.get(id)
             cat.trash = True
             db.session.commit()
             return True
