@@ -1,7 +1,8 @@
 from flask import Blueprint
 from flask_restx import Api
 from cmm.users import ns_user
-from cmm.products import ns_prod, ns_gprod
+from cmm.products import ns_prod
+from cmm.products_grid import ns_gprod
 from cmm.products_category import ns_cat
 from cmm.products_type import ns_type
 from cmm.products_model import ns_model
