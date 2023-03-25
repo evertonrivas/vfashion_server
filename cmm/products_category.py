@@ -2,7 +2,7 @@ from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
 from models import CmmProductsCategory,db
-from sqlalchemy import exc,and_
+from sqlalchemy import exc,and_,asc,desc
 from auth import auth
 
 ns_cat  = Namespace("products-category",description="Operações para manipular dados de categorias de produtos")
@@ -42,17 +42,28 @@ class CategoryList(Resource):
     @ns_cat.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_cat.param("query","Texto para busca","query")
     @ns_cat.param("list_all","Ignora as paginas e lista todos os registros",type=bool,default=False)
+    @ns_cat.param("order_by","Campo de ordenacao","query")
+    @ns_cat.param("order_dir","Direção da ordenação","query",enum=['ASC','DESC'])
     @auth.login_required
     def get(self):
         pag_num  =  1 if request.args.get("page") is None else int(request.args.get("page"))
         pag_size = 25 if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
         search   = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
         list_all = False if request.args.get("list_all") is None else True
+        order_by   = "id" if request.args.get("order_by") is None else request.args.get("order_by")
+        direction  = desc if request.args.get("order_dir") == 'DESC' else asc
+
         try:
             if search=="":
-                rquery = CmmProductsCategory.query.filter(CmmProductsCategory.trash==False).order_by(CmmProductsCategory.name)
+                rquery = CmmProductsCategory\
+                    .query\
+                    .filter(CmmProductsCategory.trash==False)\
+                    .order_by(direction(getattr(CmmProductsCategory, order_by)))
             else:
-                rquery = CmmProductsCategory.query.filter(and_(CmmProductsCategory.trash==False,CmmProductsCategory.name.like(search))).order_by(CmmProductsCategory.name)
+                rquery = CmmProductsCategory\
+                    .query\
+                    .filter(and_(CmmProductsCategory.trash==False,CmmProductsCategory.name.like(search)))\
+                    .order_by(direction(getattr(CmmProductsCategory, order_by)))
 
             if list_all==False:
                 rquery = rquery.paginate(page=pag_num,per_page=pag_size)
@@ -106,8 +117,6 @@ class CategoryList(Resource):
                 "error_details": e._message(),
                 "error_sql": e._sql_message()
             }
-    def options(self):
-        pass
 
 @ns_cat.route("/<int:id>")
 class CategoryApi(Resource):

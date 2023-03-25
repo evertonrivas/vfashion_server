@@ -2,7 +2,7 @@ from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
 from models import CmmProductsType,db
-from sqlalchemy import and_,exc
+from sqlalchemy import and_,exc,asc,desc
 from auth import auth
 
 ns_type = Namespace("products-type",description="Operações para manipular dados de tipos de produtos")
@@ -41,17 +41,27 @@ class CategoryList(Resource):
     @ns_type.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_type.param("query","Texto para busca","query")
     @ns_type.param("list_all","Ignora as paginas e lista todos os registros",type=bool,default=False)
+    @ns_type.param("order_by","Campo de ordenacao","query")
+    @ns_type.param("order_dir","Direção da ordenação","query",enum=['ASC','DESC'])
     @auth.login_required
     def get(self):
         pag_num  =  1 if request.args.get("page") is None else int(request.args.get("page"))
         pag_size = 25 if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
         search   = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
         list_all = False if request.args.get("list_all") is None else True
+        order_by   = "id" if request.args.get("order_by") is None else request.args.get("order_by")
+        direction  = desc if request.args.get("order_dir") == 'DESC' else asc
         try:
             if search=="":
-                rquery = CmmProductsType.query.filter(CmmProductsType.trash==False).order_by(CmmProductsType.name)
+                rquery = CmmProductsType\
+                    .query\
+                    .filter(CmmProductsType.trash==False)\
+                    .order_by(direction(getattr(CmmProductsType, order_by)))
             else:
-                rquery = CmmProductsType.query.filter(and_(CmmProductsType.trash==False,CmmProductsType.name.like(search))).order_by(CmmProductsType.name)
+                rquery = CmmProductsType\
+                    .query\
+                    .filter(and_(CmmProductsType.trash==False,CmmProductsType.name.like(search)))\
+                    .order_by(direction(getattr(CmmProductsType, order_by)))
 
             if list_all==False:
                 rquery = rquery.paginate(page=pag_num,per_page=pag_size)

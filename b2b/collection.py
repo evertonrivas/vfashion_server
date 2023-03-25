@@ -3,7 +3,7 @@ from flask_restx import Resource,Namespace,fields
 from flask import request
 from models import B2bCollection,B2bCollectionPrice,db
 import json
-from sqlalchemy import exc,and_
+from sqlalchemy import exc,and_,desc,asc
 from auth import auth
 
 ns_collection = Namespace("collection",description="Operações para manipular dados de coleções")
@@ -53,19 +53,29 @@ class CollectionList(Resource):
     @ns_collection.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_collection.param("query","Texto para busca","query")
     @ns_collection.param("list_all","Ignora as paginas e lista todos os registros",type=bool,default=False)
-    #@auth.login_required
+    @ns_collection.param("order_by","Campo de ordenacao","query")
+    @ns_collection.param("order_dir","Direção da ordenação","query",enum=['ASC','DESC'])
+    @auth.login_required
     def get(self):
         pag_num  =  1 if request.args.get("page") is None else int(request.args.get("page"))
         pag_size = 25 if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
         search   = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
         list_all = False if request.args.get("list_all") is None else True
+        order_by   = "id" if request.args.get("order_by") is None else request.args.get("order_by")
+        direction  = desc if request.args.get("order_dir") == 'DESC' else asc
 
         try:
             if search=="":
-                rquery = B2bCollection.query.filter(B2bCollection.trash == False).order_by(B2bCollection.name)
+                rquery = B2bCollection\
+                    .query\
+                    .filter(B2bCollection.trash == False)\
+                    .order_by(direction(getattr(B2bCollection, order_by)))
                 
             else:
-                rquery = B2bCollection.query.filter(and_(B2bCollection.trash == False,B2bCollection.name.like(search))).order_by(B2bCollection.name)
+                rquery = B2bCollection\
+                    .query\
+                    .filter(and_(B2bCollection.trash == False,B2bCollection.name.like(search)))\
+                    .order_by(direction(getattr(B2bCollection, order_by)))
 
             if list_all==False:
                 rquery = rquery.paginate(page=pag_num,per_page=pag_size)
@@ -88,7 +98,7 @@ class CollectionList(Resource):
                 retorno = [{
                         "id":m.id,
                         "name":m.name,
-                        "table_prices": ''
+                        "table_prices": self.get_table_prices(m.id)
                     } for m in rquery]
             return retorno
         except exc.SQLAlchemyError as e:
@@ -98,8 +108,8 @@ class CollectionList(Resource):
                 "error_sql": e._sql_message()
             }
 
-    def get_customers(self,id:int):
-        rquery = B2bCollectionPrice.query.filter_by(id_collection = id)
+    def get_table_prices(self,id:int):
+        rquery = B2bCollectionPrice.query.filter(B2bCollectionPrice.id_collection == id)
         return [{
             "id": m.id_table_price
         } for m in rquery]
@@ -107,7 +117,7 @@ class CollectionList(Resource):
     @ns_collection.response(HTTPStatus.OK.value,"Cria uma nova coleção")
     @ns_collection.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar registro!")
     @ns_collection.doc(body=coll_model)
-    #@auth.login_required
+    @auth.login_required
     def post(self)->int:
         try:
             req = json.dumps(request.get_json())
@@ -136,19 +146,18 @@ class CollectionList(Resource):
 class CollectionApi(Resource):
     @ns_collection.response(HTTPStatus.OK.value,"Retorna os dados dados de uma coleção")
     @ns_collection.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
-    #@auth.login_required
+    @auth.login_required
     def get(self,id:int):
         try:
             cquery = B2bCollection.query.get(id)
-            squery = B2bCollectionPrice.query.filter_by(id_customer = id)
+            squery = B2bCollectionPrice.query.filter(B2bCollectionPrice.id_collection == id)
 
             return {
                 "id": cquery.id,
                 "name": cquery.name,
-                "need_approval": cquery.need_approval,
-                "customers": [{
+                "table_prices": [{
                     "id": m.id_table_price
-                }for m in squery.items]
+                }for m in squery]
             }
         except exc.SQLAlchemyError as e:
             return {
@@ -160,7 +169,7 @@ class CollectionApi(Resource):
     @ns_collection.response(HTTPStatus.OK.value,"Atualiza os dados de uma coleção")
     @ns_collection.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
     @ns_collection.doc(body=coll_model)
-    #@auth.login_required
+    @auth.login_required
     def post(self,id:int)->bool:
         try:
             req = json.dumps(request.get_json())
@@ -191,7 +200,7 @@ class CollectionApi(Resource):
     
     @ns_collection.response(HTTPStatus.OK.value,"Exclui os dados de uma coleção")
     @ns_collection.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
-    #@auth.login_required
+    @auth.login_required
     def delete(self,id:int)->bool:
         try:
             grp = B2bCollection.query.get(id)

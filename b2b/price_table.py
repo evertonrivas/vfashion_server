@@ -3,8 +3,9 @@ from flask import request
 from flask_restx import Resource,Namespace,fields
 from models import B2bTablePrice,B2bTablePriceProduct,db
 import json
-from sqlalchemy import exc,and_
+from sqlalchemy import exc,and_,desc,asc
 from auth import auth
+from decimal import Decimal
 
 ns_price = Namespace("price-table",description="Operações para manipular dados de tabelas de preços")
 
@@ -53,18 +54,29 @@ class PriceTableList(Resource):
     @ns_price.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_price.param("query","Texto para busca","query")
     @ns_price.param("list_all","Ignora as paginas e lista todos os registros",type=bool,default=False)
+    @ns_price.param("order_by","Campo de ordenacao","query")
+    @ns_price.param("order_dir","Direção da ordenação","query",enum=['ASC','DESC'])
+
     @auth.login_required
     def get(self):
         pag_num  =  1 if request.args.get("page") is None else int(request.args.get("page"))
         pag_size = 25 if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
         search   = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
         list_all = False if request.args.get("list_all") is None else True
+        order_by   = "id" if request.args.get("order_by") is None else request.args.get("order_by")
+        direction  = desc if request.args.get("order_dir") == 'DESC' else asc
 
         try:
             if search=="":
-                rquery = B2bTablePrice.query.filter(B2bTablePrice.active==True).order_by(B2bTablePrice.name)
+                rquery = B2bTablePrice\
+                    .query\
+                    .filter(B2bTablePrice.active==True)\
+                    .order_by(direction(getattr(B2bTablePrice, order_by)))
             else:
-                rquery = B2bTablePrice.query.filter(and_(B2bTablePrice.active==True,B2bTablePrice.name.like(search))).order_by(B2bTablePrice.name)
+                rquery = B2bTablePrice\
+                    .query\
+                    .filter(and_(B2bTablePrice.active==True,B2bTablePrice.name.like(search)))\
+                    .order_by(direction(getattr(B2bTablePrice, order_by)))
 
             if list_all==False:
                 rquery = rquery.paginate(page=pag_num,per_page=pag_size)
@@ -82,7 +94,8 @@ class PriceTableList(Resource):
                         "name": m.name,
                         "start_date": m.start_date,
                         "end_date": m.end_date,
-                        "active": m.active
+                        "active": m.active,
+                        "products": self.get_products(m.id)
                     }for m in rquery.items]
                 }
             else:
@@ -91,7 +104,8 @@ class PriceTableList(Resource):
                         "name": m.name,
                         "start_date": m.start_date,
                         "end_date": m.end_date,
-                        "active": m.active
+                        "active": m.active,
+                        "products": self.get_products(m.id)
                     }for m in rquery]
             return retorno
         except exc.SQLAlchemyError as e:
@@ -166,7 +180,7 @@ class PriceTableApi(Resource):
                     "stock_quantity": m.stock_quantity,
                     "price": m.price,
                     "price_retail": m.price_retail
-                }for m in squery.items]
+                }for m in squery]
             }
         except exc.SQLAlchemyError as e:
             return {
@@ -211,3 +225,55 @@ class PriceTableApi(Resource):
                 "error_details": e._message(),
                 "error_sql": e._sql_message()
             }
+
+
+class B2bTablePriceProductApi(Resource):
+
+    @ns_price.response(HTTPStatus.OK.value,"Adiciona uma tabela de preço em uma coleção")
+    @ns_price.response(HTTPStatus.BAD_REQUEST.value,"Falha ao adicionar preço!")
+    @ns_price.param("id_table_price","Código da tabela de preço","formData",required=True)
+    @ns_price.param("id_product","Código do produto","formData",required=True)
+    def post(self):
+        try:
+            colp = B2bTablePriceProduct()
+            colp.id_product     = int(request.form.get("id_product"))
+            colp.id_table_price = int(request.form.get("id_table_price"))
+            colp.price          = Decimal(request.form.get("price"))
+            colp.price_retail   = Decimal(request.form.get("price_retail"))
+            colp.stock_quantity = int(request.form.get("stock_quantity"))
+            db.session.add(colp)
+            db.session.commit()
+            return True
+        except exc.DatabaseError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
+        pass
+
+    @ns_price.response(HTTPStatus.OK.value,"Remove uma tabela de preço em uma coleção")
+    @ns_price.response(HTTPStatus.BAD_REQUEST.value,"Falha ao adicionar preço!")
+    @ns_price.param("id_table_price","Código da tabela de preço","formData",required=True)
+    @ns_price.param("id_product","Código do produto","formData",required=True)
+    def delete(self):
+        try:
+
+    # id_table_price = sa.Column(sa.Integer,nullable=False,primary_key=True)
+    # id_product     = sa.Column(sa.Integer,nullable=False,primary_key=True)
+
+
+            id_table_price = request.args.get("id_table_price")
+            id_product  = request.args.get("id_colid_productlection")
+            grp = B2bTablePriceProduct.query.get((id_table_price,id_product))
+            db.session.delete(grp)
+            db.session.commit()
+            return True
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
+
+ns_price.add_resource(B2bTablePriceProductApi,'/manage-product')

@@ -2,9 +2,9 @@ from http import HTTPStatus
 import simplejson as json
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import B2bCollectionPrice, CmmProducts, CmmProductsCategory,\
-    CmmProductsSku,CmmProductsImage, CmmProductType, \
-    CmmProductModel, B2bCollection, B2bTablePrice, \
+from models import B2bBrand, B2bCollectionPrice, CmmProducts, CmmProductsCategory,\
+    CmmProductsSku,CmmProductsImage, CmmProductsType, \
+    CmmProductsModel, B2bCollection, B2bTablePrice, \
     B2bTablePriceProduct,db
 from sqlalchemy import desc, exc, and_, asc,Select,or_
 from auth import auth
@@ -337,7 +337,8 @@ class ProductsGallery(Resource):
     def get(self):
         pag_num    = 1 if request.args.get("page") is None else int(request.args.get("page"))
         pag_size   = 25 if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
-        search     = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
+        search     = "" if request.args.get("query") is None or request.args.get("query")=="" else "{}%".format(request.args.get("query"))
+        brand      = None if request.args.get("brand") is None else request.args.get("brand")
         collection = None if request.args.get("collection") is None else request.args.get("collection")
         category   = None if request.args.get("category") is None else request.args.get("category")
         model      = None if request.args.get("model") is None else request.args.get("model")
@@ -350,12 +351,13 @@ class ProductsGallery(Resource):
         try:
             query = Select(CmmProducts)\
                 .join(CmmProductsCategory,CmmProducts.id_category==CmmProductsCategory.id)\
-                .join(CmmProductType,CmmProductType.id==CmmProducts.id_type)\
-                .join(CmmProductModel,CmmProductModel.id==CmmProducts.id_model)\
+                .join(CmmProductsType,CmmProductsType.id==CmmProducts.id_type)\
+                .join(CmmProductsModel,CmmProductsModel.id==CmmProducts.id_model)\
                 .outerjoin(B2bTablePriceProduct,B2bTablePriceProduct.id_product==CmmProducts.id)\
                 .outerjoin(B2bTablePrice,B2bTablePrice.id==B2bTablePriceProduct.id_table_price)\
                 .outerjoin(B2bCollectionPrice,B2bCollectionPrice.id_table_price==B2bTablePrice.id)\
-                .outerjoin(B2bCollection,B2bCollection.id==B2bCollectionPrice.id_collection)
+                .outerjoin(B2bCollection,B2bCollection.id==B2bCollectionPrice.id_collection)\
+                .outerjoin(B2bBrand,B2bBrand.id==B2bCollection.id_brand)
             if search!="":
                 query = query.where(or_(
                     CmmProducts.trash==False,
@@ -364,15 +366,18 @@ class ProductsGallery(Resource):
                     CmmProducts.barCode.like(search),
                     CmmProducts.observation.like(search),
                     CmmProductsCategory.name.like(search),
-                    CmmProductModel.name.like(search),
-                    CmmProductType.name.like(search)
+                    CmmProductsModel.name.like(search),
+                    CmmProductsType.name.like(search)
                 ))
-            if collection != None: query = query.where(B2bCollection.id.in_([collection]))
-            if category!= None:    query = query.where(CmmProductsCategory.id.in_([category]))
-            if model!=None:        query = query.where(CmmProductModel.id.in_([model]))
-            if type != None:       query = query.where(CmmProductType.id.in_([type]))
+            if brand!= None:       query = query.where(B2bBrand.id.in_(brand.split(',')))
+            if collection != None: query = query.where(B2bCollection.id.in_(collection.split(",")))
+            if category!= None:    query = query.where(CmmProductsCategory.id.in_(category.split(",")))
+            if model!=None:        query = query.where(CmmProductsModel.id.in_(model.split(",")))
+            if type != None:       query = query.where(CmmProductsType.id.in_(type.split(",")))
 
             query = query.order_by(direction(getattr(CmmProducts, order_by)))
+
+            #print(query)
 
             rquery = db.paginate(query,page=pag_num,per_page=pag_size)
 
