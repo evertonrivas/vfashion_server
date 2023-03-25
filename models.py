@@ -213,8 +213,17 @@ class B2bPaymentConditions(db.Model,SerializerMixin):
     trash         = sa.Column(sa.Boolean,nullable=False,default=False)
 
 
+class B2bBrand(db.Model,SerializerMixin):
+    id = sa.Column(sa.Integer,primary_key=True,nullable=False,autoincrement=True)
+    name = sa.Column(sa.String(100),nullable=False)
+    date_created  = sa.Column(sa.DateTime,nullable=False,server_default=func.now())
+    date_updated  = sa.Column(sa.DateTime,onupdate=func.now())
+    trash         = sa.Column(sa.Boolean,nullable=False,default=False)
+
+
 class B2bCollection(db.Model,SerializerMixin):
     id            = sa.Column(sa.Integer,primary_key=True,nullable=False,autoincrement=True)
+    id_brand      = sa.Column(sa.Integer,nullable=False)
     name          = sa.Column(sa.String(128),nullable=False)
     date_created  = sa.Column(sa.DateTime,nullable=False,server_default=func.now())
     date_updated  = sa.Column(sa.DateTime,onupdate=func.now())
