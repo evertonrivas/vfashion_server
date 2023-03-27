@@ -1,7 +1,7 @@
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import CmmProductsCategory,db
+from models import CmmProductsCategories,db
 from sqlalchemy import exc,and_,asc,desc
 from auth import auth
 
@@ -55,15 +55,15 @@ class CategoryList(Resource):
 
         try:
             if search=="":
-                rquery = CmmProductsCategory\
+                rquery = CmmProductsCategories\
                     .query\
-                    .filter(CmmProductsCategory.trash==False)\
-                    .order_by(direction(getattr(CmmProductsCategory, order_by)))
+                    .filter(CmmProductsCategories.trash==False)\
+                    .order_by(direction(getattr(CmmProductsCategories, order_by)))
             else:
-                rquery = CmmProductsCategory\
+                rquery = CmmProductsCategories\
                     .query\
-                    .filter(and_(CmmProductsCategory.trash==False,CmmProductsCategory.name.like(search)))\
-                    .order_by(direction(getattr(CmmProductsCategory, order_by)))
+                    .filter(and_(CmmProductsCategories.trash==False,CmmProductsCategories.name.like(search)))\
+                    .order_by(direction(getattr(CmmProductsCategories, order_by)))
 
             if list_all==False:
                 rquery = rquery.paginate(page=pag_num,per_page=pag_size)
@@ -105,7 +105,7 @@ class CategoryList(Resource):
     @auth.login_required
     def post(self):
         try:
-            cat = CmmProductsCategory()
+            cat = CmmProductsCategories()
             cat.name = request.form.get("name")
             cat.id_parent = int(request.form.get("id_parent")) if request.form.get("id_parent")!=None else None
             db.session.add(cat)
@@ -125,7 +125,7 @@ class CategoryApi(Resource):
     @auth.login_required
     def get(self,id:int):
         try:
-            return CmmProductsCategory.query.get(id).to_dict()
+            return CmmProductsCategories.query.get(id).to_dict()
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -139,7 +139,7 @@ class CategoryApi(Resource):
     @auth.login_required
     def post(self,id:int):
         try:
-            cat = CmmProductsCategory.query.get(id)
+            cat = CmmProductsCategories.query.get(id)
             cat.name      = cat.name if request.form.get("name") is None else request.form.get("name")
             cat.id_parent = cat.id_parent if request.form.get("id_parent") is None else int(request.form.get("id_parent"))
             db.session.commit() 
@@ -155,7 +155,7 @@ class CategoryApi(Resource):
     @auth.login_required
     def delete(self,id:int):
         try:
-            cat = CmmProductsCategory.query.get(id)
+            cat = CmmProductsCategories.query.get(id)
             cat.trash = True
             db.session.commit()
             return True

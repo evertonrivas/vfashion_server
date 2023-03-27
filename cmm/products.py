@@ -2,9 +2,9 @@ from http import HTTPStatus
 import simplejson as json
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import B2bBrand, B2bCollectionPrice, CmmProducts, CmmProductsCategory,\
-    CmmProductsSku,CmmProductsImage, CmmProductsType, \
-    CmmProductsModel, B2bCollection, B2bTablePrice, \
+from models import B2bBrand, B2bCollectionPrice, CmmProducts, CmmProductsCategories,\
+    CmmProductsSku,CmmProductsImages, CmmProductsTypes, \
+    CmmProductsModels, B2bCollection, B2bTablePrice, \
     B2bTablePriceProduct,db
 from sqlalchemy import desc, exc, and_, asc,Select,or_
 from auth import auth
@@ -148,7 +148,7 @@ class ProductsList(Resource):
     
 
     def get_images(self,id:int):
-        rquery = CmmProductsImage.query.filter_by(id_product=id)
+        rquery = CmmProductsImages.query.filter_by(id_product=id)
         return [{
             "id": m.id,
             "img_url":m.img_url
@@ -205,7 +205,7 @@ class ProductApi(Resource):
         try:
             rquery = CmmProducts.query.get(id)
             squery = CmmProductsSku.query.filter_by(id_product=id)
-            iquery = CmmProductsImage.query.filter_by(id_product=id)
+            iquery = CmmProductsImages.query.filter_by(id_product=id)
             return {
                 "id": rquery.id,
                 "prodCode": rquery.prodCode,
@@ -350,9 +350,9 @@ class ProductsGallery(Resource):
 
         try:
             query = Select(CmmProducts)\
-                .join(CmmProductsCategory,CmmProducts.id_category==CmmProductsCategory.id)\
-                .join(CmmProductsType,CmmProductsType.id==CmmProducts.id_type)\
-                .join(CmmProductsModel,CmmProductsModel.id==CmmProducts.id_model)\
+                .join(CmmProductsCategories,CmmProducts.id_category==CmmProductsCategories.id)\
+                .join(CmmProductsTypes,CmmProductsTypes.id==CmmProducts.id_type)\
+                .join(CmmProductsModels,CmmProductsModels.id==CmmProducts.id_model)\
                 .outerjoin(B2bTablePriceProduct,B2bTablePriceProduct.id_product==CmmProducts.id)\
                 .outerjoin(B2bTablePrice,B2bTablePrice.id==B2bTablePriceProduct.id_table_price)\
                 .outerjoin(B2bCollectionPrice,B2bCollectionPrice.id_table_price==B2bTablePrice.id)\
@@ -365,15 +365,15 @@ class ProductsGallery(Resource):
                     CmmProducts.description.like(search),
                     CmmProducts.barCode.like(search),
                     CmmProducts.observation.like(search),
-                    CmmProductsCategory.name.like(search),
-                    CmmProductsModel.name.like(search),
-                    CmmProductsType.name.like(search)
+                    CmmProductsCategories.name.like(search),
+                    CmmProductsModels.name.like(search),
+                    CmmProductsTypes.name.like(search)
                 ))
             if brand!= None:       query = query.where(B2bBrand.id.in_(brand.split(',')))
             if collection != None: query = query.where(B2bCollection.id.in_(collection.split(",")))
-            if category!= None:    query = query.where(CmmProductsCategory.id.in_(category.split(",")))
-            if model!=None:        query = query.where(CmmProductsModel.id.in_(model.split(",")))
-            if type != None:       query = query.where(CmmProductsType.id.in_(type.split(",")))
+            if category!= None:    query = query.where(CmmProductsCategories.id.in_(category.split(",")))
+            if model!=None:        query = query.where(CmmProductsModels.id.in_(model.split(",")))
+            if type != None:       query = query.where(CmmProductsTypes.id.in_(type.split(",")))
 
             query = query.order_by(direction(getattr(CmmProducts, order_by)))
 
@@ -427,7 +427,7 @@ class ProductsGallery(Resource):
     
 
     def get_images(self,id:int):
-        rquery = CmmProductsImage.query.filter_by(id_product=id)
+        rquery = CmmProductsImages.query.filter_by(id_product=id)
         return [{
             "id": m.id,
             "img_url":m.img_url
