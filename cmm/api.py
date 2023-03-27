@@ -7,6 +7,8 @@ from cmm.products_category import ns_cat
 from cmm.products_type import ns_type
 from cmm.products_model import ns_model
 from cmm.legal_entities import ns_legal
+from cmm.translate_colors import ns_color
+from cmm.translate_sizes import ns_size
 
 
 """ Módulo Common entre os sistemas
@@ -16,7 +18,7 @@ Keyword arguments: usuarios, produtos
 """
 
 #nss = [ns_user]
-nss = [ns_prod,ns_gprod,ns_cat,ns_user,ns_legal,ns_type,ns_model]
+nss = [ns_prod,ns_gprod,ns_cat,ns_user,ns_legal,ns_type,ns_model,ns_color,ns_size]
 
 blueprint = Blueprint("cmm",__name__,url_prefix="/cmm/api/v1/")
 
