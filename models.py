@@ -106,12 +106,6 @@ class CmmProductsCategories(db.Model,SerializerMixin):
     trash        = Column(Boolean,nullable=False,default=False)
 
 
-class CmmProductsSku(db.Model,SerializerMixin):
-    id_product = Column(Integer,primary_key=True,nullable=False)
-    color      = Column(String(10),primary_key=True,nullable=False)
-    size       = Column(String(5),primary_key=True,nullable=False)
-
-
 class CmmProductsGrid(db.Model,SerializerMixin):
     id           = Column(Integer,primary_key=True,autoincrement=True,nullable=False)
     name         = Column(String(128))
@@ -216,6 +210,8 @@ class B2bTablePrice(db.Model,SerializerMixin):
 class B2bTablePriceProduct(db.Model,SerializerMixin):
     id_table_price = Column(Integer,nullable=False,primary_key=True)
     id_product     = Column(Integer,nullable=False,primary_key=True)
+    color          = Column(String(10),nullable=False,primary_key=True)
+    size           = Column(String(5),nullable=False,primary_key=True)
     stock_quantity = Column(Integer,nullable=False)
     price          = Column(DECIMAL(5,2),nullable=False,comment="Valor de Preço do Atacado")
     price_retail   = Column(DECIMAL(5,2),nullable=False,comment="Valor de Preço do Varejo")

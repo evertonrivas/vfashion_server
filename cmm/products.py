@@ -3,7 +3,7 @@ import simplejson as json
 from flask_restx import Resource,Namespace,fields
 from flask import request
 from models import B2bBrand, B2bCollectionPrice, CmmProducts, CmmProductsCategories,\
-    CmmProductsSku,CmmProductsImages, CmmProductsTypes, \
+    CmmProductsImages, CmmProductsTypes, \
     CmmProductsModels, B2bCollection, B2bTablePrice, \
     B2bTablePriceProduct,db
 from sqlalchemy import desc, exc, and_, asc,Select,or_
@@ -20,16 +20,6 @@ prd_pag_model = ns_prod.model(
         "per_page": fields.Integer,
         "pages": fields.Integer,
         "has_next": fields.Boolean
-    }
-)
-
-prd_sku_model = ns_prod.model(
-    "SKU",{
-        "id_product": fields.Integer,
-        "id_type": fields.Integer,
-        "id_model": fields.Integer,
-        "size": fields.String,
-        "color": fields.String
     }
 )
 
@@ -56,7 +46,6 @@ prd_model = ns_prod.model(
         "structure": fields.String,
         "date_created": fields.DateTime,
         "date_updated": fields.DateTime,
-        "sku": fields.List(fields.Nested(prd_sku_model)),
         "images": fields.List(fields.Nested(prd_img_model))
     }
 )
@@ -125,7 +114,6 @@ class ProductsList(Resource):
                     "structure": m.structure,
                     "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                     "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None,
-                    "sku": self.get_sku(m.id),
                     "images": self.get_images(m.id)
                 } for m in rquery.items]
             }
@@ -135,17 +123,6 @@ class ProductsList(Resource):
                 "error_details": e._message(),
                 "error_sql": e._sql_message()
             }
-
-
-    def get_sku(self,id:int):
-        rquery = CmmProductsSku.query.filter_by(id_product=id)
-        return [{
-            "id_type": m.id_type,
-            "id_model": m.id_model,
-            "color": m.color,
-            "size" : m.size
-        }for m in rquery]
-    
 
     def get_images(self,id:int):
         rquery = CmmProductsImages.query.filter_by(id_product=id)
@@ -175,15 +152,6 @@ class ProductsList(Resource):
             prod.measure_unit  = req.measure_unit
             db.session.add(prod)
             db.session.commit()
-            for s in req.sku:
-                sku = CmmProductsSku()
-                sku.id_product = prod.id
-                sku.id_type    = s.id_type
-                sku.id_model   = s.id_model
-                sku.color      = s.color
-                sku.size       = s.size
-                db.session.add(sku)
-                db.session.commit()
             
             return prod.id
         except exc.SQLAlchemyError as e:
@@ -204,7 +172,6 @@ class ProductApi(Resource):
     def get(self,id:int):
         try:
             rquery = CmmProducts.query.get(id)
-            squery = CmmProductsSku.query.filter_by(id_product=id)
             iquery = CmmProductsImages.query.filter_by(id_product=id)
             return {
                 "id": rquery.id,
@@ -220,12 +187,6 @@ class ProductApi(Resource):
                 "structure": rquery.structure,
                 "date_created": rquery.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                 "date_updated": rquery.date_updated.strftime("%Y-%m-%d %H:%M:%S") if rquery.date_updated!=None else None,
-                "sku": [{
-                    "id_type": m.id_type,
-                    "id_model": m.id_model,
-                    "color": m.color,
-                    "size" : m.size
-                }for m in squery],
                 "images":[{
                     "id": m.id,
                     "img_url": m.img_url
@@ -260,19 +221,17 @@ class ProductApi(Resource):
             prod.trash         = prod.trash if req.trash is None else req.trash
             db.session.commit()
 
-            #apaga todos os SKUs registrados e realiza novo registro
+            #apaga todos as imagens registradas e realiza novo registro
             #eh mais facil do que realizar testes para saber se saiu ou entrou registro
-            db.session.delete(CmmProductsSku()).where(CmmProductsSku().id_product==id)
+            db.session.delete(CmmProductsImages()).where(CmmProductsImages().id_product==id)
             db.session.commit()
             for s in req.sku:
-                sku = CmmProductsSku()
-                sku.id_product = id
-                sku.id_type    = s.id_type
-                sku.id_model   = s.id_model
-                sku.color      = s.color
-                sku.size       = s.size
-                db.session.add(sku)
-                db.session.commit()
+                img = CmmProductsImages()
+                img.id_product = id
+                img.img_url    = s.img_url
+                db.session.add(img)
+
+            db.session.commit()
 
 
             return True
@@ -404,7 +363,6 @@ class ProductsGallery(Resource):
                     "structure": m.structure,
                     "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                     "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None,
-                    "sku": self.get_sku(m.id),
                     "images": self.get_images(m.id)
                 } for m in rquery]
             }
@@ -414,16 +372,6 @@ class ProductsGallery(Resource):
                 "error_details": e._message(),
                 "error_sql": e._sql_message()
             }
-
-
-    def get_sku(self,id:int):
-        rquery = CmmProductsSku.query.filter_by(id_product=id)
-        return [{
-            "id_type": m.id_type,
-            "id_model": m.id_model,
-            "color": m.color,
-            "size" : m.size
-        }for m in rquery]
     
 
     def get_images(self,id:int):
