@@ -225,7 +225,7 @@ class ProductApi(Resource):
             #eh mais facil do que realizar testes para saber se saiu ou entrou registro
             db.session.delete(CmmProductsImages()).where(CmmProductsImages().id_product==id)
             db.session.commit()
-            for s in req.sku:
+            for s in req.images:
                 img = CmmProductsImages()
                 img.id_product = id
                 img.img_url    = s.img_url
