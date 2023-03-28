@@ -22,7 +22,6 @@ prc_pag_model = ns_price.model(
 prc_prod_model = ns_price.model(
     "Products",{
         "id_product": fields.Integer,
-        "stock_quantity": fields.Integer,
         "price": fields.Fixed,
         "price_retail": fields.Fixed
     }
@@ -119,7 +118,6 @@ class PriceTableList(Resource):
         rquery = B2bTablePriceProduct.query.filter(B2bTablePriceProduct.id_table_price==id)
         return [{
             "id_product": m.id_product,
-            "stock_quantity": m.stock_quantity,
             "price": m.price,
             "price_retail": m.price_retail
         }for m in rquery]
@@ -142,7 +140,6 @@ class PriceTableList(Resource):
                 p = B2bTablePriceProduct()
                 p.id_product = prod.id_product
                 p.id_table_price = table.id
-                p.stock_quantity = prod.stock_quantity
                 p.price          = prod.price
                 p.price_retail   = prod.price_retail
                 db.session.add(p)
@@ -258,11 +255,6 @@ class B2bTablePriceProductApi(Resource):
     @ns_price.param("id_product","Código do produto","formData",required=True)
     def delete(self):
         try:
-
-    # id_table_price = sa.Column(sa.Integer,nullable=False,primary_key=True)
-    # id_product     = sa.Column(sa.Integer,nullable=False,primary_key=True)
-
-
             id_table_price = request.args.get("id_table_price")
             id_product  = request.args.get("id_colid_productlection")
             grp = B2bTablePriceProduct.query.get((id_table_price,id_product))
