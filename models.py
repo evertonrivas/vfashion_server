@@ -142,6 +142,7 @@ class CmmLegalEntities(db.Model,SerializerMixin):
 class CmmTranslateColors(db.Model,SerializerMixin):
     id      = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
     hexcode = Column(String(8),nullable=False)
+    name    = Column(String(100),nullable=False)
     color   = Column(String(10),nullable=False)
     trash        = Column(Boolean,nullable=False,default=False)
     date_created = Column(DateTime,nullable=False,server_default=func.now())
