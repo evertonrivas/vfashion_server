@@ -5,7 +5,7 @@ from models import CmmTranslateColors,db
 from sqlalchemy import exc, and_,desc,asc
 from auth import auth
 
-ns_color = Namespace("colors-translate",description="Operações para manipular dados de cores")
+ns_color = Namespace("translate-colors",description="Operações para manipular dados de cores")
 
 color_pag_model = ns_color.model(
     "Pagination",{
@@ -21,6 +21,7 @@ color_model = ns_color.model(
     "ColorTranslate",{
         "id": fields.Integer,
         "hexcode": fields.String,
+        "name": fields.String,
         "color": fields.String,
         "date_created": fields.DateTime,
         "date_updated": fields.DateTime
@@ -77,6 +78,7 @@ class CategoryList(Resource):
                     "data":[{
                         "id": m.id,
                         "hexcode": m.hexcode,
+                        "name": m.name,
                         "color": m.color,
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                         "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
@@ -86,6 +88,7 @@ class CategoryList(Resource):
                 retorno = [{
                         "id": m.id,
                         "hexcode": m.hexcode,
+                        "name": m.name,
                         "color": m.color,
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                         "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
@@ -106,6 +109,7 @@ class CategoryList(Resource):
         try:
             cor = CmmTranslateColors()
             cor.hexcode = request.form.get("hexcode")
+            cor.name    = request.form.get("name")
             cor.color   = request.form.get("color")
             db.session.add(type)
             db.session.commit()
@@ -140,6 +144,7 @@ class CategoryApi(Resource):
         try:
             cor = CmmTranslateColors.query.get(id)
             cor.hexcode = cor.hexcode if request.form.get("hexcode") is None else request.form.get("hexcode")
+            cor.name    = cor.name if request.form.get("name") is None else request.form.get("name")
             cor.color   = cor.color if request.form.get("color") is None else request.form.get("color")
             db.session.commit() 
         except exc.SQLAlchemyError as e:
