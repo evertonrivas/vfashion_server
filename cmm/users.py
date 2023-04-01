@@ -1,7 +1,7 @@
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import CmmUsers,db
+from models import CmmUserEntity, CmmUsers,db
 from sqlalchemy import desc, exc, and_, asc
 from datetime import datetime
 import bcrypt
@@ -180,7 +180,8 @@ class UserAuth(Resource):
 					"token_type": "Bearer",
 					"token_expire": usr.token_expire.strftime("%Y-%m-%d %H:%M:%S"),
 					"level_access": usr.type,
-                    "id_user": usr.id
+                    "id_user": usr.id,
+                    "id_profile": CmmUserEntity.query.filter(CmmUserEntity.id_user==usr.id).first().id_entity
                 }
                 usr.is_authenticate = True
                 db.session.commit()
