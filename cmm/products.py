@@ -5,7 +5,7 @@ from flask import request
 from models import B2bBrand, B2bCollectionPrice, CmmProducts, CmmProductsCategories,\
     CmmProductsImages, CmmProductsTypes, \
     CmmProductsModels, B2bCollection, B2bTablePrice, \
-    B2bTablePriceProduct,db
+    B2bTablePriceProduct, CmmTranslateColors,CmmTranslateSizes, db
 from sqlalchemy import desc, exc, and_, asc,Select,or_
 from auth import auth
 from decimal import Decimal
@@ -292,11 +292,11 @@ class ProductsGallery(Resource):
     @ns_prod.param("query","Texto para busca","query")
     @ns_prod.param("order_by","Campo de ordenacao","query")
     @ns_prod.param("order_dir","Direção da ordenação","query",enum=['ASC','DESC'])
-    #@auth.login_required
+    @auth.login_required
     def get(self):
         pag_num    = 1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size   = 25 if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
-        search     = "" if request.args.get("query") is None or request.args.get("query")=="" else "{}%".format(request.args.get("query"))
+        pag_size   = 20 if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        search     = "" if request.args.get("query") is None or request.args.get("query")=="" else "%{}%".format(request.args.get("query"))
         brand      = None if request.args.get("brand") is None else request.args.get("brand")
         collection = None if request.args.get("collection") is None else request.args.get("collection")
         category   = None if request.args.get("category") is None else request.args.get("category")
@@ -318,8 +318,7 @@ class ProductsGallery(Resource):
                 .outerjoin(B2bCollection,B2bCollection.id==B2bCollectionPrice.id_collection)\
                 .outerjoin(B2bBrand,B2bBrand.id==B2bCollection.id_brand)
             if search!="":
-                query = query.where(or_(
-                    CmmProducts.trash==False,
+                query = query.where(and_(CmmProducts.trash==False,or_(
                     CmmProducts.name.like(search),
                     CmmProducts.description.like(search),
                     CmmProducts.barCode.like(search),
@@ -327,16 +326,20 @@ class ProductsGallery(Resource):
                     CmmProductsCategories.name.like(search),
                     CmmProductsModels.name.like(search),
                     CmmProductsTypes.name.like(search)
-                ))
+                )))
             if brand!= None:       query = query.where(B2bBrand.id.in_(brand.split(',')))
             if collection != None: query = query.where(B2bCollection.id.in_(collection.split(",")))
             if category!= None:    query = query.where(CmmProductsCategories.id.in_(category.split(",")))
             if model!=None:        query = query.where(CmmProductsModels.id.in_(model.split(",")))
             if type != None:       query = query.where(CmmProductsTypes.id.in_(type.split(",")))
+            #faltam adicionar cores e tamanhos
+
 
             query = query.order_by(direction(getattr(CmmProducts, order_by)))
 
-            #print(query)
+            # print(query)
+            # print("------------")
+            # print(search)
 
             rquery = db.paginate(query,page=pag_num,per_page=pag_size)
 
@@ -380,6 +383,5 @@ class ProductsGallery(Resource):
             "id": m.id,
             "img_url":m.img_url
         }for m in rquery]
-
 
 ns_prod.add_resource(ProductsGallery,'/gallery/')
