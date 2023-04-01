@@ -1,8 +1,8 @@
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import B2bOrders,B2bOrdersProducts,db
-from sqlalchemy import exc,and_
+from models import B2bCartShopping, B2bOrders,B2bOrdersProducts,db
+from sqlalchemy import exc,Select,and_,func,tuple_,distinct
 import json
 from auth import auth
 
@@ -24,7 +24,10 @@ prd_ord_model = ns_order.model(
         "id_product": fields.Integer,
         "color": fields.String,
         "size" : fields.String,
-        "quantity": fields.Integer
+        "quantity": fields.Integer,
+        "price": fields.Float,
+        "discount": fields.Float,
+        "discount_percentage": fields.Float
     }
 )
 
@@ -114,8 +117,15 @@ class OrdersList(Resource):
                 prd.color      = it.color
                 prd.size       = it.size
                 prd.quantity   = it.quantity
+                prd.price      = it.price
+                prd.discount   = it.discount
+                prd.discount_percentage = it.discount_percentage
                 db.session.add(prd)
-                db.session.commit()
+            db.session.commit()
+
+            #apaga o conteudo do carrinho de compras que nao se faz mais necessario
+            db.session.delete(B2bCartShopping()).where(B2bCartShopping().id_customer==req.id_customer)
+            db.session.commit()
 
             return order.id
         except exc.SQLAlchemyError as e:
@@ -184,7 +194,7 @@ class OrderApi(Resource):
                 prd.size  = it.size
                 prd.quantity = it.quantity
                 db.session.add(prd)
-                db.session.commit()
+            db.session.commit()
 
             return True
         except exc.SQLAlchemyError as e:
