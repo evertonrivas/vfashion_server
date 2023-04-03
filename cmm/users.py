@@ -4,7 +4,6 @@ from flask import request
 from models import CmmUserEntity, CmmUsers,db
 from sqlalchemy import desc, exc, and_, asc
 from datetime import datetime
-import bcrypt
 from auth import auth
 
 ns_user = Namespace("users",description="Operações para manipular dados de usuários do sistema")
@@ -174,7 +173,7 @@ class UserAuth(Resource):
         if usr:
             #verifica a senha criptografada anteriormente
             pwd = request.form.get("password").encode()
-            if bcrypt.checkpw(pwd,str(usr.password).encode()):
+            if usr.check_pwd(pwd):
                 obj_retorno = {
 					"token_access": usr.get_token(),
 					"token_type": "Bearer",

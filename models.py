@@ -1,5 +1,4 @@
 from flask_sqlalchemy import SQLAlchemy
-import sqlalchemy as sa
 from sqlalchemy import func,String,Integer,CHAR,DateTime,Boolean,Column,Text,DECIMAL,SmallInteger
 from sqlalchemy_serializer import SerializerMixin
 from datetime import datetime,timedelta
@@ -21,8 +20,11 @@ class CmmUsers(db.Model,SerializerMixin):
     is_authenticate = Column(Boolean,nullable=False,default=False)
 
     def hash_pwd(self,pwd:str):
-        self.password = bcrypt.hashpw(pwd.encode(),bcrypt.gensalt())
+        self.password = bcrypt.hashpw(pwd.encode(),bcrypt.gensalt()).decode()
     
+    def check_pwd(self,pwd:str):
+        return bcrypt.checkpw(pwd,self.password.encode())
+
     def get_token(self,expires_in:int=7200):
         now = datetime.utcnow()
         if self.token and self.token_expire > now + timedelta(seconds=expires_in):
