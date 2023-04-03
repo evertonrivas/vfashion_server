@@ -1,7 +1,6 @@
 from flask import request
 from flask_httpauth import HTTPTokenAuth
 from models import CmmUsers,db
-import sqlalchemy as sa
 import jwt
 
 auth = HTTPTokenAuth(scheme="Bearer")
