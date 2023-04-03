@@ -14,7 +14,7 @@ app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://venda_fashion:vd_fashio
 
 # $env:FLASK_APP="main.py" no powerShell do windows
 
-migrate = Migrate(app,db)
+migrate = Migrate()
 
 db.init_app(app)
 migrate.init_app(app,db)
