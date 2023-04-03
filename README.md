@@ -2,6 +2,9 @@
 
 Repositório para hospedar a versão server do sistema de CLM desenvolvido em Python.
 
+A documentação e demo da API podem ser vistos em:
+https://evertonrivas.pythonanywhere.com/
+
 Possui 6 níveis de acesso sendo:
 1. Administrador: possui acesso em todos os sistemas.
 2. Lojista: apenas sinaliza devoluções e pedidos.
