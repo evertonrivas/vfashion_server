@@ -24,39 +24,53 @@ class CartApi(Resource):
         direction  = desc if request.args.get("order_dir") == 'DESC' else asc
 
         try:
-            rquery = Select(B2bCartShopping.id_product,
-                            B2bCartShopping.color.label("color_code"),
-                            B2bCartShopping.size.label("size_code"),
-                            B2bCartShopping.quantity,
+            
+            pquery = Select(B2bCartShopping.id_product,
                             B2bCartShopping.price,
-                            CmmProducts.name,
-                            CmmProducts.refCode,
-                            CmmTranslateColors.hexcode.label("color_hexa"),
-                            CmmTranslateSizes.size_name)\
+                            CmmProductsImages.img_url,
+                            CmmProducts.name,CmmProducts.refCode,
+                            func.sum(B2bCartShopping.quantity).label("total")).distinct()\
+                .join(CmmProductsImages,and_(CmmProductsImages.id_product==B2bCartShopping.id_product,CmmProductsImages.img_default==True))\
                 .join(CmmProducts,CmmProducts.id==B2bCartShopping.id_product)\
-                .join(CmmTranslateColors,CmmTranslateColors.color==B2bCartShopping.color)\
-                .join(CmmTranslateSizes,CmmTranslateSizes.size==B2bCartShopping.size)\
-                .join(CmmProductsImages,and_(CmmProductsImages.id_product==CmmProducts.id,CmmProductsImages.img_default==True))\
                 .where(B2bCartShopping.id_customer==id_profile)\
-                .order_by(direction(getattr(B2bCartShopping, order_by)))
-
+                .group_by(B2bCartShopping.id_product)\
+                .order_by(direction(getattr(B2bCartShopping,order_by)))
+            
             return [{
-                        "id": p.id_product,
-                        "ref": p.refCode,
-                        "name": p.name,
-                        "color_code": p.color_code,
-                        "size_code": p.size_code,
-                        "quantity": p.quantity,
-                        "price": str(p.price),
-                        "color_hexa": p.color_hexa,
-                        "size_name" : p.size_name
-                    } for p in db.session.execute(rquery).all()]
+                "id_product": m.id_product,
+                "ref": m.refCode,
+                "name": m.name,
+                "img_url": m.img_url,
+                "price_un": str(m.price),
+                "itens": str(m.total), 
+                "total_price": str(m.total*m.price),
+                "attributes": [{
+                    c.color:[{
+                        s.size: {
+                            "quantity": s.quantity
+                        }
+                    }for s in self.get_sizes(id_profile,m.id_product,c.color)]
+                }for c in self.get_colors(id_profile,m.id_product)]
+            } for m in db.session.execute(pquery).all()]
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
                 "error_details": e._message(),
                 "error_sql": e._sql_message()
             }
+        
+    def get_colors(self,id_customer:int,id_product:int):
+        return db.session.execute(Select(B2bCartShopping.color).distinct()\
+                .where(and_(B2bCartShopping.id_customer==id_customer,
+                            B2bCartShopping.id_product==id_product))).all()
+
+    def get_sizes(self,id_customer:int,id_product:int,color:str):
+        return db.session.execute(Select(B2bCartShopping.size,B2bCartShopping.quantity).distinct()\
+                .where(and_(B2bCartShopping.id_customer==id_customer, 
+                            B2bCartShopping.id_product==id_product,
+                            B2bCartShopping.color==color)))\
+                .all()
+        
 
 
     @ns_cart.response(HTTPStatus.OK.value,"Salva os dados de produtos no carrinho de compras")
