@@ -215,6 +215,7 @@ class B2bProductStock(db.Model,SerializerMixin):
     color       = Column(String(10),nullable=False,primary_key=True)
     size        = Column(String(5),nullable=False,primary_key=True)
     quantity    = Column(SmallInteger,nullable=True)
+    in_order    = Column(SmallInteger,nullable=True)
     limited     = Column(Boolean,default=False)
 
 
