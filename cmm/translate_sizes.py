@@ -7,7 +7,7 @@ from auth import auth
 
 ns_size = Namespace("translate-sizes",description="Operações para manipular dados de tamanhos")
 
-color_pag_model = ns_size.model(
+size_pag_model = ns_size.model(
     "Pagination",{
         "registers": fields.Integer,
         "page": fields.Integer,
@@ -17,26 +17,26 @@ color_pag_model = ns_size.model(
     }
 )
 
-color_model = ns_size.model(
+size_model = ns_size.model(
     "TranslateSize",{
         "id": fields.Integer,
-        "hexcode": fields.String,
-        "color": fields.String,
+        "size_name": fields.String,
+        "size": fields.String,
         "date_created": fields.DateTime,
         "date_updated": fields.DateTime
     }
 )
 
-model_return = ns_size.model(
+size_return = ns_size.model(
     "TranslateSizeReturn",{
-        "pagination": fields.Nested(color_pag_model),
-        "data": fields.List(fields.Nested(color_model))
+        "pagination": fields.Nested(size_pag_model),
+        "data": fields.List(fields.Nested(size_model))
     }
 )
 
 @ns_size.route("/")
 class CategoryList(Resource):
-    @ns_size.response(HTTPStatus.OK.value,"Obtem a listagem de traduções de tamanhos",model_return)
+    @ns_size.response(HTTPStatus.OK.value,"Obtem a listagem de traduções de tamanhos",size_return)
     @ns_size.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
     @ns_size.param("page","Número da página de registros","query",type=int,required=True,default=1)
     @ns_size.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
@@ -100,7 +100,7 @@ class CategoryList(Resource):
 
     @ns_size.response(HTTPStatus.OK.value,"Cria uma nova tradução de tamanho")
     @ns_size.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar novo modelo de produto!")
-    @ns_size.doc(body=color_model)
+    @ns_size.doc(body=size_model)
     @auth.login_required
     def post(self):
         try:
@@ -119,7 +119,7 @@ class CategoryList(Resource):
 
 @ns_size.route("/<int:id>")
 class CategoryApi(Resource):
-    @ns_size.response(HTTPStatus.OK.value,"Obtem um registro de uma nova tradução de tamanho",color_model)
+    @ns_size.response(HTTPStatus.OK.value,"Obtem um registro de uma nova tradução de tamanho",size_model)
     @ns_size.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
     @auth.login_required
     def get(self,id:int):
