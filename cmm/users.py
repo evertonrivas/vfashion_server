@@ -192,11 +192,11 @@ class UserAuth(Resource):
 ns_user.add_resource(UserAuth,"/auth")
 
 class UserAuthCheck(Resource):
-	def post(self):
-		try:
-			return False if CmmUsers.check_token(request.form.get("token")) is None else True
-		except:
-			return False
+    def post(self):
+        try:
+            return False if CmmUsers.check_token(request.form.get("token")) is None else True
+        except:
+            return False
 ns_user.add_resource(UserAuthCheck,"/auth-check")
 
 

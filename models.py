@@ -1,7 +1,7 @@
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import func,String,Integer,CHAR,DateTime,Boolean,Column,Text,DECIMAL,SmallInteger
 from sqlalchemy_serializer import SerializerMixin
-from datetime import datetime,timedelta
+from datetime import datetime,timedelta, timezone
 import jwt
 import bcrypt
 
@@ -25,18 +25,21 @@ class CmmUsers(db.Model,SerializerMixin):
     def check_pwd(self,pwd:str):
         return bcrypt.checkpw(pwd,self.password.encode())
 
-    def get_token(self,expires_in:int=7200):
-        now = datetime.utcnow()
-        if self.token and self.token_expire > now + timedelta(seconds=expires_in):
+    def get_token(self,expires_in:int=3600):
+        now = datetime.now()
+        expire_utc = now + timedelta(seconds=expires_in)
+        complete_key = now.year + now.month + now.day
+
+        if self.token and self.token_expire > expire_utc:
             return self.token
 
         #encode e decode por causa da diferenca de versoes do windows que pode retornar byte array ao inves de str
-        self.token = jwt.encode({"username":str(self.username),"exp": (now + timedelta(seconds=expires_in)) },"VENDA_FASHION").encode().decode()
-        self.token_expire = (now + timedelta(seconds=expires_in))
+        self.token = jwt.encode({"username":str(self.username) },"VENDA_FASHION_"+str(complete_key)).encode().decode()
+        self.token_expire = now + timedelta(seconds=expires_in)
         return self.token
 
     def revoke_token(self):
-        self.token_expire = datetime.utcnow() - timedelta(seconds=1)
+        self.token_expire = datetime.now() - timedelta(seconds=1)
 
     def logout(self):
         self.is_authenticate = False
@@ -45,7 +48,7 @@ class CmmUsers(db.Model,SerializerMixin):
     @staticmethod
     def check_token(token):
         user = CmmUsers.query.filter(CmmUsers.token==token).first()
-        if user is None or user.token_expire < datetime.utcnow():
+        if user is None or user.token_expire < datetime.now():
             return None
         return user
 
