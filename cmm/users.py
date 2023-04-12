@@ -5,6 +5,7 @@ from models import CmmUserEntity, CmmUsers,db
 from sqlalchemy import desc, exc, and_, asc
 from datetime import datetime
 from auth import auth
+from config import Config
 
 ns_user = Namespace("users",description="Operações para manipular dados de usuários do sistema")
 
@@ -49,7 +50,7 @@ class UsersList(Resource):
     @auth.login_required
     def get(self):
         pag_num   =  1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size  = 25 if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_size  = Config.PAGINATION_SIZE.value if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
         search    = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
         order_by  = "username" if request.args.get("order_by") is None else request.args.get("order_by")
         direction = asc if request.args.get("order_dir") == 'ASC' else desc
