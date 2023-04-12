@@ -7,9 +7,10 @@ from b2b.api import blueprint as b2b
 from fpr.api import blueprint as fpr
 from models import db
 from flask_migrate import Migrate
+from config import Config
 
 app = Flask(__name__)
-app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://venda_fashion:vd_fashion@localhost/venda_fashion"
+app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://"+Config.DB_USER.value+":"+Config.DB_PASS.value+"@"+Config.DB_HOST.value+"/"+Config.DB_NAME.value
 
 
 # $env:FLASK_APP="main.py" no powerShell do windows
