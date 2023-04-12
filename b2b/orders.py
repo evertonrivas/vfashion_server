@@ -5,6 +5,7 @@ from models import B2bCartShopping, B2bOrders,B2bOrdersProducts,db
 from sqlalchemy import exc,Select,and_,func,tuple_,distinct
 import json
 from auth import auth
+from config import Config
 
 ns_order = Namespace("orders",description="Operações para manipular dados de pedidos")
 ns_porder = Namespace("orders-products",description="Operações para manipular dados de produtos de pedidos")
@@ -61,9 +62,10 @@ class OrdersList(Resource):
     @ns_order.param("page","Número da página de registros","query",type=int,required=True)
     @ns_order.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_order.param("query","Texto para busca","query")
+    @auth.login_required
     def get(self):
         pag_num  =  1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size = 25 if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_size = Config.PAGINATION_SIZE.value if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
         search   = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
 
         try:
@@ -100,6 +102,7 @@ class OrdersList(Resource):
     @ns_order.response(HTTPStatus.OK.value,"Cria um novo pedido")
     @ns_order.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar pedido!")
     @ns_order.doc(body=ord_model)
+    @auth.login_required
     def post(self)->int:
         try:
             req = json.dumps(request.get_json())
@@ -142,7 +145,7 @@ class OrderApi(Resource):
 
     @ns_order.response(HTTPStatus.OK.value,"Obtem um registro de pedido",ord_model)
     @ns_order.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
-    #@auth.login_required
+    @auth.login_required
     def get(self,id:int):
         try:
             order = B2bOrders.query.get(id)
@@ -172,7 +175,7 @@ class OrderApi(Resource):
     @ns_order.response(HTTPStatus.OK.value,"Atualiza os dados de um pedido")
     @ns_order.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
     @ns_order.doc(body=ord_model)
-    #@auth.login_required
+    @auth.login_required
     def post(self,id:int)->bool:
         try:
             req = json.dumps(request.get_json())
@@ -206,7 +209,7 @@ class OrderApi(Resource):
     
     @ns_order.response(HTTPStatus.OK.value,"Exclui os dados de um pedido")
     @ns_order.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
-    #@auth.login_required
+    @auth.login_required
     def delete(self,id:int)->bool:
         try:
             order = B2bOrders.query.get(id)
@@ -227,7 +230,7 @@ class ProductsOrderList(Resource):
     @ns_porder.response(HTTPStatus.OK.value,"Obtem a listagem de produtos de pedidos",[prd_ord_model])
     @ns_porder.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
     @ns_porder.param("id_order","Número do pedido","query",type=int,required=True)
-    #@auth.login_required
+    @auth.login_required
     def get(self,id:int):
         try:
             rquery = B2bOrdersProducts.query.filter_by(id_order=id)
@@ -251,7 +254,7 @@ class ProductsOrderList(Resource):
     @ns_porder.param("id_product","Id do Produto","formData",type=int,required=True)
     @ns_porder.param("color","Codigo ou nome da cor (hexa ou ingles)","formData",required=True)
     @ns_porder.param("size","Tamanho do produto","formData",required=True)
-    #@auth.login_required
+    @auth.login_required
     def delete(self,id:int):
         try:
             pOrder = B2bOrdersProducts.query.get([

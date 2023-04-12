@@ -4,6 +4,7 @@ from flask import request
 from models import CmmLegalEntities,CmmUserEntity,db
 from sqlalchemy import Select,and_,exc
 from auth import auth
+from config import Config
 
 ns_legal = Namespace("legal-entities",description="Operações para manipular dados de clientes/representantes")
 
@@ -55,7 +56,7 @@ class CustomersList(Resource):
     #@auth.login_required
     def get(self):
         pag_num  =  1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size = 25 if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_size = Config.PAGINATION_SIZE.value if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
         search   = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
 
         try:

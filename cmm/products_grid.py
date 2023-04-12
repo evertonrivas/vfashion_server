@@ -5,6 +5,7 @@ from flask import request
 from models import CmmProductsGrid,CmmProductsGridDistribution,db
 from sqlalchemy import exc, and_
 from auth import auth
+from config import Config
 
 ns_gprod = Namespace("products-grid",description="Operações para manipular dados das grades de produtos")
 
@@ -54,7 +55,7 @@ class GridList(Resource):
     @auth.login_required
     def get(self):
         pag_num  =  1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size = 25 if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_size = Config.PAGINATION_SIZE.value if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
         search   = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
 
         try:

@@ -3,6 +3,7 @@ from typing import TypedDict
 from flask_restx import Resource,fields,Namespace
 from flask import request
 from auth import auth
+from config import Config
 
 api = Namespace("consumer",description="Operações para manipular dados de consumidores")
 apis = Namespace("consumer-groups",description="Operações para manipular grupos de consumidores")

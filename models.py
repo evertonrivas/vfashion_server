@@ -4,6 +4,7 @@ from sqlalchemy_serializer import SerializerMixin
 from datetime import datetime,timedelta, timezone
 import jwt
 import bcrypt
+from config import Config
 
 db = SQLAlchemy()
 
@@ -25,7 +26,7 @@ class CmmUsers(db.Model,SerializerMixin):
     def check_pwd(self,pwd:str):
         return bcrypt.checkpw(pwd,self.password.encode())
 
-    def get_token(self,expires_in:int=3600):
+    def get_token(self,expires_in:int=Config.EXPIRE_SESSION.value):
         now = datetime.now()
         expire_utc = now + timedelta(seconds=expires_in)
         complete_key = now.year + now.month + now.day

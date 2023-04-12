@@ -9,6 +9,7 @@ from models import B2bBrand, B2bCollectionPrice, CmmProducts, CmmProductsCategor
 from sqlalchemy import desc, exc, and_, asc,Select,or_
 from auth import auth
 from decimal import Decimal
+from config import Config
 
 ns_prod  = Namespace("products",description="Operações para manipular dados de produtos")
 
@@ -72,7 +73,7 @@ class ProductsList(Resource):
     @auth.login_required
     def get(self):
         pag_num  = 1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size = 4 if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_size = Config.PAGINATION_SIZE.value if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
         search   = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
         order_by = "name" if request.args.get("order_by") is None else request.args.get("order_by")
         direction = asc if request.args.get("order_dir") == 'ASC' else desc
@@ -295,7 +296,7 @@ class ProductsGallery(Resource):
     @auth.login_required
     def get(self):
         pag_num    = 1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size   = 20 if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_size   = Config.PAGINATION_SIZE.value if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
         search     = "" if request.args.get("query") is None or request.args.get("query")=="" else "%{}%".format(request.args.get("query"))
         brand      = None if request.args.get("brand") is None else request.args.get("brand")
         collection = None if request.args.get("collection") is None else request.args.get("collection")

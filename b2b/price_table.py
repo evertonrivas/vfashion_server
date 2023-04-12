@@ -6,6 +6,7 @@ import json
 from sqlalchemy import exc,and_,desc,asc
 from auth import auth
 from decimal import Decimal
+from config import Config
 
 ns_price = Namespace("price-table",description="Operações para manipular dados de tabelas de preços")
 
@@ -59,7 +60,7 @@ class PriceTableList(Resource):
     @auth.login_required
     def get(self):
         pag_num  =  1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size = 25 if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_size = Config.PAGINATION_SIZE.value if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
         search   = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
         list_all = False if request.args.get("list_all") is None else True
         order_by   = "id" if request.args.get("order_by") is None else request.args.get("order_by")
