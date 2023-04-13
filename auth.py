@@ -9,11 +9,9 @@ auth = HTTPTokenAuth(scheme="Bearer")
 @auth.verify_token
 def verify_token(token):
     try:
-        print("veio aqui")
         user = CmmUsers.check_token(token)
         if user!=None:
             try:
-                print("chegou aqui")
                 complete_key = datetime.now().year+datetime.now().month+datetime.now().day
                 data = jwt.decode(token,"VENDA_FASHION_"+str(complete_key),algorithms=['HS256'])
             except Exception as e:
