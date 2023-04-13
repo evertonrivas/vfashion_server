@@ -179,7 +179,7 @@ class ProductApi(Resource):
                 "prodCode": rquery.prodCode,
                 "barCode": rquery.barCode,
                 "refCode": rquery.refCode,
-                "name": rquery.Name,
+                "name": rquery.name,
                 "description": rquery.description,
                 "observation": rquery.observation,
                 "ncm": rquery.ncm,
