@@ -11,6 +11,7 @@ class Config(Enum):
     DB_PASS = "vd_fashion"
     COMPANY_TAXVAT = ''
 
+
 class ShippingCompany(Enum):
     BRASPRESS = 1
     JADLOG    = 2
@@ -21,7 +22,6 @@ class ConfigBraspress(Enum):
     TOKEN_TYPE   = 'Basic'
     TOKEN_ACCESS = 'TEJNSU5EVVNUUklBX1BSRDoyWTg3aEx1SGoxOGVja241'
 
-
 class ConfigJamef(Enum):
     USERNAME = ''
     PASSWORD = ''
@@ -29,3 +29,12 @@ class ConfigJamef(Enum):
 class ConfigJadlog(Enum):
     TOKEN_TYPE   = 'Bearer'
     TOKEN_ACCESS = ''
+
+
+class ConfigVirtualAge(Enum):
+    URL           = 'https://api.labellamafia.com.br:9443/'
+    grant_type    = 'password'
+    client_id     = 'labellamafiaapiv2'
+    client_secret = '16061138'
+    username      = 'apiv2'
+    password      = 'api8107'
