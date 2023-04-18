@@ -9,6 +9,7 @@ class Config(Enum):
     DB_NAME = "venda_fashion"
     DB_USER = "venda_fashion"
     DB_PASS = "vd_fashion"
+    COMPANY_TAXVAT = ''
 
 class ShippingCompany(Enum):
     BRASPRESS = 1
