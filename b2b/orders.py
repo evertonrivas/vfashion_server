@@ -9,7 +9,6 @@ from config import Config
 from decimal import Decimal
 
 ns_order = Namespace("orders",description="Operações para manipular dados de pedidos")
-ns_porder = Namespace("orders-products",description="Operações para manipular dados de produtos de pedidos")
 
 prd_pag_model = ns_order.model(
     "Pagination",{
@@ -235,8 +234,8 @@ class OrderApi(Resource):
 
 
 class HistoryOrderList(Resource):
-    @ns_porder.response(HTTPStatus.OK.value,"Obtem a listagem de produtos de pedidos",[prd_ord_model])
-    @ns_porder.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
+    @ns_order.response(HTTPStatus.OK.value,"Obtem a listagem de produtos de pedidos",[prd_ord_model])
+    @ns_order.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
     @ns_order.param("page","Número da página de registros","query",type=int,required=True)
     @ns_order.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_order.param("order_by","Campo de ordenacao","query")
