@@ -1,5 +1,5 @@
 from http import HTTPStatus
-import simplejson as json
+import simplejson
 from flask_restx import Resource,Namespace,fields
 from flask import request
 from models import B2bBrand, B2bCollectionPrice, CmmProducts, CmmProductsCategories,\
@@ -110,7 +110,7 @@ class ProductsList(Resource):
                     "description": m.description,
                     "observation": m.observation,
                     "ncm": m.ncm,
-                    "price": json.dumps(Decimal(m.price)),
+                    "price": simplejson.dumps(Decimal(m.price)),
                     "measure_unit": m.measure_unit,
                     "structure": m.structure,
                     "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
@@ -138,7 +138,7 @@ class ProductsList(Resource):
     @auth.login_required
     def post(self)->int:
         try:
-            req = json.dumps(request.get_json())
+            req = simplejson.dumps(request.get_json())
             prod = CmmProducts()
             prod.id_category   = int(req.id_category)
             prod.prodCode      = req.prodCode
@@ -183,7 +183,7 @@ class ProductApi(Resource):
                 "description": rquery.description,
                 "observation": rquery.observation,
                 "ncm": rquery.ncm,
-                "price": json.dumps(Decimal(rquery.price)),
+                "price": simplejson.dumps(Decimal(rquery.price)),
                 "measure_unit": rquery.measure_unit,
                 "structure": rquery.structure,
                 "date_created": rquery.date_created.strftime("%Y-%m-%d %H:%M:%S"),
@@ -205,7 +205,7 @@ class ProductApi(Resource):
     @auth.login_required
     def post(self,id:int)->bool:
         try:
-            req = json.dumps(request.get_json())
+            req = request.get_json()
             prod = CmmProducts.query.get(id)
             prod.id_category   = prod.id_category if req.id_category is None else int(req.id_category)
             prod.id_prod_type  = prod.id_prod_type if req.id_prod_type is None else int(req.id_prod_type)
@@ -259,26 +259,6 @@ class ProductApi(Resource):
                 "error_sql": e._sql_message()
             }
 
-
-from sqlalchemy.ext.declarative import DeclarativeMeta
-
-class AlchemyEncoder(json.JSONEncoder):
-
-    def default(self, obj):
-        if isinstance(obj.__class__, DeclarativeMeta):
-            # an SQLAlchemy class
-            fields = {}
-            for field in [x for x in dir(obj) if not x.startswith('_') and x != 'metadata']:
-                data = obj.__getattribute__(field)
-                try:
-                    json.dumps(data) # this will fail on non-encodable values, like other classes
-                    fields[field] = data
-                except TypeError:
-                    fields[field] = None
-            # a json-encodable dict
-            return fields
-
-        return json.JSONEncoder.default(self, obj)
 
 #busca especifica para a galeria de produtos do B2B, jah que precisa buscar mais coisas além do nome
 class ProductsGallery(Resource):
@@ -362,7 +342,7 @@ class ProductsGallery(Resource):
                     "description": m.description,
                     "observation": m.observation,
                     "ncm": m.ncm,
-                    "price": json.dumps(Decimal(m.price)),
+                    "price": simplejson.dumps(Decimal(m.price)),
                     "measure_unit": m.measure_unit,
                     "structure": m.structure,
                     "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
