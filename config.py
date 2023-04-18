@@ -1,6 +1,6 @@
-import enum
+from enum import Enum
 
-class Config(enum.Enum):
+class Config(Enum):
     PAGINATION_SIZE = 25
     EXPIRE_SESSION  = 3600
     
@@ -9,3 +9,22 @@ class Config(enum.Enum):
     DB_NAME = "venda_fashion"
     DB_USER = "venda_fashion"
     DB_PASS = "vd_fashion"
+
+class ShippingCompany(Enum):
+    BRASPRESS = 1
+    JADLOG    = 2
+    JAMEF     = 3
+
+class ConfigBraspress(Enum):
+    API_VERSION  = 3
+    TOKEN_TYPE   = 'Basic'
+    TOKEN_ACCESS = 'TEJNSU5EVVNUUklBX1BSRDoyWTg3aEx1SGoxOGVja241'
+
+
+class ConfigJamef(Enum):
+    USERNAME = ''
+    PASSWORD = ''
+
+class ConfigJadlog(Enum):
+    TOKEN_TYPE   = 'Bearer'
+    TOKEN_ACCESS = ''
