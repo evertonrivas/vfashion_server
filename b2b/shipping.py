@@ -14,13 +14,13 @@ class Shipping():
         self.nav = requests.Session()
         self.cfg = _cfg
 
-    def tracking(self,_shp:ShippingCompany,options):
+    def tracking(self,_shp:ShippingCompany,options:object):
         if _shp==ShippingCompany.BRASPRESS:
-            return self.__braspress_tracking()
+            return self.__braspress_tracking(_taxvat=options.taxvat,_invoice=options.invoice)
         if _shp==ShippingCompany.JADLOG:
-            return self.__jadlog_tracking()
+            return self.__jadlog_tracking(_nf=options.invoice,_nf_serie=options.invoice_serie,_cnpj=options.taxvat)
         if _shp==ShippingCompany.JAMEF:
-            return self.__jamef_tracking()
+            return self.__jamef_tracking(_cnpj=options.taxvat,_nf=options.invoice,_serie_nf=options.invoice_serie)
 
     def __braspress_tracking(self,_taxvat:str,_invoice:str):
         #ignora a verificacao de certificado SSL
@@ -33,15 +33,12 @@ class Shipping():
             consulta = resp.json()
 
             for con in consulta['conhecimentos']:
-                retb = """<h6 class='mb-2 text-secondary'>Transportadora: BRASPRESS</h6>
-                    <ul class='timeline'>"""
+                retb = "<h6 class='mb-2 text-secondary'>Transportadora: BRASPRESS</h6><ul class='timeline'>"
                 for tml in con['timeLine']:
-                    retb += """<li>
-                        <p class='card-text'><span class='text-danger'>{data}</span><br>Status: {status}</p>
-                    </li>
+                    retb += """<li><p class='card-text'><span class='text-danger'>{data}</span><br>Status: {status}</p></li>
                     """.format(status=tml['descricao'],data=datetime.strptime(tml['data'],"%Y-%m-%d").strftime("%d/%m/%Y"))
-                retb += """<li><p class='card-text'><span class='text-danger'>{data}</span><br>Status: {status}</p></li>""".format(data=datetime.strptime(con['previsaoEntrega'],"%Y-%m-%d").strftime("%d/%m/%Y"),status="Previsão de Entrega")
-            retb += """</ul>"""
+                retb += "<li><p class='card-text'><span class='text-danger'>{data}</span><br>Status: {status}</p></li>".format(data=datetime.strptime(con['previsaoEntrega'],"%Y-%m-%d").strftime("%d/%m/%Y"),status="Previsão de Entrega")
+            retb += "</ul>"
 
             return retb
         
@@ -67,15 +64,13 @@ class Shipping():
             consulta = resp.json()
             #realizar o retorno em formato HTML em um card
             
-            ret = """<h6 class='mb-2 text-secondary'>Transportadora: JADLOG</h6>
-                    <ul class='timeline'>"""
+            ret = "<h6 class='mb-2 text-secondary'>Transportadora: JADLOG</h6><ul class='timeline'>"
             for cons in consulta['consulta']:
                 for evt in cons['tracking']['eventos']:
                     ret += """<li><p class='card-text'><span class='text-danger'>{data}</span><br>Status: {status}</p></li>
                     """.format(status=evt['status'],data=datetime.strptime(evt['data'],"%Y-%m-%d %H:%M:%S").strftime("%d/%m/%Y %H:%M:%S"))
                 ret += "<li><p class='card-text'><span class='text-danger'>{data}</span><br/>Status: {status}</p></li>".format(data=datetime.strptime(cons['previsaoEntrega'],"%Y-%m-%d").strftime("%d/%m/%Y"),status="Previsão de Entrega")
-
-            ret += """</ul>"""
+            ret += "</ul>"
 
             return ret
         return False
@@ -88,66 +83,32 @@ class Shipping():
                       }
                       )
         if resp.status_code==200:
-            return True
+            return resp.json()
         return False
 
-    def __jamef_tracking(self):
+    def __jamef_tracking(self,_cnpj:str,_nf:str,_serie_nf:str):
         login = self.__jamef_login()
         if login!=False:
             self.nav.verify = False
             self.nav.headers = {
-                "Authorization": login.token_type+" "+login.token_access
+                "Authorization": login.token_type+" "+login.access_token
             }
-            resp = self.nav.post('https://developers.jamef.com.br/rastreamento/ver')
+            resp = self.nav.post('https://developers.jamef.com.br/rastreamento/ver',data={
+                {
+                    "documentoResponsavelPagamento" : Config.COMPANY_TAXVAT.value,
+                    "documentoDestinatario": _cnpj,
+                    "numeroNotaFiscal": _nf,
+                    "numeroSerieNotaFiscal": _serie_nf
+                }
+            })
             if resp.status_code==200:
-                return resp.json()
+                consulta = resp.json()
+
+                retj = "<h6 class='mb-2 text-secondary'>Transportadora: JAMEF</h6><ul class='timeline'>"
+                for cons in consulta['conhecimentos']:
+                        for evt in cons['historico']:
+                            retj += """<li><p class='card-text'><span class='text-danger'>{data}</span><br>Status: {status}</p></li>
+                            """.format(status=evt['statusRastreamento'],data=datetime.strptime(evt['dataAtualizacao'],"%d/%m/%y %H:%M").strftime("%d/%m/%Y %H:%M"))
+                        retj += "<li><p class='card-text'><span class='text-danger'>{data}</span><br>Status: {status}</p></li>".format(data=datetime.strptime(cons['dataPrevisaoEntrega'],"%d/%m/%y").strftime("%d/%m/%Y"),status="Previsão de Entrega")
+                retj += "</ul>"
         return False
-
-
-
-
-
-# export class ShippingService{
-#   sys_config:any = (configData as any).default;
-#   constructor(private http:HttpClient) { }
-
-#   trackingBraspress(cnpj:string,notaFiscal:string):Observable<BraspressReturn>{
-#     //https://api.braspress.com/home
-
-#     const httpHeader:HttpHeaders = new HttpHeaders().set('Authorization','Basic '+this.sys_config.integrations.braspress.api_token);
-#     return this.http.get<BraspressReturn>('https://api.braspress.com/v'+this.sys_config.integrations.braspress.api_version+'/tracking/'+cnpj+'/'+notaFiscal+'/json',{
-#       headers:httpHeader
-#     });
-#   }
-
-#   trackingJadlog():Observable<JadlogReturn>{
-#     const httpHeader:HttpHeaders = new HttpHeaders()
-#       .set('Authorization','Bearer '+this.sys_config.integration.jadlog.api_token)
-#       .set('Content-Type',"application\json");
-#     //https://www.jadlog.com.br/jadlog/arquivos/api_integracao.pdf
-#     return this.http.post<JadlogReturn>('http://www.jadlog.com.br/embarcador/api/tracking/consultar',{
-#       headers:httpHeader
-#     })
-#   }
-
-#   loginJamef():Observable<JamefToken>{
-#     const myParams:HttpParams = new HttpParams()
-#       .set('username',this.sys_config.integration.jamef.username)
-#       .set('password',this.sys_config.integration.jamef.password);
-
-#     return this.http.post<JamefToken>('https://developers.jamef.com.br/login',{
-#       httpParams: myParams
-#     });
-#   }
-
-#   trackingJamef(token_type:string,token_access:string):Observable<JamefReturn>{
-#     const myParams: HttpParams = new HttpParams()
-#           .set('Authorization',token_type+' '+token_access);
-#     return this.http.post<JamefReturn>('https://developers.jamef.com.br/login/rastreamento/ver',{
-#           httpParams: myParams
-#         });
-#     //https://developers.jamef.com.br/documentacao
-#   }
-
-
-# }
