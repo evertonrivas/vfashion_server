@@ -2,7 +2,7 @@ from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
 from models import B2bCartShopping, B2bOrders,B2bOrdersProducts, B2bPaymentConditions, CmmLegalEntities,db
-from sqlalchemy import exc,Select,and_,func,tuple_,distinct,Delete,asc,desc
+from sqlalchemy import exc,Select,Delete,asc,desc
 import simplejson
 from auth import auth
 from config import Config
