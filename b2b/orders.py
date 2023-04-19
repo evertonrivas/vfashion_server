@@ -7,6 +7,7 @@ import simplejson
 from auth import auth
 from config import Config
 from decimal import Decimal
+from integrations.shipping import Shipping,ShippingCompany
 
 ns_order = Namespace("orders",description="Operações para manipular dados de pedidos")
 
@@ -258,9 +259,12 @@ class HistoryOrderList(Resource):
                           B2bOrders.integrated,
                           B2bOrders.integration_number,
                           B2bOrders.track_code,
+                          B2bOrders.track_company,
                           B2bOrders.invoice_number,
+                          B2bOrders.invoice_serie,
                           B2bOrders.id_customer,
                           CmmLegalEntities.name.label("customer_name"),
+                          CmmLegalEntities.taxvat,
                           B2bOrders.id_payment_condition,
                           B2bPaymentConditions.name.label("payment_name"))\
                 .join(B2bPaymentConditions,B2bPaymentConditions.id==B2bOrders.id_payment_condition)\
@@ -291,7 +295,7 @@ class HistoryOrderList(Resource):
                 "integrated": r.integrated,
                 "integration_number": r.integration_number,
                 "invoice_number": r.invoice_number,
-                "track_code": r.track_code,
+                "track_code": (None if Config.TRACK_ORDER.value==False else self.__getTrack(r.taxvat,r.invoice_number,r.invoice_serie,r.track_company,r.track_code) ),
                 "date_created": r.date_created.strftime("%d/%m/%Y %H:%M:%S")
             }for r in db.session.execute(stmt)]
             }
@@ -301,5 +305,21 @@ class HistoryOrderList(Resource):
                 "error_details": e._message(),
                 "error_sql": e._sql_message()
             }
+    
+    def __getTrack(self,_cnpj:str,_nf:int,_nf_serie:int,_emp:str,_code:str):
+        opts = {
+            "taxvat": _cnpj,
+            "invoice": _nf,
+            "invoice_serie": _nf_serie
+        }
+
+        if _emp=="BRASPRESS":
+            return Shipping().tracking(ShippingCompany.BRASPRESS,opts)
+        if _emp=="JAMEF":
+            return Shipping().tracking(ShippingCompany.JAMEF,opts)
+        if _emp=="JADLOG":
+            return Shipping().tracking(ShippingCompany.JADLOG,opts)
+
+        return _code
         
 ns_order.add_resource(HistoryOrderList,'/history/<int:id>')
