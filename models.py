@@ -129,6 +129,12 @@ class CmmProductsGridDistribution(db.Model,SerializerMixin):
     is_percent = Column(Boolean,nullable=False,default=False)
 
 
+class CmmMeasureUnit(db.Model,SerializerMixin):
+    id          = Column(Integer,primary_key=True,autoincrement=True)
+    code        = Column(CHAR(4),nullable=False)
+    description = Column(String(50),nullable=False)
+
+
 class CmmLegalEntities(db.Model,SerializerMixin):
     id           = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
     name         = Column(String(255),nullable=False)
@@ -195,7 +201,9 @@ class B2bOrders(db.Model,SerializerMixin):
     integrated           = Column(Boolean,nullable=False,default=True,comment="Indica se o pedido foi integrado com o ERP do cliente (se houver necessidade)")
     integration_number   = Column(Integer,nullable=True,comment="Número do pedido no sistema de cliente")
     track_code           = Column(String(30),nullable=True,comment="Código de rastreamento")
+    track_company        = Column(String(30),nullable=True,comment="Nome da empresa de transporte")
     invoice_number       = Column(Integer,nullable=True,comment="Número da nota fiscal")
+    invoice_serie        = Column(Integer,nullable=True)
     date_created         = Column(DateTime,nullable=False,server_default=func.now())
     date_updated         = Column(DateTime,onupdate=func.now())
     trash                = Column(Boolean,nullable=False,default=False)
