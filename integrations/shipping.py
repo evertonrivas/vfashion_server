@@ -5,14 +5,12 @@ from datetime import datetime
 
 class Shipping():
     nav = None
-    cfg = None
     shp = None
-    def __init__(self,_cfg:Config) -> None:
+    def __init__(self) -> None:
         #remove o warning de excessao da verificacao do certificado SSL
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
         self.nav = requests.Session()
-        self.cfg = _cfg
 
     def tracking(self,_shp:ShippingCompany,options:object):
         if _shp==ShippingCompany.BRASPRESS:
