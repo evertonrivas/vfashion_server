@@ -38,3 +38,7 @@ class ERP(ABC):
     @abstractmethod
     def get_products(self):
         pass
+
+    @abstractmethod
+    def get_payment_conditions(self):
+        pass
