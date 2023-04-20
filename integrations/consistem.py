@@ -2,6 +2,9 @@ from integrations.erp import ERP
 from requests import Response,Session,RequestException
 
 class Consistem(ERP):
+    def __get_header(self):
+        return super().__get_header()
+    
     def __get_object(self, req: Response):
         return super().__get_object(req)
     
@@ -26,3 +29,8 @@ class Consistem(ERP):
     def get_representative(self):
         return super().get_representative()
     
+    def get_payment_conditions(self):
+        return super().get_payment_conditions()
+    
+    def create_order(self):
+        return super().create_order()

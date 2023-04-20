@@ -2,6 +2,9 @@ from integrations.erp import ERP
 from requests import Response,Session,RequestException
 
 class Vexta(ERP):
+    def __get_header(self):
+        return super().__get_header()
+    
     def __get_object(self, req: Response):
         return super().__get_object(req)
     

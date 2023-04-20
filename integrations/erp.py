@@ -4,6 +4,10 @@ from requests import Response
 
 class ERP(ABC):
     @abstractmethod
+    def __get_header(self):
+        pass
+
+    @abstractmethod
     def __get_object(self,req:Response):
         pass
 
