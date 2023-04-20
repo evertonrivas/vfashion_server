@@ -1,12 +1,9 @@
 from integrations.erp import ERP
-from requests import Response,Session,RequestException
+from requests import RequestException
 
 class OrganizaTextil(ERP):
-    def __get_header(self):
-        return super().__get_header()
-    
-    def __get_object(self, req: Response):
-        return super().__get_object(req)
+    def _get_header(self):
+        return super()._get_header()
     
     def get_bank_slip(self):
         return super().get_bank_slip()

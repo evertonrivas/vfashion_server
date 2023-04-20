@@ -1,45 +1,36 @@
-from types import SimpleNamespace
-from requests import Session,Response,RequestException
-from config import ConfigVirtualAge,Config
+from requests import RequestException
+from config import ConfigVirtualAge
 from models import CmmMeasureUnit,CmmLegalEntities,B2bOrders, CmmProducts
-from sqlalchemy import create_engine,Insert,Select
+from sqlalchemy import Insert,Select
 from integrations.erp import ERP
 from time import sleep
-import json
 
 class VirtualAge(ERP):
-    nav = None
     token_type = ''
     token_access = ''
-    conn = None
     def __init__(self) -> None:
-        self.nav = Session()
-        self.conn = create_engine("mysql+pymysql://"+Config.DB_USER.value+":"+Config.DB_PASS.value+"@"+Config.DB_HOST.value+"/"+Config.DB_NAME.value)
+        super().__init__()
         self.__get_token()
 
-    def __get_object(self,req:Response):
-        return json.loads(req.text,object_hook=lambda d: SimpleNamespace(**d))
-
-    def __get_header(self):
+    def _get_header(self):
         return {
             "Authorization": self.token_type+' '+self.token_access
         }
 
     def __get_token(self):
-        url = ConfigVirtualAge.URL.value+'/api/totvsmoda/authorization/v2/token'
-        req = self.nav.post(url,data={
-            "grant_type": ConfigVirtualAge.grant_type.value,
-            "client_id": ConfigVirtualAge.client_id.value,
+        req = self.nav.post(ConfigVirtualAge.URL.value+'/api/totvsmoda/authorization/v2/token',data={
+            "grant_type"   : ConfigVirtualAge.grant_type.value,
+            "client_id"    : ConfigVirtualAge.client_id.value,
             "client_secret": ConfigVirtualAge.client_secret.value,
-            "username": ConfigVirtualAge.username.value,
-            "password": ConfigVirtualAge.password.value
+            "username"     : ConfigVirtualAge.username.value,
+            "password"     : ConfigVirtualAge.password.value
         },headers={
             "Content-Type":"application/x-www-form-urlencoded"
         })
         if req.status_code==200:
-            data = req.json()
-            self.token_type   = data['token_type']
-            self.token_access = data['access_token']
+            data = self._as_object(req)
+            self.token_type   = data.token_type
+            self.token_access = data.access_token
             return True
         return False
     
@@ -61,12 +52,12 @@ class VirtualAge(ERP):
                                     "page": act_page,
                                     "pageSize": 30
                                 },
-                                headers=self.__get_header())
+                                headers=self._get_header())
             if req.status_code==200:
-                data = self.__get_object(req)
+                data = self._as_object(req)
 
                 for p in data.items:
-                    with self.conn.connect() as con:
+                    with self.dbconn.connect() as con:
                         exist = con.execute(Select(CmmProducts).where(CmmProducts.prodCode==p.productCode)).first()
                         if exist!=None:
                             if p.isActive==True:                                
@@ -108,9 +99,9 @@ class VirtualAge(ERP):
                                 },
                                 "page": 1,
                                 "pageSize": 1000
-                                },headers=self.__get_header())
+                                },headers=self._get_header())
         if req.status_code==200:
-            data = self.__get_object(req)
+            data = self._as_object(req)
             if data.items!=None:
                 if data.items[0]!=None:
                     if data.items[0].images!=None:
@@ -125,19 +116,19 @@ class VirtualAge(ERP):
 
     def get_representative(self):
         req = self.nav.post(ConfigVirtualAge.URL.value+'/api/api/totvsmoda/person/v2/representatives/search',
-                             headers=self.__get_header()
+                             headers=self._get_header()
                              )
         if req.status_code==200:
-            return self.__get_object(req)
+            return self._as_object(req)
         return False
     
     def get_customer(self,_taxvat:str):
         req = self.nav.post(ConfigVirtualAge.URL.value+'',
-                              headers=self.__get_header(),data={
+                              headers=self._get_header(),data={
                                 
                               })
         if req.status_code==200:
-            return self.__get_object(req)
+            return self._as_object(req)
         return False
     
     def create_order(self):
@@ -161,19 +152,19 @@ class VirtualAge(ERP):
                         "pageSize": 50,
                         "expand": "shippingCompany"
                         },
-                      headers=self.__get_header())
+                      headers=self._get_header())
         if req.status_code==200:
-            data = self.__get_object(req)
+            data = self._as_object(req)
             
         return None
 
     def get_measure_unit(self):
         try:
             resp = self.nav.get(ConfigVirtualAge.URL.value+'/api/totvsmoda/product/v2/measurement-unit',
-                        headers=self.__get_header())
+                        headers=self._get_header())
             if resp.status_code==200:
                 data = resp.json()
-                with self.conn.connect() as con:
+                with self.dbconn.connect() as con:
                     for d in data['items']:
                         exist = con.execute(Select(CmmMeasureUnit).where(CmmMeasureUnit.code==d['code'])).first()
                         if exist!=None:
@@ -197,11 +188,10 @@ class VirtualAge(ERP):
         #                             "customerCpfCnpjList": ['']
         #                         }
         #                      },
-        #                      headers=self.__get_header())
+        #                      headers=self._get_header())
         # if resp.status_code==200:
         #     data = resp.json()
         pass
-
 
     def get_payment_conditions(self):
         pass
