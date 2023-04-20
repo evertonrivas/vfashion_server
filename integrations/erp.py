@@ -1,7 +1,12 @@
 from abc import abstractmethod,ABC
+from requests import Response
 
 
 class ERP(ABC):
+    @abstractmethod
+    def __get_object(self,req:Response):
+        pass
+
     @abstractmethod
     def get_representative(self):
         pass
@@ -28,4 +33,8 @@ class ERP(ABC):
 
     @abstractmethod
     def get_bank_slip(self):
+        pass
+
+    @abstractmethod
+    def get_products(self):
         pass
