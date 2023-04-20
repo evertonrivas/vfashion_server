@@ -10,12 +10,16 @@ class Config(Enum):
     DB_USER = "venda_fashion"
     DB_PASS = "vd_fashion"
     COMPANY_TAXVAT = ''
-
+    TRACK_ORDER = False
+    CONNECT_ERP = False
+    ERP_MODULE  = "integrations.virtualage"
+    ERP_CLASS   = "VirtualAge"
 
 class ShippingCompany(Enum):
     BRASPRESS = 1
     JADLOG    = 2
     JAMEF     = 3
+    ECT       = 4
 
 class ConfigBraspress(Enum):
     API_VERSION  = 3
@@ -30,11 +34,17 @@ class ConfigJadlog(Enum):
     TOKEN_TYPE   = 'Bearer'
     TOKEN_ACCESS = ''
 
+class ConfigECT(Enum):
+    token_access = 'ZXZlcnRvbnJpdmFzOnJvbWVybzAx' #username:senha (base64)
+    token_type   = 'Basic'
+
 
 class ConfigVirtualAge(Enum):
-    URL           = 'https://api.labellamafia.com.br:9443/'
+    URL           = 'https://api.labellamafia.com.br:9443'
     grant_type    = 'password'
     client_id     = 'labellamafiaapiv2'
     client_secret = '16061138'
     username      = 'apiv2'
     password      = 'api8107'
+    active_companies = [1]
+    default_company  = 1
