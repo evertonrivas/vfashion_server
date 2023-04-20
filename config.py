@@ -40,11 +40,11 @@ class ConfigECT(Enum):
 
 
 class ConfigVirtualAge(Enum):
-    URL           = 'https://api.labellamafia.com.br:9443'
-    grant_type    = 'password'
-    client_id     = 'labellamafiaapiv2'
-    client_secret = '16061138'
-    username      = 'apiv2'
-    password      = 'api8107'
+    URL           = ''
+    grant_type    = ''
+    client_id     = ''
+    client_secret = ''
+    username      = ''
+    password      = ''
     active_companies = [1]
     default_company  = 1
