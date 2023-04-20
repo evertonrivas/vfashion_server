@@ -4,6 +4,7 @@ class Config(Enum):
     PAGINATION_SIZE = 25
     EXPIRE_SESSION  = 3600
     
+    DB_LIB  = "mysql+pymysql"
     DB_TYPE = "MYSQL"
     DB_HOST = "localhost"
     DB_NAME = "venda_fashion"
@@ -11,7 +12,7 @@ class Config(Enum):
     DB_PASS = "vd_fashion"
     COMPANY_TAXVAT = ''
     TRACK_ORDER = False
-    CONNECT_ERP = False
+    CONNECT_ERP = True
     ERP_MODULE  = "integrations.virtualage"
     ERP_CLASS   = "VirtualAge"
 
