@@ -1,9 +1,10 @@
 from requests import RequestException
 from config import ConfigVirtualAge
-from models import CmmMeasureUnit,CmmLegalEntities,B2bOrders, CmmProducts
-from sqlalchemy import Insert,Select
+from models import CmmMeasureUnit,CmmLegalEntities,CmmLegalEntityContact,B2bOrders, CmmProducts, CmmProductsCategories
+from sqlalchemy import Insert,Select, Update,or_
 from integrations.erp import ERP
 from time import sleep
+import json
 
 class VirtualAge(ERP):
     token_type = ''
@@ -12,9 +13,10 @@ class VirtualAge(ERP):
         super().__init__()
         self.__get_token()
 
-    def _get_header(self):
+    def _get_header(self,is_json:bool=True):
         return {
-            "Authorization": self.token_type+' '+self.token_access
+            "Authorization": self.token_type+' '+self.token_access,
+            "Content-Type": "application/json" if is_json==True else "text/plain"
         }
 
     def __get_token(self):
@@ -47,7 +49,7 @@ class VirtualAge(ERP):
                                         }
                                     },
                                     "option":{
-                                        "branchInfoCode": ConfigVirtualAge.default_company.value
+                                        "branchInfoCode": ConfigVirtualAge.DEFAULT_COMPANY.value
                                     },
                                     "page": act_page,
                                     "pageSize": 30
@@ -78,18 +80,14 @@ class VirtualAge(ERP):
                                 ))
                                 con.commit()
                                 
-                                imgs = self.__get_product_images(result.inserted_primary_key[0])
-                                for img in imgs:
-                                    pass
-
-
+                                self.__save_product_images(result.inserted_primary_key[0])
                 has_next = data.hasNext
                 act_page += 1
                 sleep(1)
             else:
                 has_next = False
 
-    def __get_product_images(self,id_product:int):
+    def __save_product_images(self,id_product:int):
         req = self.nav.post(ConfigVirtualAge.URL.value+'/api/totvsmoda/image/v2/product/search',
                              data={
                                 "filter": {
@@ -109,18 +107,159 @@ class VirtualAge(ERP):
         return None
 
     def get_product_category(self):
-        has_next = False
+        has_next = True
         act_page = 1
+        #faz um looping infinito por causa da paginacao de resultados
         while has_next:
-            self.nav.get(ConfigVirtualAge.URL.value+'/')
+            req = self.nav.get(ConfigVirtualAge.URL.value+'/api/totvsmoda/product/v2/category',
+                               data={
+                                    "page": act_page,
+                                    "pageSize": 100
+                                },
+                                headers=self._get_header()
+                                )
+            #verifica se houve sucesso na busca
+            if req.status_code==200:
+                #converte o resultado em objeto
+                data = self._as_object(req)
+                #varre os itens do resultado
+                for it in data.items:
+                    #conecta o bd
+                    with self.dbconn.connect() as con:
+                        #verifica se o registro ja existe
+                        exist = con.execute(Select(CmmProductsCategories).where(CmmProductsCategories.orign_id==it.code)).first()
+                        if exist!=None:
+                            #so irah salvar o que for categoria ou subcategoria
+                            if it.categoryType==1 or it.categoryType==2:
+                                con.execute(Insert(CmmProductsCategories).values(name=it.name,id_parent=it.parentCategoryCode,origin_id=it.code))
+                                con.commit()
+            else:
+                #ao gerar falha na busca interrompe o looping
+                has_next = False
+            has_next = data.hasNext
+            act_page += 1
+            #da um tempo pra nao sobrecarregar a API
+            sleep(1)
+        return True
 
     def get_representative(self):
-        req = self.nav.post(ConfigVirtualAge.URL.value+'/api/api/totvsmoda/person/v2/representatives/search',
-                             headers=self._get_header()
-                             )
-        if req.status_code==200:
-            return self._as_object(req)
-        return False
+        try:
+            has_next = True
+            act_page = 1
+
+            while has_next:
+                #se nao preencheu a lista de REPS buscarah tudo o que existe na API
+                if ConfigVirtualAge.ACTIVE_REPS.value!="":
+                    filter = {
+                        "filter":{
+                            "representativeCodeList": ConfigVirtualAge.ACTIVE_REPS.value
+                        },
+                        "expand": "addresses,emails,phones",
+                        "page" : act_page
+                    }
+                else:
+                    filter = {
+                        "expand": "addresses,emails,phones",
+                        "page" : act_page
+                    }
+
+                req = self.nav.post(ConfigVirtualAge.URL.value+'/api/totvsmoda/person/v2/representatives/search',
+                                    data=json.dumps(filter),
+                                    headers=self._get_header()
+                                    )
+                if req.status_code==200:
+                    #transforma a resposta em objeto
+                    data = self._as_object(req)
+                    #varre os itens
+                    for it in data.items:
+                        #connecta o BD
+                        with self.dbconn.connect() as conn:
+                            #verifica se ja existe cadastro importado ou se ja tem cadastro do CNPJ
+                            exist = conn.execute(Select(CmmLegalEntities).where(or_(CmmLegalEntities.origin_id==it.code,CmmLegalEntities.taxvat==it.cpfCnpj))).first()
+                            #se nao existir ira cadastrar
+                            if exist==None:
+                                res = conn.execute(Insert(CmmLegalEntities).values(
+                                    origin_id = it.code,
+                                    name = it.name,
+                                    taxvat = it.cpfCnpj,
+                                    state_region = it.addresses[0].stateAbbreviation,
+                                    city = it.addresses[0].cityName,
+                                    postal_code = it.addresses[0].cep,
+                                    neighborhood = it.addresses[0].neighborhood,
+                                    type="R"
+                                ))
+                                conn.commit()
+
+                                #importa os emails do cadastro
+                                for em in it.emails:
+                                    conn.execute(Insert(CmmLegalEntityContact).values(
+                                        id_legal_entity=res.inserted_primary_key[0],
+                                        contact_type = 'E',
+                                        is_whatsapp = False,
+                                        value = str(em.email).replace(" ",""),
+                                        is_default = bool(em.isDefault),
+                                        name = em.typeName
+                                    ))
+                                    conn.commit()
+
+                                #importa os telefones do cadastro
+                                for ph in it.phones:
+                                    conn.execute(Insert(CmmLegalEntityContact).values(
+                                        id_legal_entity=res.inserted_primary_key[0],
+                                        contact_type = 'P',
+                                        is_whatsapp = False,
+                                        value = str(ph.number).replace(" ","").replace("(","").replace(")","").replace("-",""),
+                                        is_default = ph.isDefault,
+                                        name = ph.typeName
+                                    ))
+                                    conn.commit()
+                            else:
+                                #aqui irah atualizar as informacoes de cadastro
+                                conn.execute(Update(CmmLegalEntities).values(
+                                    origin_id    = it.code if it.code!=exist.origin_id else exist.origin_id,
+                                    name         = it.name if it.name!=exist.name else exist.name,
+                                    taxvat       = it.cpfCnpj if it.cpfCnpj!=exist.taxvat else exist.taxvat,
+                                    state_region = it.addresses[0].stateAbbreviation if it.addresses[0].stateAbbreviation!=exist.state_region else exist.state_region,
+                                    city         = it.addresses[0].cityName if it.addresses[0].cityName!=exist.city else exist.city,
+                                    postal_code  = it.addresses[0].cep if it.addresses[0].cep!=exist.postal_code else exist.postal_code,
+                                    neighborhood = it.addresses[0].neighborhood if it.addresses[0].neighborhood!=exist.neighborhood else exist.neighborhood
+                                ).where(CmmLegalEntities.id==exist.id))
+                                conn.commit()
+                                for em in it.emails:
+                                    exist = conn.execute(Select(CmmLegalEntityContact).where(CmmLegalEntityContact.value==em.email)).first()
+                                    if exist==None:
+                                        conn.execute(Insert(CmmLegalEntityContact).values(
+                                            id_legal_entity=exist.id,
+                                            contact_type = 'E',
+                                            is_whatsapp = False,
+                                            value = str(em.email).replace(" ",""),
+                                            is_default = bool(em.isDefault),
+                                            name = em.typeName
+                                        ))
+                                        conn.commit()
+                                
+                                for ph in it.phones:
+                                    number = str(ph.number).replace(" ","").replace("(","").replace(")","").replace("-","")
+                                    exist = conn.execute(Select(CmmLegalEntityContact).where(CmmLegalEntityContact.value==number))
+                                    if exist==None:
+                                        conn.execute(Insert(CmmLegalEntityContact).values(
+                                            id_legal_entity=exist.id,
+                                            contact_type = 'P',
+                                            is_whatsapp = False,
+                                            value = str(ph.number).replace(" ","").replace("(","").replace(")","").replace("-",""),
+                                            is_default = bool(ph.isDefault),
+                                            name = ph.typeName
+                                        ))
+                                        conn.commit()
+                else:
+                    # print(req.status_code)
+                    # print(req.text)
+                    has_next = False
+                has_next = bool(data.hasNext)
+                act_page += 1
+        except RequestException as e:
+            print(e)
+            return False
     
     def get_customer(self,_taxvat:str):
         req = self.nav.post(ConfigVirtualAge.URL.value+'',
@@ -141,7 +280,7 @@ class VirtualAge(ERP):
         req = self.nav.post(ConfigVirtualAge.URL.value+'/api/totvsmoda/fiscal/v2/invoices/search',
                       data={
                         "filter": {
-                            "branchCodeList": ConfigVirtualAge.active_companies.value,
+                            "branchCodeList": ConfigVirtualAge.ACTIVE_COMPANIES.value,
                             "operationType": "S",
                             "origin": "All",
                             "invoiceStatusList": ["Normal","Issued"],
@@ -160,19 +299,26 @@ class VirtualAge(ERP):
 
     def get_measure_unit(self):
         try:
-            resp = self.nav.get(ConfigVirtualAge.URL.value+'/api/totvsmoda/product/v2/measurement-unit',
-                        headers=self._get_header())
-            if resp.status_code==200:
-                data = resp.json()
-                with self.dbconn.connect() as con:
-                    for d in data['items']:
-                        exist = con.execute(Select(CmmMeasureUnit).where(CmmMeasureUnit.code==d['code'])).first()
-                        if exist!=None:
-                            con.execute(Insert(CmmMeasureUnit).values(code=d['code'],description=d['description']))
-                            con.commit()
-                return True
+            has_next = True
+            act_page = 1
+            while has_next:
+                req = self.nav.get(ConfigVirtualAge.URL.value+'/api/totvsmoda/product/v2/measurement-unit',
+                            headers=self._get_header())
+                if req.status_code==200:
+                    data = self._as_object(req)
+                    with self.dbconn.connect() as con:
+                        for d in data.items:
+                            exist = con.execute(Select(CmmMeasureUnit).where(CmmMeasureUnit.code==d.code)).first()
+                            if exist!=None:
+                                con.execute(Insert(CmmMeasureUnit).values(code=d.code,description=d.description))
+                                con.commit()
+                else:
+                    has_next = False
+                has_next = data.hasNext
+                act_page += 1
+            return True
         except RequestException as e:
-            print(e.strerror)
+            #print(e.strerror)
             return False
         
     def get_bank_slip(self):
