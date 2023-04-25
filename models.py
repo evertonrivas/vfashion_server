@@ -90,6 +90,7 @@ class CmmProductsImages(db.Model,SerializerMixin):
 
 class CmmProductsTypes(db.Model,SerializerMixin):
     id           = Column(Integer,nullable=False,primary_key=True,autoincrement=True)
+    origin_id    = Column(Integer,nullable=True)
     name         = Column(String(128),nullable=False)
     date_created = Column(DateTime,nullable=False,server_default=func.now())
     date_updated = Column(DateTime,onupdate=func.now())
@@ -97,8 +98,9 @@ class CmmProductsTypes(db.Model,SerializerMixin):
 
 
 class CmmProductsModels(db.Model,SerializerMixin):
-    id = Column(Integer,nullable=False,primary_key=True,autoincrement=True)
-    name = Column(String(255),nullable=False)
+    id           = Column(Integer,nullable=False,primary_key=True,autoincrement=True)
+    origin_id    = Column(Integer,nullable=True)
+    name         = Column(String(255),nullable=False)
     date_created = Column(DateTime,nullable=False,server_default=func.now())
     date_updated = Column(DateTime,onupdate=func.now())
     trash        = Column(Boolean,nullable=False,default=False)
@@ -106,6 +108,7 @@ class CmmProductsModels(db.Model,SerializerMixin):
 
 class CmmProductsCategories(db.Model,SerializerMixin):
     id           = Column(Integer,primary_key=True,autoincrement=True,nullable=False)
+    orign_id     = Column(Integer,nullable=True)
     name         = Column(String(128),nullable=False)
     id_parent    = Column(Integer,nullable=True)
     date_created = Column(DateTime,nullable=False,server_default=func.now())
@@ -115,6 +118,7 @@ class CmmProductsCategories(db.Model,SerializerMixin):
 
 class CmmProductsGrid(db.Model,SerializerMixin):
     id           = Column(Integer,primary_key=True,autoincrement=True,nullable=False)
+    orign_id     = Column(Integer,nullable=True)
     name         = Column(String(128))
     date_created = Column(DateTime,nullable=False,server_default=func.now())
     date_updated = Column(DateTime,onupdate=func.now())
@@ -137,6 +141,7 @@ class CmmMeasureUnit(db.Model,SerializerMixin):
 
 class CmmLegalEntities(db.Model,SerializerMixin):
     id           = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
+    origin_id    = Column(Integer,nullable=True)
     name         = Column(String(255),nullable=False)
     instagram    = Column(String(100),nullable=True)
     taxvat       = Column(String(30),nullable=False,comment="CPF ou CNPJ no Brasil")
@@ -144,13 +149,19 @@ class CmmLegalEntities(db.Model,SerializerMixin):
     city         = Column(String(100),nullable=False)
     postal_code  = Column(String(30),nullable=False)
     neighborhood = Column(String(150),nullable=False)
-    phone        = Column(String(30),nullable=False)
-    email        = Column(String(150),nullable=False)
     type         = Column(CHAR(1),nullable=False,default='C',comment="C = Customer(Cliente), R = Representative(Representante), S = Supplier(Fornecedor)")
     trash        = Column(Boolean,nullable=False,default=False)
     date_created = Column(DateTime,nullable=False,server_default=func.now())
     date_updated = Column(DateTime,onupdate=func.now())
 
+class CmmLegalEntityContact(db.Model,SerializerMixin):
+    id              = Column(Integer,primary_key=True,autoincrement=True)
+    id_legal_entity = Column(Integer,nullable=False)
+    name            = Column(String(150),nullable=False)
+    contact_type    = Column(CHAR(1),nullable=False,default='E',comment='E = E-mail, P = Phone')
+    value           = Column(String(200),nullable=False)
+    is_whatsapp     = Column(Boolean,nullable=False,default=False)
+    is_default      = Column(Boolean,default=False,nullable=False)
 
 class CmmTranslateColors(db.Model,SerializerMixin):
     id      = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
