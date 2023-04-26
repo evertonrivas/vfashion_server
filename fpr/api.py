@@ -10,7 +10,7 @@ Keyword arguments: devolução, cliente, produto
 
 nss = []
 
-blueprint = Blueprint("fpr",__name__,url_prefix="/fpr/api/v1/")
+blueprint = Blueprint("fpr",__name__,url_prefix="/fpr/api/")
 
 api = Api(blueprint,
     version="1.0",

@@ -53,12 +53,12 @@ def index():
                             <p class='card-text'>
                             O sistema Venda Fashion possui 4 m&oacute;dulos, cada um com seu backend em REST API com sua respectiva documenta&ccedil;&atilde;o.
                             Para acessar as documenta&ccedil;&otilde;es das APIS, clique nos links abaixo:<br/><br/>
-                            VF_B2B - Business to Business <a href='/b2b/api/v1'>/b2b/api/v1</a><br/>
-                            VF_FPR - Finished Product Return <a href='/fpr/api/v1'>/fpr/api/v1</a><br/>
-                            VF_POS - Point Of Sale <a href='/pos/api/v1'>/pos/api/v1</a><br/>
-                            VF_CRM - Customer Relashionship Management <a href='/crm/api/v1'>/crm/api/v1</a><hr size='1'>
+                            VF_B2B - Business to Business <a href='/b2b/api'>/b2b/api</a><br/>
+                            VF_FPR - Finished Product Return <a href='/fpr/api'>/fpr/api</a><br/>
+                            VF_POS - Point Of Sale <a href='/pos/api'>/pos/api</a><br/>
+                            VF_CRM - Customer Relashionship Management <a href='/crm/api'>/crm/api</a><hr size='1'>
 
-                            VF_CMM - M&oacute;dulo Common (Fun&ccedil;&otilde;es comuns dos m&oacute;dulos) <a href='/cmm/api/v1'>/cmm/api/v1</a>
+                            VF_CMM - M&oacute;dulo Common (Fun&ccedil;&otilde;es comuns dos m&oacute;dulos) <a href='/cmm/api'>/cmm/api</a>
                             </p>
                         </div>
                     </div>

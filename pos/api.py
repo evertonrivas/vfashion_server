@@ -41,7 +41,7 @@ Keyword arguments: vendas, b2c, produtos, consumidor
 
 nss = [ns_consumer,ns_consumer_group]
 
-blueprint = Blueprint("pos",__name__,url_prefix="/pos/api/v1/")
+blueprint = Blueprint("pos",__name__,url_prefix="/pos/api/")
 
 api = Api(blueprint,
     version="1.0",

@@ -43,7 +43,7 @@ nss = [ns_brand,
        ns_price,   
        ns_stock]
 
-blueprint = Blueprint("b2b",__name__,url_prefix="/b2b/api/v1/")
+blueprint = Blueprint("b2b",__name__,url_prefix="/b2b/api/")
 
 api = Api(blueprint,
     version="1.0",

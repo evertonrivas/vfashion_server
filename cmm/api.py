@@ -20,7 +20,7 @@ Keyword arguments: usuarios, produtos
 #nss = [ns_user]
 nss = [ns_prod,ns_gprod,ns_cat,ns_user,ns_legal,ns_type,ns_model,ns_color,ns_size]
 
-blueprint = Blueprint("cmm",__name__,url_prefix="/cmm/api/v1/")
+blueprint = Blueprint("cmm",__name__,url_prefix="/cmm/api/")
 
 api = Api(blueprint,
     version="1.0",

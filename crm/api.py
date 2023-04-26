@@ -10,7 +10,7 @@ Keyword arguments: relacionamento, clientes, contatos, financeiro
 
 nss = [ns_funil,ns_fun_stg]
 
-blueprint = Blueprint("crm",__name__,url_prefix="/crm/api/v1/")
+blueprint = Blueprint("crm",__name__,url_prefix="/crm/api/")
 
 api = Api(blueprint,
     version="1.0",
