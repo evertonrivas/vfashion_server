@@ -143,6 +143,7 @@ class CmmLegalEntities(db.Model,SerializerMixin):
     id           = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
     origin_id    = Column(Integer,nullable=True)
     name         = Column(String(255),nullable=False)
+    fantasy_name = Column(String(255),nullable=False)
     instagram    = Column(String(100),nullable=True)
     taxvat       = Column(String(30),nullable=False,comment="CPF ou CNPJ no Brasil")
     state_region = Column(CHAR(2),nullable=False)
