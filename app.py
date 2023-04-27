@@ -48,7 +48,7 @@ def index():
                 <div class='col-2'>&nbsp;</div>
                 <div class='col'>
                     <div class='card border border-info'>
-                        <div class='card-header text-center fw-bold'>Venda Fashion - API</div>
+                        <div class='card-header text-center fw-bold'>VFashion - API</div>
                         <div class='card-body'>
                             <p class='card-text'>
                             O sistema Venda Fashion possui 4 m&oacute;dulos, cada um com seu backend em REST API com sua respectiva documenta&ccedil;&atilde;o.
@@ -56,7 +56,8 @@ def index():
                             VF_B2B - Business to Business <a href='/b2b/api'>/b2b/api</a><br/>
                             VF_FPR - Finished Product Return <a href='/fpr/api'>/fpr/api</a><br/>
                             VF_POS - Point Of Sale <a href='/pos/api'>/pos/api</a><br/>
-                            VF_CRM - Customer Relashionship Management <a href='/crm/api'>/crm/api</a><hr size='1'>
+                            VF_CRM - Customer Relashionship Management <a href='/crm/api'>/crm/api</a><br/>
+                            VF_SCM - Sales Calendar Management <a href='/scm/api'>/scm/api</a><hr size='1'>
 
                             VF_CMM - M&oacute;dulo Common (Fun&ccedil;&otilde;es comuns dos m&oacute;dulos) <a href='/cmm/api'>/cmm/api</a>
                             </p>
