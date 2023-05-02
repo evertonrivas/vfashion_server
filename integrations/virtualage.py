@@ -346,9 +346,11 @@ class VirtualAge(ERP):
         conn.commit()
 
     def create_order(self):
+        
         pass
 
     def get_order(self):
+
         pass
 
     def get_invoice(self,_taxvat:str):
