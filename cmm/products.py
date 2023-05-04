@@ -93,7 +93,7 @@ class ProductsList(Resource):
                     .paginate(page=pag_num,per_page=pag_size)
 
             return {
-                "paginate":{
+                "pagination":{
                     "registers": rquery.total,
                     "page": pag_num,
                     "per_page": pag_size,
@@ -317,15 +317,10 @@ class ProductsGallery(Resource):
 
 
             query = query.order_by(direction(getattr(CmmProducts, order_by)))
-
-            # print(query)
-            # print("------------")
-            # print(search)
-
             rquery = db.paginate(query,page=pag_num,per_page=pag_size)
 
             return {
-                "paginate":{
+                "pagination":{
                     "registers": rquery.total,
                     "page": pag_num,
                     "per_page": pag_size,

@@ -73,6 +73,7 @@ class UsersList(Resource):
                     "id": m.id,
                     "username": m.username,
                     "type": m.type,
+                    "active": m.active,
                     "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                     "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
                 } for m in rquery.items]

@@ -275,7 +275,7 @@ class HistoryOrderList(Resource):
             pag = db.paginate(stmt,page=pag_num,per_page=pag_size)
             
             return {
-                "paginate":{
+                "pagination":{
                     "registers": pag.total,
                     "page": pag_num,
                     "per_page": pag_size,
