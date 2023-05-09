@@ -2,8 +2,7 @@ from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
 from models import CmmUserEntity, CmmUsers,db
-from sqlalchemy import desc, exc, and_, asc
-from datetime import datetime
+from sqlalchemy import desc, exc, and_, asc, Insert,Update
 from auth import auth
 from config import Config
 
@@ -51,33 +50,60 @@ class UsersList(Resource):
     def get(self):
         pag_num   =  1 if request.args.get("page") is None else int(request.args.get("page"))
         pag_size  = Config.PAGINATION_SIZE.value if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
-        search    = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
-        order_by  = "username" if request.args.get("order_by") is None else request.args.get("order_by")
+        search    = "" if request.args.get("query") is None else request.args.get("query")
+        order_by  = "id" if request.args.get("order_by") is None else request.args.get("order_by")
         direction = asc if request.args.get("order_dir") == 'ASC' else desc
+        to_export = False if request.args.get("to_export") is None else bool(request.args.get("to_export"))
 
         try:
-            if request.args.get("query")!=None:
-                rquery = CmmUsers.query.filter(and_(CmmUsers.username.like(search),CmmUsers.active==True)).order_by(direction(getattr(CmmUsers, order_by))).paginate(page=pag_num,per_page=pag_size)
+            if search!="":
+                if search.find("is:query ")!=-1:
+                    nsearch = search.split("is:query ")[1]
+                    nsearch = "%{}%".format(nsearch)
+                    rquery = CmmUsers.query.filter(and_(CmmUsers.username.like(nsearch))).order_by(direction(getattr(CmmUsers, order_by)))
+                else:
+                    if search.find(",")!=-1:
+                        terms = search.split(",")
+                        active_terms = terms[0].split(" ") if terms[0].find("is:active")!=-1 else terms[1].split(" ")
+                        type_terms   = terms[1].split(" ") if terms[0].find("is:type") else terms[1].split(" ")
+                        rquery = CmmUsers.query.filter(and_(CmmUsers.type==type_terms[1],CmmUsers.active==active_terms[1])).order_by(direction(getattr(CmmUsers, order_by)))
+                    else:
+                        term = search.split(" ")[1]
+                        if search.find("is:active")!=-1:
+                            rquery = CmmUsers.query.filter(CmmUsers.active==term).order_by(direction(getattr(CmmUsers, order_by)))
+                        else:
+                            rquery = CmmUsers.query.filter(CmmUsers.type==term).order_by(direction(getattr(CmmUsers, order_by)))
             else:
-                rquery = CmmUsers.query.filter(CmmUsers.active==True).order_by(direction(getattr(CmmUsers, order_by))).paginate(page=pag_num,per_page=pag_size)
+                rquery = CmmUsers.query.order_by(direction(getattr(CmmUsers, order_by)))
 
-            return {
-                "pagination":{
-                    "registers": rquery.total,
-                    "page": pag_num,
-                    "per_page": pag_size,
-                    "pages": rquery.pages,
-                    "has_next": rquery.has_next
-                },
-                "data":[{
+            if to_export==False:
+                rquery = rquery.paginate(page=pag_num,per_page=pag_size)
+                return {
+                    "pagination":{
+                        "registers": rquery.total,
+                        "page": pag_num,
+                        "per_page": pag_size,
+                        "pages": rquery.pages,
+                        "has_next": rquery.has_next
+                    },
+                    "data":[{
+                        "id": m.id,
+                        "username": m.username,
+                        "type": m.type,
+                        "active": m.active,
+                        "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+                        "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
+                    } for m in rquery.items]
+                }
+            else:
+                return [{
                     "id": m.id,
                     "username": m.username,
                     "type": m.type,
                     "active": m.active,
                     "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                     "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
-                } for m in rquery.items]
-            }
+                }for m in rquery.all()]
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -85,23 +111,22 @@ class UsersList(Resource):
                 "error_sql": e._sql_message()
             }
 
-    @ns_user.response(HTTPStatus.OK.value,"Cria um novo usuário no sistema")
-    @ns_user.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar novo usuário!")
-    @ns_user.param("username","Login do usuário","formData",required=True)
-    @ns_user.param("password","Senha do usuário","formData",required=True)
-    @ns_user.param("type","Tipo do usuário","formData",required=True,enum=['A','L','R','V','U'])
+    @ns_user.response(HTTPStatus.OK.value,"Cria um ou mais novo(s) usuário(s) no sistema")
+    @ns_user.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar!")
     @auth.login_required
     def post(self):
         try:
-            usr = CmmUsers()
-            usr.username = request.form.get("username")
-            usr.type     = request.form.get("type")
-            usr.hash_pwd(request.form.get("password"))
-            usr.token = ""
-            usr.token_expire = datetime.now().utcnow()
-            db.session.add(usr)
+            req = request.get_json()
+
+            db.session.execute(
+                Insert(CmmUsers),[{
+                    "username": usr["username"],
+                    "password": CmmUsers().hash_pwd(usr["password"]),
+                    "type": usr["type"]
+                }for usr in req]
+            )
             db.session.commit()
-            return  usr.id
+            return  True
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -214,3 +239,26 @@ class UserAuthLogout(Resource):
             return False
         
 ns_user.add_resource(UserAuthLogout,"/logout/<int:id>")
+
+
+class UserUpdate(Resource):
+    @ns_user.response(HTTPStatus.OK.value,"Cria um ou mais novo(s) usuário(s) no sistema")
+    @ns_user.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar!")
+    @auth.login_required
+    def post(self):
+        try:
+            req = request.get_json()
+            db.session.execute(Update(CmmUsers),[{
+                "id": m["id"],
+                "active":m["active"],
+                "type": m["type"]
+            }for m in req])
+            db.session.commit()
+            return True
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
+ns_user.add_resource(UserUpdate,'/massive-change')
