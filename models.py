@@ -12,7 +12,7 @@ class CmmUsers(db.Model,SerializerMixin):
     id              = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
     username        = Column(String(100), nullable=False)
     password        = Column(String(255), nullable=False)
-    type            = Column(CHAR(1),nullable=False,default='L',comment='A = Administrador, L = Lojista, R = Representante, V = Vendedor, U = User')
+    type            = Column(CHAR(1),nullable=False,default='L',comment='A = Administrador, L = Lojista, R = Representante, V = Vendedor, C = Company User')
     date_created    = Column(DateTime,nullable=False,server_default=func.now())
     date_updated    = Column(DateTime,onupdate=func.now())
     active          = Column(Boolean,nullable=False,default=True)
@@ -22,6 +22,7 @@ class CmmUsers(db.Model,SerializerMixin):
 
     def hash_pwd(self,pwd:str):
         self.password = bcrypt.hashpw(pwd.encode(),bcrypt.gensalt()).decode()
+        return self.password
     
     def check_pwd(self,pwd:str):
         return bcrypt.checkpw(pwd,self.password.encode())
@@ -138,16 +139,29 @@ class CmmMeasureUnit(db.Model,SerializerMixin):
     code        = Column(CHAR(4),nullable=False)
     description = Column(String(50),nullable=False)
 
+class CmmCountry(db.Model,SerializerMixin):
+    id   = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
+    name = Column(String(100),nullable=False)
+
+class CmmStateRegion(db.Model,SerializerMixin):
+    id         = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
+    id_country = Column(Integer,nullable=False)
+    name       = Column(String(100),nullable=False)
+    acronym    = Column(String(10),nullable=False)
+
+class CmmCities(db.Model,SerializerMixin):
+    id              = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
+    id_state_region = Column(Integer,nullable=False)
+    name            = Column(String(100),nullable=False)
+
 
 class CmmLegalEntities(db.Model,SerializerMixin):
     id           = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
     origin_id    = Column(Integer,nullable=True)
     name         = Column(String(255),nullable=False)
     fantasy_name = Column(String(255),nullable=False)
-    instagram    = Column(String(100),nullable=True)
     taxvat       = Column(String(30),nullable=False,comment="CPF ou CNPJ no Brasil")
-    state_region = Column(CHAR(2),nullable=False)
-    city         = Column(String(100),nullable=False)
+    id_city      = Column(Integer,nullable=False)
     postal_code  = Column(String(30),nullable=False)
     neighborhood = Column(String(150),nullable=False)
     type         = Column(CHAR(1),nullable=False,default='C',comment="C = Customer(Cliente), R = Representative(Representante), S = Supplier(Fornecedor)")
@@ -163,6 +177,12 @@ class CmmLegalEntityContact(db.Model,SerializerMixin):
     value           = Column(String(200),nullable=False)
     is_whatsapp     = Column(Boolean,nullable=False,default=False)
     is_default      = Column(Boolean,default=False,nullable=False)
+
+class CmmLegalEntityWeb(db.Model,SerializerMixin):
+    id              = Column(Integer,primary_key=True,autoincrement=True)
+    id_legal_entity = Column(Integer,nullable=False)
+    name            = Column(String(150),nullable=False)
+    web_type        = Column(CHAR(1),nullable=False,default='E',comment='W = Website, B = Blog, S = Social Media, L = Location (latitude,longitude)')
 
 class CmmTranslateColors(db.Model,SerializerMixin):
     id      = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
