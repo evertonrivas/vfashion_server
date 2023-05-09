@@ -1,10 +1,12 @@
 from flask import Flask
 from flask_cors import CORS
+from sqlalchemy import text
 from cmm.api import blueprint as cmm
 from pos.api import blueprint as pos
 from crm.api import blueprint as crm
 from b2b.api import blueprint as b2b
 from fpr.api import blueprint as fpr
+from scm.api import blueprint as scm
 from models import db
 from flask_migrate import Migrate
 from config import Config
@@ -18,6 +20,17 @@ app.config["SQLALCHEMY_DATABASE_URI"] = Config.DB_LIB.value+"://"+Config.DB_USER
 migrate = Migrate()
 
 db.init_app(app)
+try:
+    with app.app_context():
+        with db.engine.begin() as conn:
+            conn.execute(text("SELECT 1"))
+            conn.close()
+except Exception as e:
+    print(e)
+    print("###################################################")
+    print("Por favor, inicialize a instância do Banco de Dados")
+    print("###################################################")
+    quit()
 migrate.init_app(app,db)
 
 #with app.app_context():
@@ -29,6 +42,7 @@ app.register_blueprint(pos)
 app.register_blueprint(crm)
 app.register_blueprint(b2b)
 app.register_blueprint(fpr)
+app.register_blueprint(scm)
 
 CORS(app, resources={r"/*": {"origins": "*"}},supports_credentials=True)
 
