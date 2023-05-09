@@ -9,6 +9,9 @@ from cmm.products_model import ns_model
 from cmm.legal_entities import ns_legal
 from cmm.translate_colors import ns_color
 from cmm.translate_sizes import ns_size
+from cmm.countries import ns_country
+from cmm.cities import ns_city
+from cmm.state_regions import ns_state_region
 
 
 """ Módulo Common entre os sistemas
@@ -18,14 +21,14 @@ Keyword arguments: usuarios, produtos
 """
 
 #nss = [ns_user]
-nss = [ns_prod,ns_gprod,ns_cat,ns_user,ns_legal,ns_type,ns_model,ns_color,ns_size]
+nss = [ns_cat,ns_city,ns_color,ns_country,ns_gprod,ns_legal,ns_model,ns_prod,ns_size,ns_state_region,ns_type,ns_user]
 
 blueprint = Blueprint("cmm",__name__,url_prefix="/cmm/api/")
 
 api = Api(blueprint,
     version="1.0",
-    title="API Venda Fashion",
-    description="Uma API REST para sistema de vendas - Módulo Common",
+    title="API VFashion",
+    description="Uma API REST para o sistema CLM - Módulo Common",
     contact_email="evertonrivas@gmail.com",
     contact="Venda Fashion",
     contact_url="http://www.vendafashion.com")

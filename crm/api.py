@@ -15,7 +15,7 @@ blueprint = Blueprint("crm",__name__,url_prefix="/crm/api/")
 api = Api(blueprint,
     version="1.0",
     title="API Venda Fashion",
-    description="Uma API REST para sistema de vendas - Módulo CRM",
+    description="Uma API REST para o sistema CLM - Módulo CRM",
     contact_email="evertonrivas@gmail.com",
     contact="Venda Fashion",
     contact_url="http://www.vendafashion.com")

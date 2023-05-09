@@ -47,8 +47,8 @@ blueprint = Blueprint("b2b",__name__,url_prefix="/b2b/api/")
 
 api = Api(blueprint,
     version="1.0",
-    title="API Venda Fashion",
-    description="Uma API REST para sistema de vendas - Módulo B2B",
+    title="API VFashion",
+    description="Uma API REST para o sistema CLM - Módulo B2B",
     contact_email="evertonrivas@gmail.com",
     contact="Venda Fashion",
     contact_url="http://www.vendafashion.com")
