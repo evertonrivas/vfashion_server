@@ -22,14 +22,9 @@ lgl_model = ns_legal.model(
     "LegalEntity",{
         "id": fields.Integer,
         "name": fields.String,
-        "instagram": fields.String,
         "taxvat": fields.String,
-        "state_region": fields.String,
-        "city": fields.String,
         "postal_code": fields.Integer,
         "neighborhood": fields.String,
-        "phone": fields.String,
-        "email": fields.String,
         "type": fields.String(enum=['C','R','S']),
         "date_created": fields.DateTime,
         "date_updated": fields.DateTime
@@ -53,42 +48,54 @@ class CustomersList(Resource):
     @ns_legal.param("page","Número da página de registros","query",type=int,required=True)
     @ns_legal.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_legal.param("query","Texto para busca","query")
-    #@auth.login_required
+    @ns_legal.param("to_export","Se deve exportar","query",type=bool,default=False)
+    @auth.login_required
     def get(self):
-        pag_num  =  1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size = Config.PAGINATION_SIZE.value if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
-        search   = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
+        pag_num   =  1 if request.args.get("page") is None else int(request.args.get("page"))
+        pag_size  = Config.PAGINATION_SIZE.value if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        search    = "" if request.args.get("query") is None else "%{}%".format(request.args.get("query"))
+        to_export = False if request.args.get("to_export") is None else bool(request.args.get("to_export"))
 
         try:
             if search!="":
-                rquery = CmmLegalEntities.query.filter(and_(CmmLegalEntities.trash == False,CmmLegalEntities.name.like(search))).paginate(page=pag_num,per_page=pag_size)
+                rquery = CmmLegalEntities.query.filter(and_(CmmLegalEntities.trash == False,CmmLegalEntities.name.like(search)))
             else:
-                rquery = CmmLegalEntities.query.filter(CmmLegalEntities.trash == False).paginate(page=pag_num,per_page=pag_size)
+                rquery = CmmLegalEntities.query.filter(CmmLegalEntities.trash == False)
 
-            return {
-                "pagination":{
-                    "registers": rquery.total,
-                    "page": pag_num,
-                    "per_page": pag_size,
-                    "pages": rquery.pages,
-                    "has_next": rquery.has_next
-                },
-                "data":[{
-                    "id": m.id,
-                    "name": m.name,
-                    "taxvat": m.taxvat,
-                    "state_region":m.state_region,
-                    "city": m.city,
-                    "postal_code": m.postal_code,
-                    "neighborhood": m.neighborhood,
-                    "phone": m.phone,
-                    "email": m.email,
-                    "instagram": m.instagram,
-                    "is_representative": m.is_representative,
-                    "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                    "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
-                } for m in rquery.items]
-            }
+            if to_export==False:
+                rquery = rquery.paginate(page=pag_num,per_page=pag_size)
+                return {
+                    "pagination":{
+                        "registers": rquery.total,
+                        "page": pag_num,
+                        "per_page": pag_size,
+                        "pages": rquery.pages,
+                        "has_next": rquery.has_next
+                    },
+                    "data":[{
+                        "id": m.id,
+                        "name": m.name,
+                        "taxvat": m.taxvat,
+                        "postal_code": m.postal_code,
+                        "neighborhood": m.neighborhood,
+                        "type": m.type,
+                        "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+                        "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
+                    } for m in rquery.items]
+                }
+            else:
+                return [{
+                        "id": m.id,
+                        "name": m.name,
+                        "taxvat": m.taxvat,
+                        "state_region":m.state_region,
+                        "city": m.city,
+                        "postal_code": m.postal_code,
+                        "neighborhood": m.neighborhood,
+                        "type": m.type,
+                        "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+                        "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
+                    } for m in rquery.all()]
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
