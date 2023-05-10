@@ -1,7 +1,7 @@
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import CmmCountry,db
+from models import CmmCountries,db
 from sqlalchemy import desc, exc, asc
 from auth import auth
 from config import Config
@@ -53,14 +53,14 @@ class CategoryList(Resource):
 
         try:
             if search=="":
-                rquery = CmmCountry\
+                rquery = CmmCountries\
                     .query\
-                    .order_by(direction(getattr(CmmCountry, order_by)))
+                    .order_by(direction(getattr(CmmCountries, order_by)))
             else:
-                rquery = CmmCountry\
+                rquery = CmmCountries\
                     .query\
-                    .filter(CmmCountry.name.like(search))\
-                    .order_by(direction(getattr(CmmCountry, order_by)))
+                    .filter(CmmCountries.name.like(search))\
+                    .order_by(direction(getattr(CmmCountries, order_by)))
 
             if list_all==False:
                 rquery = rquery.paginate(page=pag_num,per_page=pag_size)
@@ -100,7 +100,7 @@ class CategoryList(Resource):
     @auth.login_required
     def post(self):
         try:
-            reg = CmmCountry()
+            reg = CmmCountries()
             reg.name = request.form.get("name")
             db.session.add(reg)
             db.session.commit()
@@ -119,7 +119,7 @@ class CategoryApi(Resource):
     @auth.login_required
     def get(self,id:int):
         try:
-            return CmmCountry.query.get(id).to_dict()
+            return CmmCountries.query.get(id).to_dict()
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -134,7 +134,7 @@ class CategoryApi(Resource):
     def post(self,id:int):
         try:
             req = request.get_json()
-            reg = CmmCountry.query.get(id)
+            reg = CmmCountries.query.get(id)
             reg.name = reg.name if req["name"] is None else req["name"]
             db.session.commit() 
         except exc.SQLAlchemyError as e:
@@ -149,7 +149,7 @@ class CategoryApi(Resource):
     @auth.login_required
     def delete(self,id:int):
         try:
-            reg = CmmCountry.query.get(id)
+            reg = CmmCountries.query.get(id)
             reg.trash = True
             db.session.commit()
             return True
