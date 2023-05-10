@@ -1,4 +1,4 @@
-# Venda Fashion (Server)
+# VFashion (Server)
 
 Repositório para hospedar a versão server do sistema de CLM desenvolvido em Python.
 
