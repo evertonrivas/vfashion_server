@@ -1,7 +1,7 @@
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import func,String,Integer,CHAR,DateTime,Boolean,Column,Text,DECIMAL,SmallInteger
 from sqlalchemy_serializer import SerializerMixin
-from datetime import datetime,timedelta, timezone
+from datetime import datetime,timedelta
 import jwt
 import bcrypt
 from config import Config
@@ -139,11 +139,11 @@ class CmmMeasureUnit(db.Model,SerializerMixin):
     code        = Column(CHAR(4),nullable=False)
     description = Column(String(50),nullable=False)
 
-class CmmCountry(db.Model,SerializerMixin):
+class CmmCountries(db.Model,SerializerMixin):
     id   = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
     name = Column(String(100),nullable=False)
 
-class CmmStateRegion(db.Model,SerializerMixin):
+class CmmStateRegions(db.Model,SerializerMixin):
     id         = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
     id_country = Column(Integer,nullable=False)
     name       = Column(String(100),nullable=False)
