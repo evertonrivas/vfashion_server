@@ -287,6 +287,7 @@ class ProductsGallery(Resource):
         size       = None if request.args.get("size") is None else request.args.get("size")
         order_by   = "id" if request.args.get("order_by") is None else request.args.get("order_by")
         direction  = desc if request.args.get("order_dir") == 'DESC' else asc
+        list_all   = False if request.args.get("list_all") is None else bool(request.args.get("list_all"))
 
         try:
             query = Select(CmmProducts)\
@@ -317,34 +318,54 @@ class ProductsGallery(Resource):
 
 
             query = query.order_by(direction(getattr(CmmProducts, order_by)))
-            rquery = db.paginate(query,page=pag_num,per_page=pag_size)
 
-            return {
-                "pagination":{
-                    "registers": rquery.total,
-                    "page": pag_num,
-                    "per_page": pag_size,
-                    "pages": rquery.pages,
-                    "has_next": rquery.has_next
-                },
-                "data":[{
-                    "id": m.id,
-                    "id_category": m.id_category,
-                    "prodCode": m.prodCode,
-                    "barCode": m.barCode,
-                    "refCode": m.refCode,
-                    "name": m.name,
-                    "description": m.description,
-                    "observation": m.observation,
-                    "ncm": m.ncm,
-                    "price": simplejson.dumps(Decimal(m.price)),
-                    "measure_unit": m.measure_unit,
-                    "structure": m.structure,
-                    "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                    "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None,
-                    "images": self.get_images(m.id)
-                } for m in rquery]
-            }
+            if list_all==False:
+                rquery = db.paginate(query,page=pag_num,per_page=pag_size)
+
+                return {
+                    "pagination":{
+                        "registers": rquery.total,
+                        "page": pag_num,
+                        "per_page": pag_size,
+                        "pages": rquery.pages,
+                        "has_next": rquery.has_next
+                    },
+                    "data":[{
+                        "id": m.id,
+                        "id_category": m.id_category,
+                        "prodCode": m.prodCode,
+                        "barCode": m.barCode,
+                        "refCode": m.refCode,
+                        "name": m.name,
+                        "description": m.description,
+                        "observation": m.observation,
+                        "ncm": m.ncm,
+                        "price": simplejson.dumps(Decimal(m.price)),
+                        "measure_unit": m.measure_unit,
+                        "structure": m.structure,
+                        "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+                        "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None,
+                        "images": self.get_images(m.id)
+                    } for m in rquery]
+                }
+            else:
+                return [{
+                        "id": m.id,
+                        "id_category": m.id_category,
+                        "prodCode": m.prodCode,
+                        "barCode": m.barCode,
+                        "refCode": m.refCode,
+                        "name": m.name,
+                        "description": m.description,
+                        "observation": m.observation,
+                        "ncm": m.ncm,
+                        "price": simplejson.dumps(Decimal(m.price)),
+                        "measure_unit": m.measure_unit,
+                        "structure": m.structure,
+                        "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+                        "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None,
+                        "images": self.get_images(m.id)
+                    } for m in rquery.all()]
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,

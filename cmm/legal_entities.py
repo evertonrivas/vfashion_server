@@ -54,7 +54,7 @@ class CustomersList(Resource):
         pag_num   =  1 if request.args.get("page") is None else int(request.args.get("page"))
         pag_size  = Config.PAGINATION_SIZE.value if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
         search    = "" if request.args.get("query") is None else "%{}%".format(request.args.get("query"))
-        to_export = False if request.args.get("to_export") is None else bool(request.args.get("to_export"))
+        list_all = False if request.args.get("list_all") is None else bool(request.args.get("list_all"))
 
         try:
             if search!="":
@@ -62,7 +62,7 @@ class CustomersList(Resource):
             else:
                 rquery = CmmLegalEntities.query.filter(CmmLegalEntities.trash == False)
 
-            if to_export==False:
+            if list_all==False:
                 rquery = rquery.paginate(page=pag_num,per_page=pag_size)
                 return {
                     "pagination":{

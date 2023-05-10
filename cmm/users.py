@@ -53,7 +53,7 @@ class UsersList(Resource):
         search    = "" if request.args.get("query") is None else request.args.get("query")
         order_by  = "id" if request.args.get("order_by") is None else request.args.get("order_by")
         direction = asc if request.args.get("order_dir") == 'ASC' else desc
-        to_export = False if request.args.get("to_export") is None else bool(request.args.get("to_export"))
+        list_all = False if request.args.get("list_all") is None else bool(request.args.get("list_all"))
 
         try:
             if search!="":
@@ -76,7 +76,7 @@ class UsersList(Resource):
             else:
                 rquery = CmmUsers.query.order_by(direction(getattr(CmmUsers, order_by)))
 
-            if to_export==False:
+            if list_all==False:
                 rquery = rquery.paginate(page=pag_num,per_page=pag_size)
                 return {
                     "pagination":{
