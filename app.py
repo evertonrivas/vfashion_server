@@ -22,20 +22,21 @@ migrate = Migrate()
 db.init_app(app)
 try:
     with app.app_context():
+        #valida a conexao com o banco de daods
         with db.engine.begin() as conn:
             conn.execute(text("SELECT 1"))
             conn.close()
+
+        #se nao existirem as tabelas tenta crialas
+        db.create_all()
 except Exception as e:
     print(e)
     print("###################################################")
     print("Por favor, inicialize a instância do Banco de Dados")
     print("###################################################")
     quit()
-migrate.init_app(app,db)
 
-#with app.app_context():
-#    db.create_all()
-    
+migrate.init_app(app,db)
 
 app.register_blueprint(cmm)
 app.register_blueprint(pos)
@@ -86,4 +87,4 @@ def index():
     """
 
 if __name__=="__main__":
-    app.run(port=5000,debug=True,host="evertonpc")
+    app.run(port=5000,debug=True,host="0.0.0.0")
