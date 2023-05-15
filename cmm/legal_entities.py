@@ -48,7 +48,7 @@ class EntitysList(Resource):
     @ns_legal.param("page","Número da página de registros","query",type=int,required=True)
     @ns_legal.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_legal.param("query","Texto para busca","query")
-    @ns_legal.param("to_export","Se deve exportar","query",type=bool,default=False)
+    @ns_legal.param("list_all","Se deve exportar","query",type=bool,default=False)
     @auth.login_required
     def get(self):
         pag_num   =  1 if request.args.get("page") is None else int(request.args.get("page"))
@@ -210,6 +210,9 @@ class EntityApi(Resource):
             }
 
 class EntityCount(Resource):
+    @ns_legal.response(HTTPStatus.OK.value,"Retorna o total de Entidades por tipo")
+    @ns_legal.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_legal.param("type","Tipo da Entidade","query",type=str,enum=['C','R','S'])
     def get(self):
         try:
             stmt = Select(func.count(CmmLegalEntities.id).label("total")).select_from(CmmLegalEntities).where(CmmLegalEntities.type==request.args.get("type"))
