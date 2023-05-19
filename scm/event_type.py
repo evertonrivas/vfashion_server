@@ -23,7 +23,9 @@ event_model = ns_event.model(
     "EventType",{
         "id": fields.Integer,
         "name": fields.String,
-        "hex_color": fields.String
+        "hex_color": fields.String,
+        "has_budget": fields.Boolean,
+        "use_collection": fields.Boolean
     }
 )
 
@@ -81,6 +83,8 @@ class CollectionList(Resource):
                         "id": m.id,
                         "name": m.name,
                         "hex_color": m.hex_color,
+                        "has_budget": m.has_budget,
+                        "use_collection": m.use_collection,
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                         "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
                     } for m in rquery.items]
@@ -90,6 +94,8 @@ class CollectionList(Resource):
                         "id":m.id,
                         "name":m.name,
                         "hex_color": m.hex_color,
+                        "has_budget": m.has_budget,
+                        "use_collection": m.use_collection,
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                         "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
                     } for m in rquery.all()]
@@ -109,8 +115,10 @@ class CollectionList(Resource):
         try:
             req = request.get_json()
             reg = ScmEventType()
-            reg.name = req.name
+            reg.name      = req.name
             reg.hex_color = reg.hex_color
+            reg.has_budget: reg.has_budget
+            reg.use_collection: reg.use_collection
             db.session.add(reg)
             db.session.commit()
 
@@ -125,16 +133,19 @@ class CollectionList(Resource):
 @ns_event.route("/<int:id>")
 @ns_event.param("id","Id do registro")
 class CollectionApi(Resource):
-    @ns_event.response(HTTPStatus.OK.value,"Retorna os dados dados de um tipo de evento")
+    @ns_event.response(HTTPStatus.OK.value,"Retorna os dados de um tipo de evento")
     @ns_event.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
     @auth.login_required
     def get(self,id:int):
         try:
-            qry = ns_event.query.get(id)
+            qry = ScmEventType.query.get(id)
 
             return {
                 "id": qry.id,
                 "name": qry.name,
+                "hex_color": qry.hex_color,
+                "has_budget": qry.has_budget,
+                "use_collection": qry.use_collection,
                 "date_created": qry.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                 "date_updated": qry.date_updated.strftime("%Y-%m-%d %H:%M:%S") if qry.date_updated!=None else None
             }
@@ -151,11 +162,13 @@ class CollectionApi(Resource):
     @auth.login_required
     def post(self,id:int)->bool:
         try:
-            req = json.dumps(request.get_json())
+            req = request.get_json()
             reg = ScmEventType.query.get(id)
-            reg.name      = reg.name if req.name is None else req.name
-            reg.hex_color = reg.hex_color if req.hex_color is None else reg.hex_color
-            reg.trash     = reg.trash if req.trash is None else req.trash
+            reg.name           = reg.name if req["name"] is None else req["name"]
+            reg.hex_color      = reg.hex_color if req["hex_color"] is None else req["hex_color"]
+            reg.trash          = reg.trash if req["trash"] is None else req["trash"]
+            reg.has_budget     = reg.has_budget if req["has_budget"] is None else req["has_budget"]
+            reg.use_collection = reg.use_collection if req["use_collection"] is None else req["use_collection"]
             db.session.commit()
 
             return True
