@@ -333,10 +333,12 @@ class ScmCalendar(db.Model,SerializerMixin):
 
 class ScmEventType(db.Model,SerializerMixin):
     id             = Column(Integer,primary_key=True,autoincrement=True)
+    id_parent      = Column(Integer,nullable=True)
     name           = Column(String(100),nullable=False)
     hex_color      = Column(String(7),nullable=False)
     has_budget     = Column(Boolean,nullable=False,default=False)
     use_collection = Column(Boolean,nullable=False,default=False)
+    is_milestone   = Column(Boolean,nullable=False,default=False)
     trash          = Column(Boolean,nullable=False,default=False)
     date_created   = Column(DateTime,nullable=False,server_default=func.now())
     date_updated   = Column(DateTime,onupdate=func.now())
