@@ -1,7 +1,7 @@
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import db,ScmCalendar,ScmEvent,ScmEventType
+from models import B2bBrand, B2bCollection, db,ScmCalendar,ScmEvent,ScmEventType
 from sqlalchemy import exc, asc,between,Select,and_,desc
 from auth import auth
 from datetime import datetime
@@ -191,8 +191,10 @@ class CalendarEventList(Resource):
     @ns_calendar.response(HTTPStatus.OK.value,"Obtem a listagem de cidades")
     @ns_calendar.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
     @ns_calendar.param("query","Texto para busca de intervalos de datas e eventos","query")
+    @ns_calendar.param("milestone","Se é marco do calendário ou não","query",type=bool)
     def get(self):
         search   = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
+        milestone = False if request.args.get("milestone") is None else False if request.args.get("milestone")=="false" else True
 
         try:
             dates = search.split(",")
@@ -212,13 +214,22 @@ class CalendarEventList(Resource):
                             ScmEventType.id.label("id_event_type"),
                             ScmEventType.name.label("event_type_name"),
                             ScmEventType.hex_color,
-                            ScmEventType.has_budget).distinct()\
+                            ScmEventType.has_budget,
+                            ScmEventType.is_milestone,
+                            B2bCollection.id.label("id_collection"),
+                            B2bCollection.name.label("collection_name"),
+                            B2bBrand.id.label("id_brand"),
+                            B2bBrand.name.label("brand_name")).distinct()\
                 .join(ScmEventType,ScmEventType.id==ScmEvent.id_event_type)\
                 .join(ScmCalendar,and_(ScmEvent.year==ScmCalendar.year,ScmEvent.start_week==ScmCalendar.week))\
+                .outerjoin(B2bCollection,ScmEvent.id_collection==B2bCollection.id)\
+                .outerjoin(B2bBrand,B2bCollection.id_brand==B2bBrand.id)\
                 .where(between(ScmCalendar.calendar_date,dt_start,dt_end))\
+                .where(and_(ScmEventType.is_milestone==milestone,ScmEventType.id_parent.is_(None)))\
                 .order_by(asc(ScmEvent.order))
 
             retorno = [{
+                    "id": e.id,
                     "name": e.name,
                     "start_week":e.start_week,
                     "end_week":e.end_week,
@@ -228,8 +239,40 @@ class CalendarEventList(Resource):
                         "name": e.event_type_name,
                         "hex_color": e.hex_color,
                         "has_budget": e.has_budget
-                    }
+                    },
+                    "collection":{
+                        "id":e.id_collection,
+                        "name": e.collection_name,
+                        "brand":{
+                            "id": e.id_brand,
+                            "name": e.brand_name
+                        }
+                    },
+                    "children":self.__get_children(dt_start,dt_end,milestone,e.id)
                 } for e in db.session.execute(yquery).all()]
+
+            if milestone==True:
+                retorno.append({
+                    "id": 0,
+                    "name": "Hoje",
+                    "start_week": datetime.now().isocalendar().week,
+                    "end_week": datetime.now().isocalendar().week,
+                    "year": datetime.now().year,
+                    "type":{
+                        "id":0,
+                        "name": "hoje",
+                        "hex_color": '#20c997',
+                        "has_budget": False
+                    },
+                    "collection":{
+                        "id": 0,
+                        "name":None,
+                        "brand":{
+                            "id":0,
+                            "name": None
+                        }
+                    }
+                })
             return retorno
         except exc.SQLAlchemyError as e:
             return {
@@ -237,6 +280,52 @@ class CalendarEventList(Resource):
                 "error_details": e._message(),
                 "error_sql": e._sql_message()
             }
+    
+    def __get_children(self,p_dt_start:str,p_dt_end:str,p_milestone:bool,p_id_parent:int):
+        yquery = Select(ScmEvent.id,
+                            ScmEvent.name,
+                            ScmEvent.year,
+                            ScmEvent.start_week,
+                            ScmEvent.end_week,
+                            ScmEvent.budget_value,
+                            ScmEventType.id.label("id_event_type"),
+                            ScmEventType.name.label("event_type_name"),
+                            ScmEventType.hex_color,
+                            ScmEventType.has_budget,
+                            ScmEventType.is_milestone,
+                            B2bCollection.id.label("id_collection"),
+                            B2bCollection.name.label("collection_name"),
+                            B2bBrand.id.label("id_brand"),
+                            B2bBrand.name.label("brand_name")).distinct()\
+                .join(ScmEventType,ScmEventType.id==ScmEvent.id_event_type)\
+                .join(ScmCalendar,and_(ScmEvent.year==ScmCalendar.year,ScmEvent.start_week==ScmCalendar.week))\
+                .outerjoin(B2bCollection,ScmEvent.id_collection==B2bCollection.id)\
+                .outerjoin(B2bBrand,B2bCollection.id_brand==B2bBrand.id)\
+                .where(between(ScmCalendar.calendar_date,p_dt_start,p_dt_end))\
+                .where(and_(ScmEventType.is_milestone==p_milestone,ScmEventType.id_parent==p_id_parent))\
+                .order_by(asc(ScmEvent.order))
+        
+        return [{
+            "id": e.id,
+            "name": e.name,
+            "start_week":e.start_week,
+            "end_week":e.end_week,
+            "year":e.year,
+            "type": {
+                "id": e.id_event_type,
+                "name": e.event_type_name,
+                "hex_color": e.hex_color,
+                "has_budget": e.has_budget
+            },
+            "collection":{
+                "id":e.id_collection,
+                "name": e.collection_name,
+                "brand":{
+                    "id": e.id_brand,
+                    "name": e.brand_name
+                }
+            }
+        } for e in db.session.execute(yquery).all()]
 
 
 ns_calendar.add_resource(CalendarEventList,"/events")
