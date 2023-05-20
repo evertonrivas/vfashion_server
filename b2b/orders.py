@@ -109,7 +109,7 @@ class OrdersList(Resource):
 
             order = B2bOrders()
             order.id_customer          = req['id_customer']
-            order.make_online          = req['make_online']
+            #order.make_online          = req['make_online']
             order.id_payment_condition = int(req['id_payment_condition'])
             order.installment_value    = req['installment_value']
             order.installments         = req['installments']
