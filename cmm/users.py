@@ -53,7 +53,7 @@ class UsersList(Resource):
         search    = "" if request.args.get("query") is None else request.args.get("query")
         order_by  = "id" if request.args.get("order_by") is None else request.args.get("order_by")
         direction = asc if request.args.get("order_dir") == 'ASC' else desc
-        list_all = False if request.args.get("list_all") is None else bool(request.args.get("list_all"))
+        list_all  = False if request.args.get("list_all") == 'false' else True
 
         try:
             if search!="":
@@ -262,3 +262,24 @@ class UserUpdate(Resource):
                 "error_sql": e._sql_message()
             }
 ns_user.add_resource(UserUpdate,'/massive-change')
+
+@ns_user.hide
+class UserNew(Resource):
+    def post(self):
+        try:
+            req = request.get_json()
+            db.session.execute(
+                Insert(CmmUsers),[{
+                    "username": usr["username"],
+                    "password": CmmUsers().hash_pwd(usr["password"]),
+                    "type": usr["type"]
+                }for usr in req])
+            db.session.commit()
+            return  True
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
+ns_user.add_resource(UserNew,'/start')
