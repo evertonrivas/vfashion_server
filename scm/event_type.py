@@ -59,7 +59,7 @@ class CollectionList(Resource):
             if search=="":
                 rquery = ScmEventType\
                     .query\
-                    .filter(ScmEventType.trash == False)\
+                    .filter(and_(ScmEventType.trash == False,ScmEventType.id_parent==None))\
                     .order_by(direction(getattr(ScmEventType,order_by)))
                 
             else:
@@ -85,6 +85,8 @@ class CollectionList(Resource):
                         "hex_color": m.hex_color,
                         "has_budget": m.has_budget,
                         "use_collection": m.use_collection,
+                        "is_milestone": m.is_milestone,
+                        "children": self.__get_children(m.id),
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                         "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
                     } for m in rquery.items]
@@ -96,6 +98,8 @@ class CollectionList(Resource):
                         "hex_color": m.hex_color,
                         "has_budget": m.has_budget,
                         "use_collection": m.use_collection,
+                        "is_milestone": m.is_milestone,
+                        "children": self.__get_children(m.id),
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                         "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
                     } for m in rquery.all()]
@@ -106,6 +110,19 @@ class CollectionList(Resource):
                 "error_details": e._message(),
                 "error_sql": e._sql_message()
             }
+        
+    def __get_children(self,id:int):
+        regs = ScmEventType.query.filter(ScmEventType.id_parent==id)
+        return [{
+            "id": c.id,
+            "name": c.name,
+            "hex_color": c.hex_color,
+            "has_budget": c.has_budget,
+            "use_collection": c.use_collection,
+            "is_milestone": c.is_milestone,
+            "date_created": c.date_created.strftime("%Y-%m-%d"),
+            "date_updated": c.date_updated.strftime("%Y-%m-%d %H:%M:%S") if c.date_updated!=None else None
+        }for c in regs.all()]
 
     @ns_event.response(HTTPStatus.OK.value,"Cria um novo tipo de evento")
     @ns_event.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar registro!")
