@@ -10,6 +10,9 @@ from scm.api import blueprint as scm
 from models import db
 from flask_migrate import Migrate
 from config import Config
+import locale
+
+locale.setlocale(locale.LC_TIME,Config.LOCALE.value)
 
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = Config.DB_LIB.value+"://"+Config.DB_USER.value+":"+Config.DB_PASS.value+"@"+Config.DB_HOST.value+"/"+Config.DB_NAME.value
