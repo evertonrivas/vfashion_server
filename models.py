@@ -5,8 +5,35 @@ from datetime import datetime,timedelta
 import jwt
 import bcrypt
 from config import Config
+import json
+from types import SimpleNamespace
 
 db = SQLAlchemy()
+
+def _get_params(search:str):
+    # verifica se existem os pipes de separacao
+    if search.find("||")!=-1:
+        #ajusta os parametros para nao vacilar com espacos
+        search = search.replace(" ||","||").replace("|| ","")
+        #inicia criacao do objeto
+        p_obj = "{\n"
+        #realiza o primeiro split para segmentar parametro + valor
+        for param in search.split("||"):
+            #segundo split sem looping para montar os parametros no object
+            broken = param.split(" ")
+            #se o len for 2 soh tem um valor para o parametro
+            if len(broken)==2:
+                p_obj += "\""+broken[0].replace("is:","").replace(" ","").replace("-","_")+"\": \""+broken[1]+"\",\n"
+            else:
+            #significa que eh uma string separada por espacos, precisa reconcatenar
+                p_obj += "\""+broken[0].replace("is:","").replace(" ","").replace("-","_")+"\": \""+' '.join(broken[1:len(broken)])+"\",\n"
+        p_obj += "}"
+        #ajusta o final do objeto
+        p_obj = p_obj.replace(",\n}","\n}")
+
+        #retorna um objeto para realizar a busca
+        return json.loads(p_obj,object_hook=lambda d: SimpleNamespace(**d))
+    return None
 
 class CmmUsers(db.Model,SerializerMixin):
     id              = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
@@ -345,6 +372,7 @@ class ScmEventType(db.Model,SerializerMixin):
 
 class ScmEvent(db.Model,SerializerMixin):
     id            = Column(Integer,primary_key=True,autoincrement=True)
+    id_parent     = Column(Integer,nullable=True)
     name          = Column(String(100),nullable=False)
     year          = Column(SmallInteger,nullable=False)
     start_date    = Column(Date,nullable=False)
