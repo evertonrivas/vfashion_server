@@ -1,4 +1,5 @@
 from http import HTTPStatus
+import json
 from flask_restx import Resource,Namespace,fields
 from flask import request
 from models import CmmUserEntity, CmmUsers,db
@@ -215,17 +216,25 @@ class UserAuth(Resource):
             else:
                 return 0 #senha invalida
         return -1 #usuario invalido
-
-ns_user.add_resource(UserAuth,"/auth")
-
-class UserAuthCheck(Resource):
-    def post(self):
+    
+    def put(self):
         try:
-            return False if CmmUsers.check_token(request.form.get("token")) is None else True
+            retorno = CmmUsers.check_token(request.form.get("token"))
+            return False if retorno is None else retorno.token_expire.strftime("%Y-%m-%d %H:%M:%S")
         except:
             return False
-ns_user.add_resource(UserAuthCheck,"/auth-check")
+    
+    def get(self):
+        try:
+            usr = CmmUsers.query.get(request.args.get("id"))
+            usr.token_expire = usr.renew_token()
+            db.session.commit()
+            return usr.token_expire.strftime("%Y-%m-%d %H:%M:%S")
+        except Exception as e:
+            print(e)
+            return False
 
+ns_user.add_resource(UserAuth,"/auth")
 
 @ns_user.param("id","Id do registro")
 class UserAuthLogout(Resource):

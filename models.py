@@ -66,6 +66,11 @@ class CmmUsers(db.Model,SerializerMixin):
         self.token = jwt.encode({"username":str(self.username) },"VENDA_FASHION_"+str(complete_key)).encode().decode()
         self.token_expire = now + timedelta(seconds=expires_in)
         return self.token
+    
+    def renew_token(self):
+        now = datetime.now()
+        expire = now + timedelta(seconds=3600)
+        return expire
 
     def revoke_token(self):
         self.token_expire = datetime.now() - timedelta(seconds=1)
