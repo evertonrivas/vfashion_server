@@ -1,7 +1,7 @@
 from requests import RequestException
 from config import ConfigVirtualAge
-from models import CmmMeasureUnit,CmmLegalEntities,CmmLegalEntityContact,B2bOrders, CmmProducts, CmmProductsCategories
-from sqlalchemy import Insert,Select, Update,or_
+from models import CmmMeasureUnit,CmmLegalEntities,CmmLegalEntityContact,CmmProducts,CmmProductsCategories,CmmCities
+from sqlalchemy import Insert,Select, Update,or_,exc
 from integrations.erp import ERP
 from time import sleep
 import json
@@ -179,14 +179,14 @@ class VirtualAge(ERP):
                             #se nao existir ira cadastrar
                             if exist==None:
                                 res = conn.execute(Insert(CmmLegalEntities).values(
-                                    origin_id = it.code,
-                                    name = it.name,
-                                    taxvat = it.cpfCnpj,
-                                    state_region = it.addresses[0].stateAbbreviation,
-                                    city = it.addresses[0].cityName,
-                                    postal_code = it.addresses[0].cep,
+                                    origin_id    = it.code,
+                                    name         = it.name,
+                                    fantasy_name = it.name,
+                                    taxvat       = it.cpfCnpj,
+                                    id_city      = self._get_id_city(it.addresses[0].ibgeCityCode),
+                                    postal_code  = it.addresses[0].cep,
                                     neighborhood = it.addresses[0].neighborhood,
-                                    type="R"
+                                    type         = "R"
                                 ))
                                 conn.commit()
 
@@ -198,6 +198,7 @@ class VirtualAge(ERP):
                                 for ph in it.phones:
                                     self.__save_contact(conn,ph,"P",res.inserted_primary_key[0])
 
+                                #importa os clientes do representante
                                 if it.customers!=None:
                                     for cs in it.customers:
                                         self.get_customer(False,cs.cpfCnpj)
@@ -206,9 +207,9 @@ class VirtualAge(ERP):
                                 conn.execute(Update(CmmLegalEntities).values(
                                     origin_id    = it.code if it.code!=exist.origin_id else exist.origin_id,
                                     name         = it.name if it.name!=exist.name else exist.name,
+                                    fantasy_name = it.name if it.name!=exist.fantasy_name else exist.fantasy_name,
                                     taxvat       = it.cpfCnpj if it.cpfCnpj!=exist.taxvat else exist.taxvat,
-                                    state_region = it.addresses[0].stateAbbreviation if it.addresses[0].stateAbbreviation!=exist.state_region else exist.state_region,
-                                    city         = it.addresses[0].cityName if it.addresses[0].cityName!=exist.city else exist.city,
+                                    id_city      = self._get_id_city(it.addresses[0].ibgeCityCode) if self._get_id_city(it.addresses[0].ibgeCityCode)!=exist.id_city else exist.id_city,
                                     postal_code  = it.addresses[0].cep if it.addresses[0].cep!=exist.postal_code else exist.postal_code,
                                     neighborhood = it.addresses[0].neighborhood if it.addresses[0].neighborhood!=exist.neighborhood else exist.neighborhood
                                 ).where(CmmLegalEntities.id==exist.id))
@@ -224,6 +225,7 @@ class VirtualAge(ERP):
                                     if exist==None:
                                         self.__save_contact(conn,ph,"P",exist.id)
                                 
+                                #importa os clientes do representante
                                 if it.customers!=None:
                                     for cs in it.customers:
                                         self.get_customer(False,cs.cpfCnpj)
@@ -236,6 +238,15 @@ class VirtualAge(ERP):
         except RequestException as e:
             print(e)
             return False
+        
+    def _get_id_city(self,p_ibge_code:str):
+        try:
+            with self.dbconn.connect() as con:
+                ct = con.execute(Select(CmmCities).where(CmmCities.brazil_ibge_code==p_ibge_code)).one_or_none()
+                return ct.id if ct is not None else 0
+        except exc.SQLAlchemyError as e:
+            print(e)
+            return 0
     
     def get_customer(self,all:bool=True,taxvat:str=""):
         try:
@@ -282,10 +293,9 @@ class VirtualAge(ERP):
                                 resp = conn.execute(Insert(CmmLegalEntities).values(
                                     origin_id = it.code,
                                     name = it.name,
-                                    fantasy_name = it.fantasyName,
+                                    fantasy_name = it.name,
                                     taxvat = clear_cnpj,
-                                    state_region = it.addresses[0].stateAbbreviation,
-                                    city = it.addresses[0].cityName,
+                                    id_city = self._get_id_city(it.addresses[0].ibgeCityCode),
                                     postal_code = it.addresses[0].cep,
                                     neighborhood = it.addresses[0].neighborhood,
                                     type="C"
@@ -303,9 +313,8 @@ class VirtualAge(ERP):
                                 resp = conn.execute(Update(CmmLegalEntities).values(
                                     origin_id = it.code,
                                     name = it.name,
-                                    fantasy_name = it.fantasyName,
-                                    state_region = it.addresses[0].stateAbbreviation,
-                                    city = it.addresses[0].cityName,
+                                    fantasy_name = it.name,
+                                    id_city = self._get_id_city(it.addresses[0].ibgeCityCode),
                                     postal_code = it.addresses[0].cep,
                                     neighborhood = it.addresses[0].neighborhood,
                                     type="C"
