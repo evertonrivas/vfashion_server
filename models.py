@@ -176,6 +176,7 @@ class CmmCities(db.Model,SerializerMixin):
     id              = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
     id_state_region = Column(Integer,nullable=False)
     name            = Column(String(100),nullable=False)
+    brazil_ibge_code= Column(String(10),nullable=True)
 
 class CmmLegalEntities(db.Model,SerializerMixin):
     id           = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
