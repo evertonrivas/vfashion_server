@@ -168,7 +168,7 @@ class CalendarEventApi(Resource):
             reg.end_date      = date_end
             reg.id_event_type = req["id_event_type"]
             reg.id_collection = None if req["id_collection"] is None else req["id_collection"]
-            reg.budget_value  = None if req["budget_value"] is None else reg["budget_value"]
+            reg.budget_value  = None if req["budget_value"] is None else req["budget_value"]
             db.session.commit()
 
             return True
@@ -190,11 +190,9 @@ class CalendarEventList(Resource):
     @ns_calendar.response(HTTPStatus.OK.value,"Obtem a listagem de cidades")
     @ns_calendar.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
     @ns_calendar.param("query","Texto para busca de intervalos de datas e eventos","query")
-    @ns_calendar.param("milestone","Se é marco do calendário ou não","query",type=bool)
     @auth.login_required
     def get(self):
         search   = "" if request.args.get("query") is None else request.args.get("query")
-        milestone = False if request.args.get("milestone") is None else False if request.args.get("milestone")=="false" else True
 
         try:
             params = _get_params(search)
@@ -225,7 +223,7 @@ class CalendarEventList(Resource):
                 .outerjoin(B2bCollection,ScmEvent.id_collection==B2bCollection.id)\
                 .outerjoin(B2bBrand,B2bCollection.id_brand==B2bBrand.id)\
                 .where(between(ScmCalendar.calendar_date,params.start,params.end))\
-                .where(and_(ScmEventType.is_milestone==milestone,ScmEventType.id_parent.is_(None)))\
+                .where(ScmEventType.id_parent.is_(None))\
                 .order_by(asc(ScmEvent.start_date))
             
             if hasattr(params,'entity_type'):
@@ -247,7 +245,8 @@ class CalendarEventList(Resource):
                         "id": e.id_event_type,
                         "name": e.event_type_name,
                         "hex_color": e.hex_color,
-                        "has_budget": e.has_budget
+                        "has_budget": e.has_budget,
+                        "is_milestone": e.is_milestone
                     },
                     "collection":{
                         "id":e.id_collection,
@@ -260,34 +259,6 @@ class CalendarEventList(Resource):
                     "children":self.__get_children(e.id)
                 } for e in db.session.execute(yquery).all()]
 
-            if milestone==True:
-                retorno.append({
-                    "id": 0,
-                    "id_parent": 0,
-                    "name": "Hoje",
-                    "start_week": datetime.now().isocalendar().week,
-                    "end_week": datetime.now().isocalendar().week,
-                    "start_date": datetime.now().strftime("%Y-%m-%d"),
-                    "end_date": datetime.now().strftime("%Y-%m-%d"),
-                    "year": datetime.now().year,
-                    "budget_value": None,
-                    "date_created": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    "date_updated": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    "type":{
-                        "id":0,
-                        "name": "hoje",
-                        "hex_color": '#20c997',
-                        "has_budget": False
-                    },
-                    "collection":{
-                        "id": 0,
-                        "name":None,
-                        "brand":{
-                            "id":0,
-                            "name": None
-                        }
-                    }
-                })
             return retorno
         except exc.SQLAlchemyError as e:
             return {
@@ -338,7 +309,8 @@ class CalendarEventList(Resource):
                 "id": e.id_event_type,
                 "name": e.event_type_name,
                 "hex_color": e.hex_color,
-                "has_budget": e.has_budget
+                "has_budget": e.has_budget,
+                "is_milestone": e.is_milestone
             },
             "collection":{
                 "id":e.id_collection,
