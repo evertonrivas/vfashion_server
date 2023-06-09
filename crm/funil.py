@@ -3,7 +3,7 @@ from flask_restx import Resource,fields,Namespace
 from flask import request
 from models import CrmFunnel,CrmFunnelStageCustomer,CrmFunnelStage,db
 import json
-from sqlalchemy import exc,and_
+from sqlalchemy import exc,and_,asc
 from auth import auth
 from config import Config
 
@@ -77,6 +77,7 @@ class FunnelList(Resource):
                 "data":[{
                     "id": m.id,
                     "name": m.name,
+                    "is_default": m.is_default,
                     "stages": self.get_stages(m.id),
                     "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                     "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
@@ -90,14 +91,14 @@ class FunnelList(Resource):
             }
 
     def get_stages(self,id:int):
-        rquery = CrmFunnelStage.query.filter(CrmFunnelStage.id_funnel==id)
+        rquery = CrmFunnelStage.query.filter(CrmFunnelStage.id_funnel==id).order_by(asc(CrmFunnelStage.order))
         return [{
             "id": m.id,
             "name": m.name,
             "order": m.order,
             "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
             "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S")
-        } for m in rquery.items]
+        } for m in rquery]
 
     @ns_funil.response(HTTPStatus.OK.value,"cria um novo funil")
     @ns_funil.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar novo funil!")
