@@ -334,6 +334,7 @@ class B2bCollectionPrice(db.Model,SerializerMixin):
 class CrmFunnel(db.Model,SerializerMixin):
     id           = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
     name         = Column(String(128),nullable=False)
+    is_default   = Column(Boolean,default=False,nullable=False)
     date_created = Column(DateTime,nullable=False,server_default=func.now())
     date_updated = Column(DateTime,onupdate=func.now())
     trash        = Column(Boolean,nullable=False,default=False)
