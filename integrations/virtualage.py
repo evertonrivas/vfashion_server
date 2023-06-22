@@ -1,7 +1,7 @@
 from requests import RequestException
 from config import ConfigVirtualAge
-from models import CmmMeasureUnit,CmmLegalEntities,CmmLegalEntityContact,CmmProducts,CmmProductsCategories,CmmCities
-from sqlalchemy import Insert,Select, Update,or_,exc
+from models import CmmMeasureUnit,CmmLegalEntities,CmmLegalEntityContact,CmmProducts,CmmProductsCategories,CmmCities,CmmStateRegions
+from sqlalchemy import Insert,Select, Update, and_,or_,exc
 from integrations.erp import ERP
 from time import sleep
 import json
@@ -183,9 +183,10 @@ class VirtualAge(ERP):
                                     name         = it.name,
                                     fantasy_name = it.name,
                                     taxvat       = it.cpfCnpj,
-                                    id_city      = self._get_id_city(it.addresses[0].ibgeCityCode),
+                                    id_city      = self._get_id_city(it.addresses[0].ibgeCityCode,it.addresses[0].stateAbbreviation),
                                     postal_code  = it.addresses[0].cep,
                                     neighborhood = it.addresses[0].neighborhood,
+                                    address      = it.addresses[0].address +','+str(it.addresses[0].addressNumber),
                                     type         = "R"
                                 ))
                                 conn.commit()
@@ -209,9 +210,10 @@ class VirtualAge(ERP):
                                     name         = it.name if it.name!=exist.name else exist.name,
                                     fantasy_name = it.name if it.name!=exist.fantasy_name else exist.fantasy_name,
                                     taxvat       = it.cpfCnpj if it.cpfCnpj!=exist.taxvat else exist.taxvat,
-                                    id_city      = self._get_id_city(it.addresses[0].ibgeCityCode) if self._get_id_city(it.addresses[0].ibgeCityCode)!=exist.id_city else exist.id_city,
+                                    id_city      = self._get_id_city(it.addresses[0].ibgeCityCode,it.addresses[0].stateAbbreviation) if self._get_id_city(it.addresses[0].ibgeCityCode,it.addresses[0].stateAbbreviation)!=exist.id_city else exist.id_city,
                                     postal_code  = it.addresses[0].cep if it.addresses[0].cep!=exist.postal_code else exist.postal_code,
-                                    neighborhood = it.addresses[0].neighborhood if it.addresses[0].neighborhood!=exist.neighborhood else exist.neighborhood
+                                    neighborhood = it.addresses[0].neighborhood if it.addresses[0].neighborhood!=exist.neighborhood else exist.neighborhood,
+                                    address      = it.addresses[0].address+','+str(it.addresses[0].addressNumber) if it.addresses[0].address else exist.address
                                 ).where(CmmLegalEntities.id==exist.id))
                                 conn.commit()
                                 for em in it.emails:
@@ -239,10 +241,18 @@ class VirtualAge(ERP):
             print(e)
             return False
         
-    def _get_id_city(self,p_ibge_code:str):
+    def _get_id_city(self,p_ibge_code:str,p_state:str):
         try:
             with self.dbconn.connect() as con:
-                ct = con.execute(Select(CmmCities).where(CmmCities.brazil_ibge_code==p_ibge_code)).one_or_none()
+                stmt = Select(CmmCities)\
+                    .join(CmmStateRegions,CmmStateRegions.id==CmmCities.id_state_region)\
+                    .where(
+                        and_(
+                            CmmCities.brazil_ibge_code.like('%{}'.format(p_ibge_code)),
+                            CmmStateRegions.acronym==p_state
+                        )
+                    )
+                ct = con.execute(stmt).one_or_none()
                 return ct.id if ct is not None else 0
         except exc.SQLAlchemyError as e:
             print(e)
@@ -295,9 +305,10 @@ class VirtualAge(ERP):
                                     name = it.name,
                                     fantasy_name = it.name,
                                     taxvat = clear_cnpj,
-                                    id_city = self._get_id_city(it.addresses[0].ibgeCityCode),
+                                    id_city = self._get_id_city(it.addresses[0].ibgeCityCode,it.addresses[0].stateAbbreviation),
                                     postal_code = it.addresses[0].cep,
                                     neighborhood = it.addresses[0].neighborhood,
+                                    address      = it.addresses[0].address +','+str(it.addresses[0].addressNumber),
                                     type="C"
                                 ))
                                 conn.commit()
@@ -314,9 +325,10 @@ class VirtualAge(ERP):
                                     origin_id = it.code,
                                     name = it.name,
                                     fantasy_name = it.name,
-                                    id_city = self._get_id_city(it.addresses[0].ibgeCityCode),
+                                    id_city = self._get_id_city(it.addresses[0].ibgeCityCode,it.addresses[0].stateAbbreviation),
                                     postal_code = it.addresses[0].cep,
                                     neighborhood = it.addresses[0].neighborhood,
+                                    address      = it.addresses[0].address +','+str(it.addresses[0].addressNumber),
                                     type="C"
                                 ).where(CmmLegalEntities.taxvat==clear_cnpj))
                                 conn.commit()
