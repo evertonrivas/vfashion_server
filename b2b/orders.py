@@ -1,13 +1,14 @@
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import B2bCartShopping, B2bOrders,B2bOrdersProducts, B2bPaymentConditions, CmmLegalEntities,db
-from sqlalchemy import exc,Select,Delete,asc,desc
+from models import db,_get_params,B2bCartShopping, B2bOrders,B2bOrdersProducts, B2bPaymentConditions, CmmLegalEntities,ScmEvent,ScmEventType
+from sqlalchemy import exc,Select,Delete,asc,desc,func,between
 import simplejson
 from auth import auth
 from config import Config
 from decimal import Decimal
 from integrations.shipping import Shipping,ShippingCompany
+from datetime import datetime
 
 ns_order = Namespace("orders",description="Operações para manipular dados de pedidos")
 
@@ -273,6 +274,8 @@ class HistoryOrderList(Resource):
                 .order_by(direction(getattr(B2bOrders, order_by)))
             
             pag = db.paginate(stmt,page=pag_num,per_page=pag_size)
+
+            rquery = rquery.limit(pag_size).offset((pag_num - 1) * pag_size)
             
             return {
                 "pagination":{
@@ -323,3 +326,36 @@ class HistoryOrderList(Resource):
         return _code
         
 ns_order.add_resource(HistoryOrderList,'/history/<int:id>')
+
+class HistoryOrderApi(Resource):
+    def get(self):
+        try:
+            # dt_start = datetime.now()
+            # rquery = Select(func.count(B2bOrders.id).label('total'))\
+            #     .outerjoin(ScmEvent,ScmEvent.id_collection==B2bOrders.id_collection)\
+            #     .where(ScmEvent.start_date<=dt_start).order_by(desc(ScmEvent.start_date))
+            # total = db.session.execute(rquery).first()
+            return 0
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
+        
+    def post(self):
+        try:
+            # dt_start = datetime.now()
+            # rquery = Select(func.sum(B2bOrders.total_value).label('total'))\
+            #     .outerjoin(ScmEvent,ScmEvent.id_collection==B2bOrders.id_collection)\
+            #     .where(ScmEvent.start_date<=dt_start).order_by(desc(ScmEvent.start_date))
+            # total = db.session.execute(rquery).first()
+            return 0
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
+        
+ns_order.add_resource(HistoryOrderApi,'/total')
