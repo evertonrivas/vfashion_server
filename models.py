@@ -11,29 +11,42 @@ from types import SimpleNamespace
 db = SQLAlchemy()
 
 def _get_params(search:str):
-    # verifica se existem os pipes de separacao
-    if search.find("||")!=-1:
-        #ajusta os parametros para nao vacilar com espacos
-        search = search.replace(" ||","||").replace("|| ","")
-        #inicia criacao do objeto
-        p_obj = "{\n"
-        #realiza o primeiro split para segmentar parametro + valor
-        for param in search.split("||"):
-            #segundo split sem looping para montar os parametros no object
-            broken = param.split(" ")
-            #se o len for 2 soh tem um valor para o parametro
-            if len(broken)==2:
-                p_obj += "\""+broken[0].replace("is:","").replace(" ","").replace("-","_")+"\": \""+broken[1]+"\",\n"
-            else:
-            #significa que eh uma string separada por espacos, precisa reconcatenar
-                p_obj += "\""+broken[0].replace("is:","").replace(" ","").replace("-","_")+"\": \""+' '.join(broken[1:len(broken)])+"\",\n"
-        p_obj += "}"
-        #ajusta o final do objeto
-        p_obj = p_obj.replace(",\n}","\n}")
+    if search!=None:
+        # verifica se existem os pipes de separacao
+        if search.find("||")!=-1:
+            #ajusta os parametros para nao vacilar com espacos
+            search = search.replace(" ||","||").replace("|| ","")
+            #inicia criacao do objeto
+            p_obj = "{\n"
+            #realiza o primeiro split para segmentar parametro + valor
+            for param in search.split("||"):
+                #segundo split sem looping para montar os parametros no object
+                broken = param.split(" ")
+                #se o len for 2 soh tem um valor para o parametro
+                if len(broken)==2:
+                    p_obj += "\""+broken[0].replace("is:","").replace("can:","").replace(" ","").replace("-","_")+"\": \""+broken[1]+"\",\n"
+                else:
+                #significa que eh uma string separada por espacos, precisa reconcatenar
+                    p_obj += "\""+broken[0].replace("is:","").replace("can:","").replace(" ","").replace("-","_")+"\": \""+' '.join(broken[1:len(broken)])+"\",\n"
+            p_obj += "}"
+            #ajusta o final do objeto
+            p_obj = p_obj.replace(",\n}","\n}")
 
-        #retorna um objeto para realizar a busca
-        return json.loads(p_obj,object_hook=lambda d: SimpleNamespace(**d))
+            #retorna um objeto para realizar a busca
+            return json.loads(p_obj,object_hook=lambda d: SimpleNamespace(**d))
+        else:
+            if len(search)>0:
+                p_obj = "{\n"
+                broken = search.split( )
+                if len(broken)==2:
+                    p_obj += "\""+broken[0].replace("is:","").replace("can:","").replace(" ","").replace("-","_")+"\": \""+broken[1]+"\",\n"
+                else:
+                    p_obj += "\""+broken[0].replace("is:","").replace("can:","").replace(" ","").replace("-","_")+"\": \""+' '.join(broken[1:len(broken)])+"\",\n"
+                p_obj += "}"
+                p_obj = p_obj.replace(",\n}","\n}")
+                return json.loads(p_obj,object_hook=lambda d: SimpleNamespace(**d))
     return None
+   
 
 class CmmUsers(db.Model,SerializerMixin):
     id              = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
@@ -187,6 +200,7 @@ class CmmLegalEntities(db.Model,SerializerMixin):
     id_city      = Column(Integer,nullable=False)
     postal_code  = Column(String(30),nullable=False)
     neighborhood = Column(String(150),nullable=False)
+    address      = Column(String(255),nullable=False)
     type         = Column(CHAR(1),nullable=False,default='C',comment="C = Customer(Cliente), R = Representative(Representante), S = Supplier(Fornecedor)")
     trash        = Column(Boolean,nullable=False,default=False)
     date_created = Column(DateTime,nullable=False,server_default=func.now())
@@ -343,7 +357,9 @@ class CrmFunnelStage(db.Model,SerializerMixin):
     id           = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
     id_funnel    = Column(Integer,nullable=False)
     name         = Column(String(128),nullable=False)
-    order        = Column(CHAR(2),nullable=False,default='CD',comment='CD = ')
+    icon         = Column(String(20),nullable=True)
+    color        = Column(String(20),nullable=True)
+    order        = Column(Integer,nullable=False)
     date_created = Column(DateTime,nullable=False,server_default=func.now())
     date_updated = Column(DateTime,onupdate=func.now())
     trash        = Column(Boolean,nullable=False,default=False)
