@@ -214,12 +214,33 @@ class CmmLegalEntityContact(db.Model,SerializerMixin):
     value           = Column(String(200),nullable=False)
     is_whatsapp     = Column(Boolean,nullable=False,default=False)
     is_default      = Column(Boolean,default=False,nullable=False)
+    date_created    = Column(DateTime,nullable=False,server_default=func.now())
+    date_updated    = Column(DateTime,onupdate=func.now())
 
 class CmmLegalEntityWeb(db.Model,SerializerMixin):
     id              = Column(Integer,primary_key=True,autoincrement=True)
     id_legal_entity = Column(Integer,nullable=False)
     name            = Column(String(150),nullable=False)
-    web_type        = Column(CHAR(1),nullable=False,default='E',comment='W = Website, B = Blog, S = Social Media, L = Location (latitude,longitude)')
+    web_type        = Column(CHAR(1),nullable=False,default='E',comment='W = Website, B = Blog, S = Social Media')
+    value           = Column(String(255),nullable=False)
+    date_created    = Column(DateTime,nullable=False,server_default=func.now())
+    date_updated    = Column(DateTime,onupdate=func.now())
+
+class CmmLegalEntityHistory(db.Model,SerializerMixin):
+    id              = Column(Integer,primary_key=True,autoincrement=True)
+    id_legal_entity = Column(Integer,nullable=False)
+    history         = Column(Text,nullable=False)
+    action          = Column(CHAR(2),nullable=False,comment='UD = Update Data, MC = Move CRM Funil/Stage, CM = Chat Message Sended/Received, OC = Order Created/Update, OD = Order Canceled, SA = System Access, TC = Task Created, FA = File Attached, ES = E-mail Sended, ER = E-mail Replyed, RC = Return Created, FB = Financial Bloqued/Unbloqued')
+    date_created    = Column(DateTime,nullable=False,server_default=func.now())
+    date_updated    = Column(DateTime,onupdate=func.now())
+
+class CmmLegalEntityFile(db.Model,SerializerMixin):
+    id              = Column(Integer,primary_key=True,autoincrement=True)
+    id_legal_entity = Column(Integer,nullable=False)
+    name            = Column(String(255),nullable=False)
+    content_type    = Column(String(100),nullable=False)
+    date_created    = Column(DateTime,nullable=False,server_default=func.now())
+    date_updated    = Column(DateTime,onupdate=func.now())
 
 class CmmTranslateColors(db.Model,SerializerMixin):
     id      = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
@@ -238,23 +259,12 @@ class CmmTranslateSizes(db.Model,SerializerMixin):
     date_created = Column(DateTime,nullable=False,server_default=func.now())
     date_updated = Column(DateTime,onupdate=func.now())
 
-
-
-class B2bCustomersGroup(db.Model,SerializerMixin):
-    id               = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
-    name             = Column(String(128),nullable=False)
-    need_approvement = Column(Boolean,nullable=False,)
-    date_created     = Column(DateTime,nullable=False,server_default=func.now())
-    date_updated     = Column(DateTime,onupdate=func.now())
-    trash            = Column(Boolean,nullable=False,default=False)
-
-class B2bCustomerGroupCustomer(db.Model,SerializerMixin):
-    id_group    = Column(Integer,primary_key=True)
-    id_customer = Column(Integer,primary_key=True,comment="Id da tabela CmmLegalEntities quando type=C")
-
-class B2bCustomerGroupRepresentative(db.Model,SerializerMixin):
-    id_group          = Column(Integer,primary_key=True)
+class B2bCustomerRepresentative(db.Model,SerializerMixin):
+    id_customer       = Column(Integer,primary_key=True,comment="Id da tabela CmmLegalEntities quando type=C")
     id_representative = Column(Integer,primary_key=True,comment="Id da tabela CmmLegalEntities quando type=R")
+    need_approvement  = Column(Boolean,nullable=False)
+    date_created      = Column(DateTime,nullable=False,server_default=func.now())
+    date_updated      = Column(DateTime,onupdate=func.now())
 
 class B2bOrders(db.Model,SerializerMixin):
     id                   = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
