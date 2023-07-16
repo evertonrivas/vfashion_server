@@ -1,12 +1,12 @@
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import CmmCities,db
-from sqlalchemy import desc, exc, asc
+from models import CmmCities, CmmCountries, CmmStateRegions, _get_params,db
+from sqlalchemy import Select, desc, exc, asc
 from auth import auth
 from config import Config
 
-ns_city = Namespace("coutries",description="Operações para manipular dados de cidades")
+ns_city = Namespace("cities",description="Operações para manipular dados de cidades")
 
 #API Models
 cou_pag_model = ns_city.model(
@@ -39,56 +39,77 @@ class CategoryList(Resource):
     @ns_city.param("page","Número da página de registros","query",type=int,required=True,default=1)
     @ns_city.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_city.param("query","Texto para busca","query")
-    @ns_city.param("list_all","Ignora as paginas e lista todos os registros",type=bool,default=False)
-    @ns_city.param("order_by","Campo de ordenacao","query")
-    @ns_city.param("order_dir","Direção da ordenação","query",enum=['ASC','DESC'])
-    @auth.login_required
+    #@auth.login_required
     def get(self):
         pag_num  =  1 if request.args.get("page") is None else int(request.args.get("page"))
         pag_size = Config.PAGINATION_SIZE.value if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
-        search   = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
-        list_all = False if request.args.get("list_all") is None else True
-        order_by   = "id" if request.args.get("order_by") is None else request.args.get("order_by")
-        direction  = desc if request.args.get("order_dir") == 'DESC' else asc
 
         try:
-            if search=="":
-                rquery = CmmCities\
-                    .query\
-                    .order_by(direction(getattr(CmmCities, order_by)))
-            else:
-                rquery = CmmCities\
-                    .query\
-                    .filter(CmmCities.name.like(search))\
-                    .order_by(direction(getattr(CmmCities, order_by)))
+            params = _get_params(request.args.get("query"))
+            direction = asc if hasattr(params,'order')==False else asc if params.order=='ASC' else desc
+            order_by  = 'id' if hasattr(params,'order_by')==False else params.order_by
+            search = None if hasattr(params,"search")==False else params.search
+            list_all = False if hasattr(params,"list_all")==False else params.list_all
+
+            rquery = Select(CmmCities.id,
+                   CmmCities.name,
+                   CmmStateRegions.id.label("state_region_id"),
+                   CmmStateRegions.name.label("state_region_name"),
+                   CmmStateRegions.acronym,
+                   CmmCountries.id.label("country_id"),
+                   CmmCountries.name.label("country_name"))\
+                   .join(CmmStateRegions,CmmStateRegions.id==CmmCities.id_state_region)\
+                   .join(CmmCountries,CmmCountries.id==CmmStateRegions.id_country)\
+                   .order_by(direction(getattr(CmmCities,order_by)))
+            
+            if search!=None and search!="":
+                rquery = rquery.where(
+                    CmmCities.name.like('%{}%'.format(search)) |
+                    CmmStateRegions.name.like('%{}%'.format(search)) |
+                    CmmCountries.name.like('%{}%'.format(search))
+                )
+
+            print(rquery)
 
             if list_all==False:
-                rquery = rquery.paginate(page=pag_num,per_page=pag_size)
-                retorno = {
-					"pagination":{
-						"registers": rquery.total,
-						"page": pag_num,
-						"per_page": pag_size,
-						"pages": rquery.pages,
-						"has_next": rquery.has_next
-					},
-					"data":[{
-						"id": m.id,
-                        "id_state_region": m.id_state_region,
-						"name": m.name,
-						"date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-						"date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
-					} for m in rquery.items]
-				}
+                pag = db.paginate(rquery,page=pag_num,per_page=pag_size)
+                rquery = rquery.limit(pag_size).offset((pag_num -1)*pag_size)
+                return {
+                    "pagination":{
+                        "registers": pag.total,
+                        "page": pag_num,
+                        "per_page": pag_size,
+                        "pages": pag.pages,
+                        "has_next": pag.has_next
+                    },
+                    "data":[{
+                        "id": m.id,
+                        "name": m.name,
+                        "state_region":{
+                            "id": m.state_region_id,
+                            "name": m.state_region_name,
+                            "acronym": m.acronym,
+                            "country": {
+                                "id": m.country_id,
+                                "name": m.country_name
+                            }
+                        }
+                    }for m in db.session.execute(rquery)]
+                }
             else:
-                retorno = [{
-						"id": m.id,
-						"name": m.name,
-                        "id_state_region": m.id_state_region,
-						"date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-						"date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
-					} for m in rquery]
-            return retorno
+                return [{
+                        "id": m.id,
+                        "name": m.name,
+                        "state_region":{
+                            "id": m.state_region_id,
+                            "name": m.state_region_name,
+                            "acronym":m.acronym,
+                            "country": {
+                                "id": m.country_id,
+                                "name": m.country_name
+                            }
+                        }
+                    }for m in db.session.execute(rquery)]
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,

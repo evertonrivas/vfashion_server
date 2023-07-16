@@ -1,12 +1,12 @@
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import CmmStateRegions,db
+from models import CmmStateRegions, _get_params,db
 from sqlalchemy import desc, exc, asc
 from auth import auth
 from config import Config
 
-ns_state_region = Namespace("state_regions",description="Operações para manipular dados de estados ou regiões")
+ns_state_region = Namespace("state-regions",description="Operações para manipular dados de estados ou regiões")
 
 #API Models
 cou_pag_model = ns_state_region.model(
@@ -39,19 +39,18 @@ class CategoryList(Resource):
     @ns_state_region.param("page","Número da página de registros","query",type=int,required=True,default=1)
     @ns_state_region.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_state_region.param("query","Texto para busca","query")
-    @ns_state_region.param("list_all","Ignora as paginas e lista todos os registros",type=bool,default=False)
-    @ns_state_region.param("order_by","Campo de ordenacao","query")
-    @ns_state_region.param("order_dir","Direção da ordenação","query",enum=['ASC','DESC'])
     @auth.login_required
     def get(self):
         pag_num  =  1 if request.args.get("page") is None else int(request.args.get("page"))
         pag_size = Config.PAGINATION_SIZE.value if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
-        search   = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
-        list_all = False if request.args.get("list_all") is None else True
-        order_by   = "id" if request.args.get("order_by") is None else request.args.get("order_by")
-        direction  = desc if request.args.get("order_dir") == 'DESC' else asc
 
         try:
+            params = _get_params(request.args.get("query"))
+            direction = asc if hasattr(params,'order')==False else asc if params.order=='ASC' else desc
+            order_by  = 'id' if hasattr(params,'order_by')==False else params.order_by
+            search = None if hasattr(params,"search")==False else params.search
+            list_all = False if hasattr(params,"list_all")==False else params.list_all
+            
             if search=="":
                 rquery = CmmStateRegions\
                     .query\
