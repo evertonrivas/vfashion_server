@@ -1,7 +1,7 @@
 from http import HTTPStatus
-from flask_restx import Resource,Namespace,fields
+from flask_restx import Resource,Namespace,fields,RestError
 from flask import request
-from models import CmmCities, CmmCountries, CmmLegalEntityContact, CmmStateRegions, CrmFunnelStageCustomer, _get_params,CmmLegalEntities,CmmUserEntity,db
+from models import B2bCustomerRepresentative, CmmCities, CmmCountries, CmmLegalEntityContact, CmmLegalEntityWeb, CmmStateRegions, CrmFunnelStageCustomer, _get_params,CmmLegalEntities,CmmUserEntity,db
 from sqlalchemy import Select,and_,exc,asc,desc,func
 from auth import auth
 from config import Config
@@ -15,6 +15,20 @@ lgl_pag_model = ns_legal.model(
         "per_page": fields.Integer,
         "pages": fields.Integer,
         "has_next": fields.Integer
+    }
+)
+
+lgl_registry = ns_legal.model(
+    "LegalEntityInsert",{
+        "id":fields.Integer,
+        "name":fields.String,
+        "fantasy_name":fields.String,
+        "id_city": fields.Integer,
+        "taxvat": fields.String,
+        "address": fields.String,
+        "postal_code": fields.String,
+        "neighborhood": fields.String,
+        "type": fields.String
     }
 )
 
@@ -60,7 +74,9 @@ class EntitysList(Resource):
 
             direction = asc if hasattr(params,'order')==False else asc if params.order=='ASC' else desc
             order_by  = 'id' if hasattr(params,'order_by')==False else params.order_by
-            search = None if hasattr(params,"search")==False else params.search
+            search    = None if hasattr(params,"search")==False else params.search
+            type      = None if hasattr(params,'type')==False else params.type
+            trash     = False if hasattr(params,'trash')==False else params.trash
 
             rquery = Select(
                     CmmLegalEntities.id,
@@ -68,6 +84,7 @@ class EntitysList(Resource):
                     CmmLegalEntities.fantasy_name,
                     CmmLegalEntities.postal_code,
                     CmmLegalEntities.neighborhood,
+                    CmmLegalEntities.address,
                     CmmLegalEntities.taxvat,
                     CmmLegalEntities.type,
                     CmmLegalEntities.date_created,
@@ -83,6 +100,7 @@ class EntitysList(Resource):
                 .join(CmmCities,CmmCities.id==CmmLegalEntities.id_city)\
                 .join(CmmStateRegions,CmmStateRegions.id==CmmCities.id_state_region)\
                 .join(CmmCountries,CmmCountries.id==CmmStateRegions.id_country)\
+                .where(CmmLegalEntities.trash==trash)\
                 .order_by(direction(getattr(CmmLegalEntities,order_by)))
             
             if search!=None:
@@ -92,6 +110,9 @@ class EntitysList(Resource):
                     CmmCities.name.like(search) |
                     CmmLegalEntities.name.like(search) |
                     CmmLegalEntities.fantasy_name.like(search))
+                
+            if type!=None:
+                rquery = rquery.where(CmmLegalEntities.type==type)
 
             if hasattr(params,'list_all')==False:
                 pag = db.paginate(rquery,page=pag_num,per_page=pag_size)
@@ -123,6 +144,7 @@ class EntitysList(Resource):
                             }
                         },
                         "postal_code": m.postal_code,
+                        "address": m.address,
                         "neighborhood": m.neighborhood,
                         "type": m.type,
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
@@ -143,12 +165,13 @@ class EntitysList(Resource):
                                 "name": m.state_name,
                                 "acronym": m.acronym,
                                 "country":{
-                                    "id": m.coutry_id,
-                                    "name": m.coutry_name
+                                    "id": m.country_id,
+                                    "name": m.country_name
                                 }
                             }
                         },
                         "postal_code": m.postal_code,
+                        "address": m.address,
                         "neighborhood": m.neighborhood,
                         "type": m.type,
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
@@ -160,29 +183,28 @@ class EntitysList(Resource):
                 "error_details": e._message(),
                 "error_sql": e._sql_message()
             }
+        except Exception as e:
+            return  {
+                "error_code": 0,
+                "error_details": e.args,
+                "error_sql": ""
+            }        
 
-    @ns_legal.response(HTTPStatus.OK.value,"Cria um novo registro de cliente/representante")
-    @ns_legal.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar um novo cliente/representante!")
-    @ns_legal.param("name","Nome do Cliente/Representante","formData",required=True)
-    @ns_legal.param("taxvat","Número do CNPJ ou CPF no Brasil","formData",required=True)
-    @ns_legal.param("state_region","Nome ou sigla do Estado","formData",required=True)
-    @ns_legal.param("city","Nome da cidade","formData",required=True)
-    @ns_legal.param("postal_code","Número do CEP","formData",type=int,required=True)
-    @ns_legal.param("neighborhood","Nome do Bairro","formData",required=True)
-    @ns_legal.param("phone","Número do telefone","formData",required=True)
-    @ns_legal.param("email","Endereço de e-mail","formData",required=True)
-    @ns_legal.param("type","Indicativo do tipo de entidade legal",required=True,enum=['C','R','S'])
+    @ns_legal.response(HTTPStatus.OK.value,"Cria um novo registro de cliente/representante/fornecedor",model=lgl_registry)
+    @ns_legal.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar um novo cliente/representante/fornecedor!")
     @auth.login_required
     def post(self)->int:
         try:
+            req = request.get_json()
             cst = CmmLegalEntities()
-            cst.name         = request.form.get("name")
-            cst.taxvat       = request.form.get("taxvat")
-            cst.city         = request.form.get("city")
-            cst.postal_code  = request.form.get("postal_code")
-            cst.neighborhood = request.form.get("neighborhood")
-            cst.instagram    = request.form.get("instagram")
-            cst.type = request.form.get("type")
+            cst.name         = req["name"]
+            cst.fantasy_name = req["fantasy_name"]
+            cst.id_city      = req["id_city"]
+            cst.taxvat       = req["taxvat"]
+            cst.address      = req["address"]
+            cst.postal_code  = req["postal_code"]
+            cst.neighborhood = req["neighborhood"]
+            cst.type         = req["type"]
             db.session.add(cst)
             db.session.commit()
             return cst.id
@@ -203,39 +225,191 @@ class EntityApi(Resource):
     @auth.login_required
     def get(self,id:int):
         try:
-                retorno = Select(CmmLegalEntities)\
-                    .join(CmmUserEntity,CmmLegalEntities.id==CmmUserEntity.id_entity)\
-                    .where(CmmUserEntity.id_user==id)
-                return db.session.scalar(retorno).to_dict()
+            rquery = Select(
+                CmmLegalEntities.id,
+                CmmLegalEntities.origin_id,
+                CmmLegalEntities.name.label("social_name"),
+                CmmLegalEntities.fantasy_name,
+                CmmLegalEntities.postal_code,
+                CmmLegalEntities.address,
+                CmmLegalEntities.neighborhood,
+                CmmLegalEntities.taxvat,
+                CmmLegalEntities.type,
+                CmmLegalEntities.date_created,
+                CmmLegalEntities.date_updated,
+                CmmCities.id.label("city_id"),
+                CmmCities.name.label("city_name"),
+                CmmCities.brazil_ibge_code,
+                CmmStateRegions.id.label("state_id"),
+                CmmStateRegions.name.label("state_name"),
+                CmmStateRegions.acronym,
+                CmmCountries.id.label("country_id"),
+                CmmCountries.name.label("country_name"))\
+            .join(CmmCities,CmmCities.id==CmmLegalEntities.id_city)\
+            .join(CmmStateRegions,CmmStateRegions.id==CmmCities.id_state_region)\
+            .join(CmmCountries,CmmCountries.id==CmmStateRegions.id_country)\
+            .where(CmmLegalEntities.id==id)
+
+            m = db.session.execute(rquery).first()
+
+            return {
+                    "id": m.id,
+                    "origin_id": m.origin_id,
+                    "name": m.social_name,
+                    "fantasy_name": m.fantasy_name,
+                    "taxvat": m.taxvat,
+                    "city": {
+                        "id": m.city_id,
+                        "name": m.city_name,
+                        "brazil_ibge_code":m.brazil_ibge_code,
+                        "state_region": {
+                            "id": m.state_id,
+                            "name": m.state_name,
+                            "acronym": m.acronym,
+                            "country":{
+                                "id": m.country_id,
+                                "name": m.country_name
+                            }
+                        }
+                    },
+                    "agent": self.__get_representative(m.id),
+                    "contacts": self.__get_contacts(m.id),
+                    "web": self.__get_web(m.id),
+                    "postal_code": m.postal_code,
+                    "neighborhood": m.neighborhood,
+                    "address": m.address,
+                    "type": m.type,
+                    "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+                    "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
+                }
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
                 "error_details": e._message(),
                 "error_sql": e._sql_message()
             }
+        
+    def __get_contacts(self,id_customer:int):
+        stmt = Select(CmmLegalEntityContact.id,
+                      CmmLegalEntityContact.name,
+                      CmmLegalEntityContact.contact_type,
+                      CmmLegalEntityContact.value,
+                      CmmLegalEntityContact.is_whatsapp,
+                      CmmLegalEntityContact.is_default)\
+            .where(CmmLegalEntityContact.id_legal_entity==id_customer)
+        
+        return [{
+            "id": c.id,
+            "id_legal_entity": id_customer,
+            "name": c.name,
+            "contact_type": c.contact_type,
+            "value": c.value,
+            "is_whatsapp": c.is_whatsapp, #E = E-mail, P = Phone
+            "is_default": c.is_default
+        } for c in db.session.execute(stmt)]
+    
+    def __get_web(self,id_customer:int):
+        stmt = Select(CmmLegalEntityWeb.id,
+                      CmmLegalEntityWeb.name,
+                      CmmLegalEntityWeb.web_type,
+                      CmmLegalEntityWeb.value,
+                      CmmLegalEntityWeb)\
+                .where(CmmLegalEntityWeb.id_legal_entity==id_customer)
+        return [{
+            "id":c.id,
+            "id_legal_entity": id_customer,
+            "name": c.name,
+            "web_type":c.web_type,
+            "value":c.value
+        }for c in db.session.execute(stmt)]
+    
+    def __get_representative(self,id:int):
+        try:
+            rquery = Select(
+                    CmmLegalEntities.id,
+                    CmmLegalEntities.origin_id,
+                    CmmLegalEntities.name.label("social_name"),
+                    CmmLegalEntities.fantasy_name,
+                    CmmLegalEntities.postal_code,
+                    CmmLegalEntities.neighborhood,
+                    CmmLegalEntities.address,
+                    CmmLegalEntities.taxvat,
+                    CmmLegalEntities.type,
+                    CmmLegalEntities.date_created,
+                    CmmLegalEntities.date_updated,
+                    CmmCities.id.label("city_id"),
+                    CmmCities.name.label("city_name"),
+                    CmmCities.brazil_ibge_code,
+                    CmmStateRegions.id.label("state_id"),
+                    CmmStateRegions.name.label("state_name"),
+                    CmmStateRegions.acronym,
+                    CmmCountries.id.label("country_id"),
+                    CmmCountries.name.label("country_name"))\
+                .join(CmmCities,CmmCities.id==CmmLegalEntities.id_city)\
+                .join(CmmStateRegions,CmmStateRegions.id==CmmCities.id_state_region)\
+                .join(CmmCountries,CmmCountries.id==CmmStateRegions.id_country)\
+                .join(B2bCustomerRepresentative,B2bCustomerRepresentative.id_representative==CmmLegalEntities.id)\
+                .where(and_(CmmLegalEntities.trash==False,B2bCustomerRepresentative.id_customer==id))
+            
+            m = db.session.execute(rquery).first()
 
-    @ns_legal.response(HTTPStatus.OK.value,"Salva dados de um cliente/representante")
+            return {
+                    "id": m.id,
+                    "origin_id": m.origin_id,
+                    "name": m.social_name,
+                    "fantasy_name": m.fantasy_name,
+                    "taxvat": m.taxvat,
+                    "city": {
+                        "id": m.city_id,
+                        "name": m.city_name,
+                        "brazil_ibge_code":m.brazil_ibge_code,
+                        "state_region": {
+                            "id": m.state_id,
+                            "name": m.state_name,
+                            "acronym": m.acronym,
+                            "country":{
+                                "id": m.country_id,
+                                "name": m.country_name
+                            }
+                        }
+                    },
+                    "contacts": self.__get_contacts(m.id),
+                    "web": self.__get_web(m.id),
+                    "postal_code": m.postal_code,
+                    "neighborhood": m.neighborhood,
+                    "address": m.address,
+                    "type": m.type,
+                    "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+                    "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
+                }
+        except:
+            return None
+
+    @ns_legal.response(HTTPStatus.OK.value,"Salva dados de um cliente/representante/fornecedor",model=lgl_registry)
     @ns_legal.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
-    @ns_legal.param("id","Id do registro")
-    @ns_legal.param("name","Nome do Cliente/Representante","formData",required=True)
-    @ns_legal.param("taxvat","Número do CNPJ ou CPF no Brasil","formData",required=True)
-    @ns_legal.param("id_city","Nome da cidade","formData",required=True)
-    @ns_legal.param("postal_code","Número do CEP","formData",type=int,required=True)
-    @ns_legal.param("neighborhood","Nome do Bairro","formData",required=True)
-    @ns_legal.param("type","Indicativo do tipo de entidade legal",required=True,enum=['C','R','S'])
     @auth.login_required
     def post(self,id:int)->bool:
         try:
+            req = request.get_json()
             cst = CmmLegalEntities.query.get(id)
-            cst.name         = cst.name if request.form.get("name") is None else request.form.get("name")
-            cst.taxvat       = cst.taxvat if request.form.get("taxvat") is None else request.form.get("taxvat")
-            cst.id_city      = 0
-            cst.postal_code  = cst.postal_code if request.form.get("postal_code") is None else request.form.get("postal_code")
-            cst.neighborhood = cst.neighborhood if request.form.get("neighborhood") is None else request.form.get("neighborhood")
-            cst.trash        = cst.trash if request.form.get("trash") is None else request.form.get("trash")
-            cst.type         = cst.type if request.form.get("type") is None else request.form.get("type")
+            cst.name         = cst.name if req["name"] is None else req["name"]
+            cst.fantasy_name = cst.fantasy_name if req["fantasy_name"] is None else req["fantasy_name"]
+            cst.taxvat       = cst.taxvat if req["taxvat"] is None else req["taxvat"]
+            cst.id_city      = cst.id_city if req["id_city"] is None else req["id_city"]
+            cst.postal_code  = cst.postal_code if req["postal_code"] is None else req["postal_code"]
+            cst.neighborhood = cst.neighborhood if req["neighborhood"] is None else req["neighborhood"]
+            cst.type         = cst.type if req["type"] is None else req["type"]
+
+            if req["representative_id"]!=0:
+                rep = B2bCustomerRepresentative()
+                rep.id_customer       = id
+                rep.id_representative = req["representative_id"]
+                rep.need_approvement  = False #verificar como fazer esse need approvement, talvez colocar no cadastro do REP
+                db.session.add(rep)
+                db.session.commit()
+            
             db.session.commit()
-            return True
+            return id
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -294,13 +468,14 @@ class EntityOfStage(Resource):
             order_by  = 'id' if hasattr(params,'order_by')==False else params.order_by
             search = None if hasattr(params,"search")==False else params.search
 
-            print(params)
+            #print(params)
 
             rquery = Select(
                 CmmLegalEntities.id,
                 CmmLegalEntities.name.label("social_name"),
                 CmmLegalEntities.fantasy_name,
                 CmmLegalEntities.postal_code,
+                CmmLegalEntities.address,
                 CmmLegalEntities.neighborhood,
                 CmmLegalEntities.taxvat,
                 CmmLegalEntities.type,
@@ -363,7 +538,9 @@ class EntityOfStage(Resource):
                             }
                         },
                         "contacts": self.__get_contacts(m.id),
+                        "web": self.__get_web(m.id),
                         "postal_code": m.postal_code,
+                        "address": m.address,
                         "neighborhood": m.neighborhood,
                         "type": m.type,
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
@@ -384,16 +561,114 @@ class EntityOfStage(Resource):
                       CmmLegalEntityContact.value,
                       CmmLegalEntityContact.is_whatsapp,
                       CmmLegalEntityContact.is_default)\
-            .join(CmmLegalEntities,CmmLegalEntities.id==CmmLegalEntityContact.id_legal_entity)\
-            .where(CmmLegalEntities.id==id_customer)
+            .where(CmmLegalEntityContact.id_legal_entity==id_customer)
         
         return [{
             "id": c.id,
+            "id_legal_entity": id_customer,
             "name": c.name,
             "contact_type": c.contact_type,
             "value": c.value,
             "is_whatsapp": c.is_whatsapp, #E = E-mail, P = Phone
             "is_default": c.is_default
         } for c in db.session.execute(stmt)]
+    
+    def __get_web(self,id_customer:int):
+        stmt = Select(CmmLegalEntityWeb.id,
+                      CmmLegalEntityWeb.name,
+                      CmmLegalEntityWeb.web_type,
+                      CmmLegalEntityWeb.value,
+                      CmmLegalEntityWeb)\
+                .where(CmmLegalEntityWeb.id_legal_entity==id_customer)
+        return [{
+            "id":c.id,
+            "id_legal_entity": id_customer,
+            "name": c.name,
+            "web_type":c.web_type,
+            "value":c.value
+        }for c in db.session.execute(stmt)]
 
 ns_legal.add_resource(EntityOfStage,'/by-crm-stage/<int:id>')
+
+
+class EntityContact(Resource):
+    @ns_legal.response(HTTPStatus.OK.value,"Salva contato(s) de uma entidade")
+    @ns_legal.response(HTTPStatus.BAD_REQUEST.value,"Falha ao salvar o(s) registro(s)!")
+    @auth.login_required
+    def post(self):
+        try:
+            req = request.get_json()
+            #print(req)
+            for r in req:
+                ct = CmmLegalEntityContact()
+                ct.id              = r['id']
+                ct.id_legal_entity = r['id_legal_entity']
+                ct.name            = r['name']
+                ct.contact_type    = r['contact_type']
+                ct.is_default      = r['is_default']
+                ct.is_whatsapp     = r['is_whatsapp']
+                ct.value           = r['value']
+                if ct.id == 0:
+                    db.session.add(ct)
+                db.session.commit()
+                return True
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
+    
+    @ns_legal.response(HTTPStatus.OK.value,"Exclui contato(s) de uma entidade")
+    @ns_legal.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @auth.login_required
+    def delete(self):
+        try:
+            pass
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
+
+ns_legal.add_resource(EntityContact,'/save-contacts')
+
+class EntityWeb(Resource):
+    @ns_legal.response(HTTPStatus.OK.value,"Salva endereço(s) web de uma entidade")
+    @ns_legal.response(HTTPStatus.BAD_REQUEST.value,"Falha ao salvar o(s) registro(s)!")
+    @auth.login_required
+    def post(self):
+        try:
+            req = request.get_json()
+            print(req)
+            for r in req:
+                wb = CmmLegalEntityWeb()
+                wb.id              = r['id']
+                wb.id_legal_entity = r['id_legal_entity']
+                wb.name            = r['name']
+                wb.web_type        = r['web_type']
+                wb.value           = r['value']
+                if wb.id == 0:
+                    db.session.add(wb)
+                db.session.commit()
+                return True
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
+    
+    @ns_legal.response(HTTPStatus.OK.value,"Exclui endereço(s) web de uma entidade")
+    @ns_legal.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    def delete(self):
+        try:
+            pass
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
+ns_legal.add_resource(EntityWeb,'/save-webs')
