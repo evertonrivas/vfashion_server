@@ -219,7 +219,9 @@ class UserAuth(Resource):
     
     def put(self):
         try:
-            retorno = CmmUsers.check_token(request.form.get("token"))
+            #print(request.get_json())
+            req = request.get_json()
+            retorno = CmmUsers.check_token(req['token'])
             return False if retorno is None else retorno.token_expire.strftime("%Y-%m-%d %H:%M:%S")
         except:
             return False
