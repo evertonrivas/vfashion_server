@@ -3,7 +3,6 @@ from flask_restx import Api
 from b2b.price_table import ns_price
 from b2b.orders import ns_order
 from b2b.payment_condition import ns_payment
-from b2b.customer_group import ns_group_customer
 from b2b.collection import ns_collection
 from b2b.brand import ns_brand
 from b2b.product_stock import ns_stock
@@ -36,7 +35,6 @@ Keyword arguments: vendas, b2c, produtos, cliente, pedidos, condições de pagam
 nss = [ns_brand,
        ns_cart,
        ns_collection,
-       ns_group_customer,
        ns_invoice,
        ns_order,
        ns_payment,
