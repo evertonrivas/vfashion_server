@@ -1,5 +1,5 @@
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import func,String,Integer,CHAR,DateTime,Boolean,Column,Text,DECIMAL,SmallInteger,Date
+from sqlalchemy import Index, func,String,Integer,CHAR,DateTime,Boolean,Column,Text,DECIMAL,SmallInteger,Date
 from sqlalchemy_serializer import SerializerMixin
 from datetime import datetime,timedelta
 import jwt
@@ -46,11 +46,13 @@ def _get_params(search:str):
                 p_obj = p_obj.replace(",\n}","\n}")
                 return json.loads(p_obj,object_hook=lambda d: SimpleNamespace(**d))
     return None
-   
+
+def _show_query(rquery):
+    print(rquery.compile(compile_kwargs={"literal_binds": True}))
 
 class CmmUsers(db.Model,SerializerMixin):
     id              = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
-    username        = Column(String(100), nullable=False)
+    username        = Column(String(100), nullable=False,unique=True)
     password        = Column(String(255), nullable=False)
     type            = Column(CHAR(1),nullable=False,default='L',comment='A = Administrador, L = Lojista, R = Representante, V = Vendedor, C = Company User')
     date_created    = Column(DateTime,nullable=False,server_default=func.now())
@@ -76,7 +78,7 @@ class CmmUsers(db.Model,SerializerMixin):
             return self.token
 
         #encode e decode por causa da diferenca de versoes do windows que pode retornar byte array ao inves de str
-        self.token = jwt.encode({"username":str(self.username) },"VENDA_FASHION_"+str(complete_key)).encode().decode()
+        self.token = jwt.encode({"username":str(self.username) },Config.TOKEN_KEY.value+str(complete_key)).encode().decode()
         self.token_expire = now + timedelta(seconds=expires_in)
         return self.token
     
@@ -98,6 +100,7 @@ class CmmUsers(db.Model,SerializerMixin):
         if user is None or user.token_expire < datetime.now():
             return None
         return user
+IDX_USERNAME = Index("IDX_USERNAME",CmmUsers.username,unique=True)
 
 class CmmUserEntity(db.Model,SerializerMixin):
     id_user     = Column(Integer,nullable=False,primary_key=True)
