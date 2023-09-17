@@ -33,7 +33,7 @@ cou_return = ns_city.model(
 )
 
 @ns_city.route("/")
-class CategoryList(Resource):
+class CitiesList(Resource):
     @ns_city.response(HTTPStatus.OK.value,"Obtem a listagem de cidades",cou_return)
     @ns_city.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
     @ns_city.param("page","Número da página de registros","query",type=int,required=True,default=1)
@@ -137,7 +137,7 @@ class CategoryList(Resource):
             }
 
 @ns_city.route("/<int:id>")
-class CategoryApi(Resource):
+class CityApi(Resource):
     @ns_city.response(HTTPStatus.OK.value,"Obtem um registro de uma nova cidade",cou_model)
     @ns_city.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
     @auth.login_required
