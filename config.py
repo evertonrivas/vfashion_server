@@ -5,16 +5,18 @@ class Config(Enum):
     EXPIRE_SESSION  = 3600
     
     DB_LIB  = "mysql+pymysql"
-    DB_TYPE = "MYSQL"
     DB_HOST = "localhost"
-    DB_NAME = "venda_fashion"
-    DB_USER = "venda_fashion"
-    DB_PASS = "vd_fashion"
+    DB_NAME = "vfashion"
+    DB_USER = "root"
+    DB_PASS = "romero01"
     COMPANY_TAXVAT = ''
     TRACK_ORDER = False
     CONNECT_ERP = True
     ERP_MODULE  = "integrations.virtualage"
     ERP_CLASS   = "VirtualAge"
+    LOCALE      = "pt_BR"
+    TOKEN_KEY   = "SMART2BEE_"
+    APP_PATH    = "d:/development/venda_fashion/backend/"
 
 class ShippingCompany(Enum):
     BRASPRESS = 1
@@ -41,11 +43,15 @@ class ConfigECT(Enum):
 
 
 class ConfigVirtualAge(Enum):
-    URL           = ''
-    grant_type    = ''
-    client_id     = ''
-    client_secret = ''
-    username      = ''
-    password      = ''
-    active_companies = [1]
-    default_company  = 1
+    URL           = 'https://api.labellamafia.com.br:9443'
+    grant_type    = 'password'
+    client_id     = 'labellamafiaapiv2'
+    client_secret = '16061138'
+    username      = 'apiv2'
+    password      = 'api8107'
+    ACTIVE_COMPANIES = [1]
+    DEFAULT_COMPANY  = 1
+    ACTIVE_REPS      = [75413,16803,82466,79759,80008,81975,81973,71793,14336,91171,20,75717,78318,71668,17,5021,82496,91172]
+
+class MailTemplates(Enum):
+    pass
