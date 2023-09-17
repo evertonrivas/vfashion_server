@@ -12,6 +12,7 @@ from cmm.translate_sizes import ns_size
 from cmm.countries import ns_country
 from cmm.cities import ns_city
 from cmm.state_regions import ns_state_region
+from cmm.upload import ns_upload
 
 
 """ Módulo Common entre os sistemas
@@ -21,7 +22,7 @@ Keyword arguments: usuarios, produtos
 """
 
 #nss = [ns_user]
-nss = [ns_cat,ns_city,ns_color,ns_country,ns_gprod,ns_legal,ns_model,ns_prod,ns_size,ns_state_region,ns_type,ns_user]
+nss = [ns_cat,ns_city,ns_color,ns_country,ns_gprod,ns_legal,ns_model,ns_prod,ns_size,ns_state_region,ns_type,ns_upload,ns_user]
 
 blueprint = Blueprint("cmm",__name__,url_prefix="/cmm/api/")
 
