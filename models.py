@@ -1,10 +1,10 @@
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import Index, func,String,Integer,CHAR,DateTime,Boolean,Column,Text,DECIMAL,SmallInteger,Date
+from sqlalchemy import Index, Insert, func,String,Integer,CHAR,DateTime,Boolean,Column,Text,DECIMAL,SmallInteger,Date
 from sqlalchemy_serializer import SerializerMixin
 from datetime import datetime,timedelta
 import jwt
 import bcrypt
-from config import Config
+from config import Config,CustomerAction
 import json
 from types import SimpleNamespace
 
@@ -49,6 +49,15 @@ def _get_params(search:str):
 
 def _show_query(rquery):
     print(rquery.compile(compile_kwargs={"literal_binds": True}))
+
+def _save_log(id:int,act:CustomerAction,p_log_action:str):
+    log = CmmLegalEntityHistory()
+    log.action          = act.value
+    log.history         = p_log_action
+    log.id_legal_entity = id
+    log.date_created    = datetime.now()
+    db.session.add(log)
+    db.session.commit()
 
 class CmmUsers(db.Model,SerializerMixin):
     id              = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
@@ -233,14 +242,14 @@ class CmmLegalEntityHistory(db.Model,SerializerMixin):
     id              = Column(Integer,primary_key=True,autoincrement=True)
     id_legal_entity = Column(Integer,nullable=False)
     history         = Column(Text,nullable=False)
-    action          = Column(CHAR(2),nullable=False,comment='UD = Update Data, MC = Move CRM Funil/Stage, CM = Chat Message Sended/Received, OC = Order Created/Update, OD = Order Canceled, SA = System Access, TC = Task Created, FA = File Attached, ES = E-mail Sended, ER = E-mail Replyed, RC = Return Created, FB = Financial Bloqued/Unbloqued')
+    action          = Column(CHAR(2),nullable=False,comment='DR = Data Registered,DU = Data Updated, MC = Move CRM Funil/Stage, CS = Chat Message Sended, CR = Chat Message Received, OC = Order Created, OU = Order Update, OD = Order Canceled, SA = System Access, TC = Task Created, FA = File Attached, FD = File Dettached, ES = E-mail Sended, ER = E-mail Replied, RC = Return Created, RU = Return Updated, FB = Financial Bloqued, FU = Financial Unbloqued')
     date_created    = Column(DateTime,nullable=False,server_default=func.now())
-    date_updated    = Column(DateTime,onupdate=func.now())
 
 class CmmLegalEntityFile(db.Model,SerializerMixin):
     id              = Column(Integer,primary_key=True,autoincrement=True)
     id_legal_entity = Column(Integer,nullable=False)
     name            = Column(String(255),nullable=False)
+    folder          = Column(String(50),nullable=False)
     content_type    = Column(String(100),nullable=False)
     date_created    = Column(DateTime,nullable=False,server_default=func.now())
     date_updated    = Column(DateTime,onupdate=func.now())
@@ -382,8 +391,6 @@ class CrmFunnelStageCustomer(db.Model,SerializerMixin):
     id_customer     = Column(Integer,primary_key=True,nullable=False)
     date_created    = Column(DateTime,nullable=False,server_default=func.now())
     date_updated    = Column(DateTime,onupdate=func.now())
-
-
 
 class ScmCalendar(db.Model,SerializerMixin):
     time_id       = Column(Integer,primary_key=True,autoincrement=True)
