@@ -1,10 +1,10 @@
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields,RestError
 from flask import request
-from models import B2bCustomerRepresentative, CmmCities, CmmCountries, CmmLegalEntityContact, CmmLegalEntityWeb, CmmStateRegions, CrmFunnelStageCustomer, _get_params,CmmLegalEntities,CmmUserEntity,db
+from models import  db,_save_log,_get_params,B2bCustomerRepresentative, CmmCities, CmmCountries, CmmLegalEntityContact, CmmLegalEntityFile, CmmLegalEntityWeb, CmmStateRegions, CrmFunnelStageCustomer,CmmLegalEntities,CmmUserEntity
 from sqlalchemy import Select,and_,exc,asc,desc,func
 from auth import auth
-from config import Config
+from config import Config,CustomerAction
 
 ns_legal = Namespace("legal-entities",description="Operações para manipular dados de clientes/representantes")
 
@@ -207,6 +207,9 @@ class EntitysList(Resource):
             cst.type         = req["type"]
             db.session.add(cst)
             db.session.commit()
+
+            _save_log(cst.id,CustomerAction.DATA_REGISTERED,'Registro criado')
+
             return cst.id
         except exc.SQLAlchemyError as e:
             return {
@@ -275,6 +278,7 @@ class EntityApi(Resource):
                     "agent": self.__get_representative(m.id),
                     "contacts": self.__get_contacts(m.id),
                     "web": self.__get_web(m.id),
+                    "files": self.__get_file(m.id),
                     "postal_code": m.postal_code,
                     "neighborhood": m.neighborhood,
                     "address": m.address,
@@ -321,6 +325,19 @@ class EntityApi(Resource):
             "name": c.name,
             "web_type":c.web_type,
             "value":c.value
+        }for c in db.session.execute(stmt)]
+    
+    def __get_file(self,id_customer:int):
+        stmt = Select(CmmLegalEntityFile.id,
+                      CmmLegalEntityFile.name,
+                      CmmLegalEntityFile.folder,
+                      CmmLegalEntityFile.content_type
+                      ).where(CmmLegalEntityFile.id_legal_entity==id_customer)
+        return [{
+            "id": c.id,
+            "name": c.name,
+            "folder": c.folder,
+            "content_type":c.content_type
         }for c in db.session.execute(stmt)]
     
     def __get_representative(self,id:int):
@@ -375,6 +392,7 @@ class EntityApi(Resource):
                     },
                     "contacts": self.__get_contacts(m.id),
                     "web": self.__get_web(m.id),
+                    "files": self.__get_file(m.id),
                     "postal_code": m.postal_code,
                     "neighborhood": m.neighborhood,
                     "address": m.address,
@@ -408,6 +426,7 @@ class EntityApi(Resource):
                 db.session.add(rep)
                 db.session.commit()
             
+            _save_log(id,CustomerAction.DATA_UPDATED,'Registro atualizado')
             db.session.commit()
             return id
         except exc.SQLAlchemyError as e:
@@ -426,6 +445,7 @@ class EntityApi(Resource):
             cst = CmmLegalEntities.query.get(id)
             cst.trash = True
             db.session.commit()
+            _save_log(id,CustomerAction.DATA_DELETED,'Registro movido para a Lixeira')
             return True
         except exc.SQLAlchemyError as e:
             return {
@@ -467,8 +487,6 @@ class EntityOfStage(Resource):
             direction = asc if hasattr(params,'order')==False else asc if params.order=='ASC' else desc
             order_by  = 'id' if hasattr(params,'order_by')==False else params.order_by
             search = None if hasattr(params,"search")==False else params.search
-
-            #print(params)
 
             rquery = Select(
                 CmmLegalEntities.id,
@@ -539,6 +557,7 @@ class EntityOfStage(Resource):
                         },
                         "contacts": self.__get_contacts(m.id),
                         "web": self.__get_web(m.id),
+                        "files": self.__get_file(m.id),
                         "postal_code": m.postal_code,
                         "address": m.address,
                         "neighborhood": m.neighborhood,
@@ -587,6 +606,19 @@ class EntityOfStage(Resource):
             "web_type":c.web_type,
             "value":c.value
         }for c in db.session.execute(stmt)]
+    
+    def __get_file(self,id_customer:int):
+        stmt = Select(CmmLegalEntityFile.id,
+                      CmmLegalEntityFile.name,
+                      CmmLegalEntityFile.folder,
+                      CmmLegalEntityFile.content_type
+                      ).where(CmmLegalEntityFile.id_legal_entity==id_customer)
+        return [{
+            "id": c.id,
+            "name": c.name,
+            "folder": c.folder,
+            "content_type":c.content_type
+        }for c in db.session.execute(stmt)]
 
 ns_legal.add_resource(EntityOfStage,'/by-crm-stage/<int:id>')
 
@@ -609,7 +641,10 @@ class EntityContact(Resource):
                 ct.is_whatsapp     = r['is_whatsapp']
                 ct.value           = r['value']
                 if ct.id == 0:
+                    _save_log(r['id_legal_entity'],CustomerAction.DATA_REGISTERED,'Adicionado contato '+r['name'])
                     db.session.add(ct)
+                else:
+                    _save_log(r['id_legal_entity'],CustomerAction.DATA_UPDATED,'Atualizado contato '+r['name'])
                 db.session.commit()
                 return True
         except exc.SQLAlchemyError as e:
@@ -641,7 +676,7 @@ class EntityWeb(Resource):
     def post(self):
         try:
             req = request.get_json()
-            print(req)
+            #print(req)
             for r in req:
                 wb = CmmLegalEntityWeb()
                 wb.id              = r['id']
@@ -650,7 +685,10 @@ class EntityWeb(Resource):
                 wb.web_type        = r['web_type']
                 wb.value           = r['value']
                 if wb.id == 0:
+                    _save_log(r['id_legal_entity'],CustomerAction.DATA_REGISTERED,'Adicionado web '+r['name'])
                     db.session.add(wb)
+                else:
+                    _save_log(r['id_legal_entity'],CustomerAction.DATA_UPDATED,'Atualizado web '+r['name'])
                 db.session.commit()
                 return True
         except exc.SQLAlchemyError as e:
