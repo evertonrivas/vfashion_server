@@ -69,7 +69,7 @@ class CitiesList(Resource):
                     CmmCountries.name.like('%{}%'.format(search))
                 )
 
-            print(rquery)
+            #print(rquery)
 
             if list_all==False:
                 pag = db.paginate(rquery,page=pag_num,per_page=pag_size)
