@@ -55,3 +55,27 @@ class ConfigVirtualAge(Enum):
 
 class MailTemplates(Enum):
     pass
+
+class CustomerAction(Enum):
+    #SA = System Access, TC = Task Created, FA = File Attached, ES = E-mail Sended, ER = E-mail Replied, RC = Return Created, FB = Financial Bloqued/Unbloqued
+    DATA_REGISTERED       = 'DR'
+    DATA_UPDATED          = 'DU'
+    DATA_DELETED          = 'DD'
+    MOVE_CRM_FUNNEL       = 'MC'
+    CHAT_MESSAGE_SEND     = 'CS'
+    CHAT_MESSAGE_RECEIVED = 'CR'
+    ORDER_CREATED         = 'OC'
+    ORDER_UPDATED         = 'OU'
+    ORDER_DELETED         = 'OD'
+    SYSTEM_ACCESS         = 'SA'
+    TASK_CREATED          = 'TC'
+    FILE_ATTACHED         = 'FA'
+    FILE_DETTACHED        = 'FD'
+    EMAIL_SENDED          = 'ES'
+    EMAIL_REPLIED         = 'ER'
+    RETURN_CREATED        = 'RC'
+    RETURN_UPDATED        = 'RU'
+    FINANCIAL_BLOQUED     = 'FB'
+    FINANCIAL_UNBLOQUED   = 'FU'
+    
+
