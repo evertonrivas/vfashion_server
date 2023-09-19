@@ -1,11 +1,10 @@
 from http import HTTPStatus
-import json
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import CmmUserEntity, CmmUsers,db
+from models import CmmUserEntity, CmmUsers,db,_save_log
 from sqlalchemy import desc, exc, and_, asc, Insert,Update
 from auth import auth
-from config import Config
+from config import Config,CustomerAction
 
 ns_user = Namespace("users",description="Operações para manipular dados de usuários do sistema")
 
@@ -198,7 +197,14 @@ class UserAuth(Resource):
     def post(self):
         #req = request.get_json()
         usr = CmmUsers.query.filter(and_(CmmUsers.username==request.form.get("username"),CmmUsers.active==True)).first()
-        if usr:
+        if usr is not None:
+
+            #tenta buscar um profile
+            idProfile = 0
+            entity = CmmUserEntity.query.filter(CmmUserEntity.id_user==usr.id).first()
+            if entity is not None:
+                idProfile = entity.id_entity
+
             #verifica a senha criptografada anteriormente
             pwd = request.form.get("password").encode()
             if usr.check_pwd(pwd):
@@ -208,10 +214,12 @@ class UserAuth(Resource):
 					"token_expire": usr.token_expire.strftime("%Y-%m-%d %H:%M:%S"),
 					"level_access": usr.type,
                     "id_user": usr.id,
-                    "id_profile": CmmUserEntity.query.filter(CmmUserEntity.id_user==usr.id).first().id_entity
+                    "id_profile": idProfile
                 }
                 usr.is_authenticate = True
                 db.session.commit()
+                if idProfile!=0:
+                    _save_log(idProfile,CustomerAction.SYSTEM_ACCESS,'Efetuou login')
                 return obj_retorno
             else:
                 return 0 #senha invalida
@@ -245,6 +253,9 @@ class UserAuthLogout(Resource):
             usr = CmmUsers.query.get(id)
             usr.logout()
             db.session.commit()
+            entity = CmmUserEntity.query.filter(CmmUserEntity.id_user==id).first()
+            if entity is not None:
+                _save_log(entity.id,CustomerAction.SYSTEM_ACCESS,'Efetuou logoff')
             return True
         except:
             return False
