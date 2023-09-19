@@ -161,3 +161,4 @@ cython_debug/
 
 migrations/
 migrations_old/
+assets/
