@@ -1,7 +1,7 @@
 from flask import Blueprint
 from flask_restx import Api
-from crm.funil import ns_funil
-from crm.funil_stage import ns_fun_stg
+from crm.funnel import ns_funil
+from crm.funnel_stage import ns_fun_stg
 
 """ Módulo Customer Relationship Management (Gestão de Relacionamento com o Cliente). 
     Módulo para gestão de contatos com o cliente (qualificação)

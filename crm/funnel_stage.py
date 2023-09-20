@@ -1,11 +1,11 @@
 from http import HTTPStatus
 from flask_restx import Resource,fields,Namespace
 from flask import request
-from models import CrmFunnelStageCustomer, _get_params,CrmFunnelStage,db
+from models import CrmFunnelStageCustomer, _get_params,CrmFunnelStage,db,_save_log
 import json
-from sqlalchemy import exc,and_,asc
+from sqlalchemy import Select, exc,and_,asc
 from auth import auth
-from config import Config
+from config import Config,CustomerAction
 
 
 ns_fun_stg = Namespace("funnel-stages",description="Operações para manipular estágios dos funis de clientes")
@@ -80,7 +80,42 @@ class FunnelStageCustomer(Resource):
 
             customer_stage = CrmFunnelStageCustomer.query.filter(CrmFunnelStageCustomer.id_customer==id_customer).one()
             customer_stage.id_funnel_stage = new_stage
+            stage = db.session.execute(Select(CrmFunnelStage.name).where(CrmFunnelStage.id==new_stage)).first().name
             db.session.commit()
+            _save_log(id_customer,CustomerAction.MOVE_CRM_FUNNEL,'Movido para o estágio '+stage)
+
+            return True
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
+        
+    def post(self):
+        try:
+            req = request.get_json()
+            for customer in req['customers']:
+                customer_state = CrmFunnelStageCustomer.query.filter(CrmFunnelStageCustomer.id_customer==customer.id).one()
+                customer_state.id_funnel_stage = req['stage']
+                stage = db.session.execute(Select(CrmFunnelStage.name).where(CrmFunnelStage.id==req['stage'])).first().name
+                _save_log(customer.id,CustomerAction.MOVE_CRM_FUNNEL,'Movido para o estágio '+stage)
+                db.session.commit()
+            return True
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
+        
+    def delete(self):
+        try:
+            req = request.get_json()
+            for customer in req['customers']:
+                customer_state = CrmFunnelStageCustomer.query.filter(CrmFunnelStageCustomer.id_customer==customer).one()
+                db.session.delete(customer_state)
+                db.session.commit()
             return True
         except exc.SQLAlchemyError as e:
             return {
