@@ -1,7 +1,7 @@
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields,RestError
 from flask import request
-from models import  db,_save_log,_get_params,B2bCustomerRepresentative, CmmCities, CmmCountries, CmmLegalEntityContact, CmmLegalEntityFile, CmmLegalEntityWeb, CmmStateRegions, CrmFunnelStageCustomer,CmmLegalEntities,CmmUserEntity
+from models import  CmmLegalEntityHistory, db,_save_log,_get_params,B2bCustomerRepresentative, CmmCities, CmmCountries, CmmLegalEntityContact, CmmLegalEntityFile, CmmLegalEntityWeb, CmmStateRegions, CrmFunnelStageCustomer,CmmLegalEntities,CmmUserEntity
 from sqlalchemy import Select,and_,exc,asc,desc,func
 from auth import auth
 from config import Config,CustomerAction
@@ -116,6 +116,7 @@ class EntitysList(Resource):
 
             if hasattr(params,'list_all')==False:
                 pag = db.paginate(rquery,page=pag_num,per_page=pag_size)
+                rquery = rquery.limit(pag_size).offset((pag_num - 1) * pag_size)
 
                 return {
                     "pagination":{
@@ -710,3 +711,54 @@ class EntityWeb(Resource):
                 "error_sql": e._sql_message()
             }
 ns_legal.add_resource(EntityWeb,'/save-webs')
+
+
+class EntityHistory(Resource):
+    @ns_legal.param("page","Número da página de registros","query",type=int,required=True)
+    @ns_legal.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
+    @ns_legal.param("query","Texto para busca","query")
+    def get(self,id:int):
+        pag_num   =  1 if request.args.get("page") is None or request.args.get("page")==0 else int(request.args.get("page"))
+        pag_size  = Config.PAGINATION_SIZE.value if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        search    = "" if request.args.get("query") is None else request.args.get("query")
+        try:
+            params = _get_params(search)
+
+            rquery = Select(CmmLegalEntityHistory.id,
+                            CmmLegalEntityHistory.id_legal_entity,
+                            CmmLegalEntityHistory.history,
+                            CmmLegalEntityHistory.action,
+                            CmmLegalEntityHistory.date_created)\
+                            .where(CmmLegalEntityHistory.id_legal_entity==id)
+            
+            if hasattr(params,'search'):
+                rquery = rquery.where(CmmLegalEntityHistory.history.like('%{}%'.format(params.search)))
+            
+
+            pag = db.paginate(rquery,page=pag_num,per_page=pag_size)
+            rquery = rquery.limit(pag_size).offset((pag_num - 1) * pag_size)
+            
+            return {
+                    "pagination":{
+                        "registers": pag.total,
+                        "page": pag_num,
+                        "per_page": pag_size,
+                        "pages": pag.pages,
+                        "has_next": pag.has_next
+                    },
+                    "data":[{
+                        "id": r.id,
+                        "id_legal_entity": r.id_legal_entity,
+                        "history": r.history,
+                        "action": r.action,
+                        "date_created": r.date_created.strftime("%d/%m/%Y %H:%M:%S")
+                    }for r in db.session.execute(rquery)]
+            }
+            
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
+ns_legal.add_resource(EntityHistory,'/load-history/<int:id>')
