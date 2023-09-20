@@ -4,19 +4,24 @@ class Config(Enum):
     PAGINATION_SIZE = 25
     EXPIRE_SESSION  = 3600
     
-    DB_LIB  = "mysql+pymysql"
-    DB_HOST = "localhost"
-    DB_NAME = "vfashion"
-    DB_USER = "root"
-    DB_PASS = "romero01"
-    COMPANY_TAXVAT = ''
-    TRACK_ORDER = False
-    CONNECT_ERP = True
-    ERP_MODULE  = "integrations.virtualage"
-    ERP_CLASS   = "VirtualAge"
-    LOCALE      = "pt_BR"
-    TOKEN_KEY   = "SMART2BEE_"
-    APP_PATH    = "d:/development/venda_fashion/backend/"
+    DB_LIB           = "mysql+pymysql"
+    DB_HOST          = "localhost"
+    DB_NAME          = "vfashion"
+    DB_USER          = "root"
+    DB_PASS          = "romero01"
+    COMPANY_TAXVAT   = ''
+    TRACK_ORDER      = False #will activate track on order history on b2b/orders.py
+    CONNECT_ERP      = True #will integrate orders, customers, representatives and products on task_manager.py
+    ERP_MODULE       = "integrations.virtualage" #used on task_manager.py
+    ERP_CLASS        = "VirtualAge" #used on task_manager.py
+    LOCALE           = "pt_BR" #nao lembro o motivo do locale no python
+    TOKEN_KEY        = "SMART2BEE_" #used on cmm/users.py
+    APP_PATH         = "d:/development/venda_fashion/backend/" #used on cmm/upload.py
+    EMAIL_LIB        = 'gmail' #options [sendgrid, smtp]
+    EMAIL_USER       = ''
+    EMAIL_PASS       = ''
+    EMAIL_TOKEN_KEY  = ''
+    EMAIL_TOKEN_TYPE = ''
 
 class ShippingCompany(Enum):
     BRASPRESS = 1
@@ -54,6 +59,7 @@ class ConfigVirtualAge(Enum):
     ACTIVE_REPS      = [75413,16803,82466,79759,80008,81975,81973,71793,14336,91171,20,75717,78318,71668,17,5021,82496,91172]
 
 class MailTemplates(Enum):
+    DEFAULT = 'template.html'
     pass
 
 class CustomerAction(Enum):
