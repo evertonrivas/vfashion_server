@@ -14,10 +14,10 @@ import os
 ns_upload = Namespace("upload",description="Operações para manipular upload de dados")
 
 @ns_upload.route("/<int:id>")
-class UploadList(Resource):
-    @ns_upload.response(HTTPStatus.OK.value,"Obtem a listagem de cidades")
-    @ns_upload.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
-    @ns_upload.param("file","Arquivo a ser enviado para o servidor","formData")
+class UploadApi(Resource):
+    @ns_upload.response(HTTPStatus.OK.value,"Realiza envio de arquivo(s) para o servidor")
+    @ns_upload.response(HTTPStatus.BAD_REQUEST.value,"Falha ao enviar arquivo(s)!")
+    @ns_upload.param("files[]","Arquivo a ser enviado para o servidor","formData")
     @auth.login_required
     def post(self,id:int):
         try:
@@ -25,11 +25,11 @@ class UploadList(Resource):
             #obtem os arquivos para upload
             files = []
             fileCount = 1
+            fpath = Config.APP_PATH.value+'assets/'
             data = ImmutableMultiDict(request.files)
             for file in data.getlist('files[]'):
                 parts = file.filename.split(".")
                 ext = parts[len(parts)-1]
-                fpath = Config.APP_PATH.value+'assets/'
                 if ext=='pdf':
                     ffolder = 'pdf/'
                 elif ext=='doc' or ext=='docx' or ext=='xls' or ext=='xlsx' or ext=='ppt' or ext=='pptx':
@@ -64,13 +64,14 @@ class UploadList(Resource):
                 fileCount += 1
 
             combinedFiles = ','.join(files)
-            _save_log(id,CustomerAction.FA,"Adicionados os arquivos "+combinedFiles)
+            _save_log(id,CustomerAction.FA,"Adicionado(s) o(s) arquivo(s) "+combinedFiles)
 
             return True
         except exceptions.HTTPException as e:
             print("Exception")
             print(e.get_headers())
             return False
+
     
     def delete(self,id:int):
         try:
@@ -89,3 +90,18 @@ class UploadList(Resource):
                 return True
         except exceptions.HTTPException as e:
             return False
+        
+
+class UploadTmp(Resource):
+    @ns_upload.response(HTTPStatus.OK.value,"Realiza envio de arquivo(s) para o servidor na pasta temporaria")
+    @ns_upload.response(HTTPStatus.BAD_REQUEST.value,"Falha ao enviar arquivo(s)!")
+    def post(self):
+        try:
+            #obtem os arquivos para upload
+            fpath = Config.APP_PATH.value+'assets/tmp/'
+            data = ImmutableMultiDict(request.files)
+            for file in data.getlist('files[]'):
+                file.save(fpath+file.filename)
+        except exceptions.HTTPException as e:
+            print(e)
+ns_upload.add_resource(UploadTmp,'/temp')
