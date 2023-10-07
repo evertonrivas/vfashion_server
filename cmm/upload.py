@@ -95,6 +95,7 @@ class UploadApi(Resource):
 class UploadTmp(Resource):
     @ns_upload.response(HTTPStatus.OK.value,"Realiza envio de arquivo(s) para o servidor na pasta temporaria")
     @ns_upload.response(HTTPStatus.BAD_REQUEST.value,"Falha ao enviar arquivo(s)!")
+    @auth.login_required
     def post(self):
         try:
             #obtem os arquivos para upload
@@ -102,6 +103,9 @@ class UploadTmp(Resource):
             data = ImmutableMultiDict(request.files)
             for file in data.getlist('files[]'):
                 file.save(fpath+file.filename)
+
+            return True
         except exceptions.HTTPException as e:
             print(e)
+            return False
 ns_upload.add_resource(UploadTmp,'/temp')
