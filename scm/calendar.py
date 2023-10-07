@@ -192,10 +192,10 @@ class CalendarEventList(Resource):
     @ns_calendar.param("query","Texto para busca de intervalos de datas e eventos","query")
     @auth.login_required
     def get(self):
-        search   = "" if request.args.get("query") is None else request.args.get("query")
+        query   = "" if request.args.get("query") is None else request.args.get("query")
 
         try:
-            params = _get_params(search)
+            params = _get_params(query)
             if params.start=="" and params.end=="":
                 params.start = datetime.now().strftime("%Y-01-01")
                 params.end   = datetime.now().strftime("%Y-12-31")
