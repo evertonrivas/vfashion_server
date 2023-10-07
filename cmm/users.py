@@ -56,7 +56,7 @@ class UsersList(Resource):
             direction = asc if hasattr(params,'order')==False else asc if str(params.order).upper()=='ASC' else desc
             order_by  = 'id' if hasattr(params,'order_by')==False else params.order_by
             search    = None if hasattr(params,"search")==False else params.search
-            trash     = False if hasattr(params,'active')==False else True
+            trash     = True if hasattr(params,'active')==False else False #foi invertido
             list_all  = False if hasattr(params,'list_all')==False else True
 
             filter_type   = None if hasattr(params,'type')==False else params.type
@@ -95,7 +95,7 @@ class UsersList(Resource):
                         "active": m.active,
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                         "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
-                    } for m in rquery.items]
+                    } for m in db.session.execute(rquery)]
                 }
             else:
                 return [{
@@ -105,7 +105,7 @@ class UsersList(Resource):
                     "active": m.active,
                     "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                     "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
-                }for m in rquery.all()]
+                }for m in db.session.execute(rquery)]
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
