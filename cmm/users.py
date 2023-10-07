@@ -1,8 +1,8 @@
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import CmmUserEntity, CmmUsers,db,_save_log
-from sqlalchemy import desc, exc, and_, asc, Insert,Update
+from models import CmmLegalEntities, CmmUserEntity, CmmUsers, _get_params,db,_save_log
+from sqlalchemy import Select, desc, exc, and_, asc, Insert,Update
 from auth import auth
 from config import Config,CustomerAction
 
@@ -22,6 +22,7 @@ usr_model = ns_user.model(
     "User",{
         "id": fields.Integer,
         "username": fields.String,
+        "name":fields.String,
         "password": fields.String,
         "type": fields.String(enum=['A','L','R','V','U']),
         "date_created": fields.DateTime,
@@ -44,47 +45,48 @@ class UsersList(Resource):
     @ns_user.param("page","Número da página de registros","query",type=int,required=True)
     @ns_user.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_user.param("query","Texto para busca","query")
-    @ns_user.param("order_by","Campo de ordenacao","query")
-    @ns_user.param("order_dir","Direção da ordenação","query",enum=['ASC','DESC'])
     @auth.login_required
     def get(self):
         pag_num   =  1 if request.args.get("page") is None else int(request.args.get("page"))
         pag_size  = Config.PAGINATION_SIZE.value if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
-        search    = "" if request.args.get("query") is None else request.args.get("query")
-        order_by  = "id" if request.args.get("order_by") is None else request.args.get("order_by")
-        direction = asc if request.args.get("order_dir") == 'ASC' else desc
-        list_all  = False if request.args.get("list_all") == 'false' else True
+        query     = "" if request.args.get("query") is None else request.args.get("query")
 
         try:
-            if search!="":
-                if search.find("is:query ")!=-1:
-                    nsearch = search.split("is:query ")[1]
-                    nsearch = "%{}%".format(nsearch)
-                    rquery = CmmUsers.query.filter(and_(CmmUsers.username.like(nsearch))).order_by(direction(getattr(CmmUsers, order_by)))
-                else:
-                    if search.find(",")!=-1:
-                        terms = search.split(",")
-                        active_terms = terms[0].split(" ") if terms[0].find("is:active")!=-1 else terms[1].split(" ")
-                        type_terms   = terms[1].split(" ") if terms[0].find("is:type") else terms[1].split(" ")
-                        rquery = CmmUsers.query.filter(and_(CmmUsers.type==type_terms[1],CmmUsers.active==active_terms[1])).order_by(direction(getattr(CmmUsers, order_by)))
-                    else:
-                        term = search.split(" ")[1]
-                        if search.find("is:active")!=-1:
-                            rquery = CmmUsers.query.filter(CmmUsers.active==term).order_by(direction(getattr(CmmUsers, order_by)))
-                        else:
-                            rquery = CmmUsers.query.filter(CmmUsers.type==term).order_by(direction(getattr(CmmUsers, order_by)))
-            else:
-                rquery = CmmUsers.query.order_by(direction(getattr(CmmUsers, order_by)))
+            params    = _get_params(query)
+            direction = asc if hasattr(params,'order')==False else asc if str(params.order).upper()=='ASC' else desc
+            order_by  = 'id' if hasattr(params,'order_by')==False else params.order_by
+            search    = None if hasattr(params,"search")==False else params.search
+            trash     = False if hasattr(params,'active')==False else True
+            list_all  = False if hasattr(params,'list_all')==False else True
+
+            filter_type   = None if hasattr(params,'type')==False else params.type
+
+            rquery = Select(CmmUsers.id,
+                          CmmUsers.username,
+                          CmmUsers.type,
+                          CmmUsers.date_created,
+                          CmmUsers.date_updated,
+                          CmmUsers.active
+                          ).where(CmmUsers.active==trash)
+
+            if filter_type is not None:
+                rquery = rquery.where(CmmUsers.type==filter_type)
+
+            if search is not None:
+                rquery = rquery.where(CmmUsers.username.like("%{}%".format(search)))
+
+            rquery.order_by(direction(getattr(CmmUsers, order_by)))
 
             if list_all==False:
-                rquery = rquery.paginate(page=pag_num,per_page=pag_size)
+                pag = db.paginate(rquery,page=pag_num,per_page=pag_size)
+                rquery = rquery.limit(pag_size).offset((pag_num - 1) * pag_size)
                 return {
                     "pagination":{
-                        "registers": rquery.total,
+                        "registers": pag.total,
                         "page": pag_num,
                         "per_page": pag_size,
-                        "pages": rquery.pages,
-                        "has_next": rquery.has_next
+                        "pages": pag.pages,
+                        "has_next": pag.has_next
                     },
                     "data":[{
                         "id": m.id,
