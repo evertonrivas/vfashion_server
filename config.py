@@ -17,11 +17,29 @@ class Config(Enum):
     LOCALE           = "pt_BR" #nao lembro o motivo do locale no python
     TOKEN_KEY        = "SMART2BEE_" #used on cmm/users.py
     APP_PATH         = "d:/development/venda_fashion/backend/" #used on cmm/upload.py
-    EMAIL_LIB        = 'gmail' #options [sendgrid, smtp]
-    EMAIL_USER       = ''
-    EMAIL_PASS       = ''
-    EMAIL_TOKEN_KEY  = ''
-    EMAIL_TOKEN_TYPE = ''
+
+
+class EmailLib(Enum):
+    GMAIL    = 0
+    SMTP     = 1
+    SENDGRID = 2
+
+class ConfigEmail(Enum):
+    LIB        = EmailLib.SMTP
+
+    SEND_GRID_TO      = None
+    SEND_GRID_TO_NAME = None
+    SEND_GRID_TOKEN   = None
+
+    SMTP_HOST = None
+    SMTP_PORT = None
+    SMTP_USER = None
+    SMTP_PASS = None
+    SMTP_NAME = None
+
+    GMAIL_NAME       = None
+    GMAIL_USER       = None
+    GMAIL_PASS       = None
 
 class ShippingCompany(Enum):
     BRASPRESS = 1
@@ -59,8 +77,7 @@ class ConfigVirtualAge(Enum):
     ACTIVE_REPS      = [75413,16803,82466,79759,80008,81975,81973,71793,14336,91171,20,75717,78318,71668,17,5021,82496,91172]
 
 class MailTemplates(Enum):
-    DEFAULT = 'template.html'
-    pass
+    DEFAULT = 'mail_template.html'
 
 class CustomerAction(Enum):
     #SA = System Access, TC = Task Created, FA = File Attached, ES = E-mail Sended, ER = E-mail Replied, RC = Return Created, FB = Financial Bloqued/Unbloqued
