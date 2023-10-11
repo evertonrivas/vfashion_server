@@ -11,8 +11,8 @@ class Config(Enum):
     DB_PASS          = "romero01"
     COMPANY_TAXVAT   = ''
     TRACK_ORDER      = False #will activate track on order history on b2b/orders.py
-    CONNECT_ERP      = True #will integrate orders, customers, representatives and products on task_manager.py
-    ERP_MODULE       = "integrations.virtualage" #used on task_manager.py
+    CONNECT_ERP      = True #will integrate orders,invoices, customers, representatives and products on task_manager.py
+    ERP_MODULE       = "virtualage" #used on task_manager.py. The value is files on integrations folders (except erp)
     ERP_CLASS        = "VirtualAge" #used on task_manager.py
     LOCALE           = "pt_BR" #nao lembro o motivo do locale no python
     TOKEN_KEY        = "SMART2BEE_" #used on cmm/users.py
@@ -25,7 +25,7 @@ class EmailLib(Enum):
     SENDGRID = 2
 
 class ConfigEmail(Enum):
-    LIB        = EmailLib.SMTP
+    LIB = EmailLib.GMAIL
 
     SEND_GRID_TO      = None
     SEND_GRID_TO_NAME = None
@@ -36,10 +36,6 @@ class ConfigEmail(Enum):
     SMTP_USER = None
     SMTP_PASS = None
     SMTP_NAME = None
-
-    GMAIL_NAME       = None
-    GMAIL_USER       = None
-    GMAIL_PASS       = None
 
 class ShippingCompany(Enum):
     BRASPRESS = 1
