@@ -222,6 +222,7 @@ class ColletionPriceApi(Resource):
     @ns_collection.response(HTTPStatus.BAD_REQUEST.value,"Falha ao adicionar preço!")
     @ns_collection.param("id_table_price","Código da tabela de preço","formData",required=True)
     @ns_collection.param("id_collection","Código da coleção","formData",required=True)
+    @auth.login_required
     def post(self):
         try:
             colp = B2bCollectionPrice()
@@ -242,6 +243,7 @@ class ColletionPriceApi(Resource):
     @ns_collection.response(HTTPStatus.BAD_REQUEST.value,"Falha ao adicionar preço!")
     @ns_collection.param("id_table_price","Código da tabela de preço","formData",required=True)
     @ns_collection.param("id_collection","Código da coleção","formData",required=True)
+    @auth.login_required
     def delete(self):
         try:
             grp = B2bCollection.query.get(id)

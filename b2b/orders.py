@@ -328,6 +328,7 @@ class HistoryOrderList(Resource):
 ns_order.add_resource(HistoryOrderList,'/history/<int:id>')
 
 class HistoryOrderApi(Resource):
+    @auth.login_required
     def get(self):
         try:
             # dt_start = datetime.now()
@@ -335,7 +336,7 @@ class HistoryOrderApi(Resource):
             #     .outerjoin(ScmEvent,ScmEvent.id_collection==B2bOrders.id_collection)\
             #     .where(ScmEvent.start_date<=dt_start).order_by(desc(ScmEvent.start_date))
             # total = db.session.execute(rquery).first()
-            return 0
+            return 1
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -343,6 +344,7 @@ class HistoryOrderApi(Resource):
                 "error_sql": e._sql_message()
             }
         
+    #@auth.login_required
     def post(self):
         try:
             # dt_start = datetime.now()

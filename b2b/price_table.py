@@ -231,6 +231,7 @@ class B2bTablePriceProductApi(Resource):
     @ns_price.response(HTTPStatus.BAD_REQUEST.value,"Falha ao adicionar preço!")
     @ns_price.param("id_table_price","Código da tabela de preço","formData",required=True)
     @ns_price.param("id_product","Código do produto","formData",required=True)
+    @auth.login_required
     def post(self):
         try:
             colp = B2bTablePriceProduct()
@@ -254,6 +255,7 @@ class B2bTablePriceProductApi(Resource):
     @ns_price.response(HTTPStatus.BAD_REQUEST.value,"Falha ao adicionar preço!")
     @ns_price.param("id_table_price","Código da tabela de preço","formData",required=True)
     @ns_price.param("id_product","Código do produto","formData",required=True)
+    @auth.login_required
     def delete(self):
         try:
             id_table_price = request.args.get("id_table_price")

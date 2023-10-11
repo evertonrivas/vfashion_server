@@ -130,6 +130,7 @@ class PaymentConditionsList(Resource):
 class PaymentConditionApi(Resource):
     @ns_payment.response(HTTPStatus.OK.value,"Obtem um registro de uma condição de pagamento",pay_model)
     @ns_payment.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @auth.login_required
     def get(self,id:int):
         try:
             return B2bPaymentConditions.query.get(id).to_dict()

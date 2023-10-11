@@ -136,6 +136,7 @@ class CartApi(Resource):
 @ns_cart.route("/<int:id_product>")
 @ns_cart.param("id_product","Id do produto")
 class CartItem(Resource):
+    @auth.login_required
     def get(self,id_product:int):
         id_customer = int(request.args.get("id_profile"))
         cquery = Select(B2bCartShopping.color).distinct()\

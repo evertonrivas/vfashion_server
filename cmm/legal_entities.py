@@ -285,7 +285,7 @@ class EntityApi(Resource):
                     "address": m.address,
                     "type": m.type,
                     "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                    "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
+                    "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None,
                 }
         except exc.SQLAlchemyError as e:
             return {
@@ -459,6 +459,7 @@ class EntityCount(Resource):
     @ns_legal.response(HTTPStatus.OK.value,"Retorna o total de Entidades por tipo")
     @ns_legal.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
     @ns_legal.param("type","Tipo da Entidade","query",type=str,enum=['C','R','S'])
+    @auth.login_required
     def get(self):
         try:
             stmt = Select(func.count(CmmLegalEntities.id).label("total")).select_from(CmmLegalEntities).where(CmmLegalEntities.type==request.args.get("type"))
@@ -717,6 +718,7 @@ class EntityHistory(Resource):
     @ns_legal.param("page","Número da página de registros","query",type=int,required=True)
     @ns_legal.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_legal.param("query","Texto para busca","query")
+    @auth.login_required
     def get(self,id:int):
         pag_num   =  1 if request.args.get("page") is None or request.args.get("page")==0 else int(request.args.get("page"))
         pag_size  = Config.PAGINATION_SIZE.value if request.args.get("pageSize") is None else int(request.args.get("pageSize"))

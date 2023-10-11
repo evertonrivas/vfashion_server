@@ -72,7 +72,9 @@ class UploadApi(Resource):
             print(e.get_headers())
             return False
 
-    
+    @ns_upload.response(HTTPStatus.OK.value,"Realiza a exclusão de arquivo(s)")
+    @ns_upload.response(HTTPStatus.BAD_REQUEST.value,"Falha ao excluir arquivo(s)!")
+    @auth.login_required
     def delete(self,id:int):
         try:
             file = db.session.execute(Select(CmmLegalEntityFile.name,

@@ -39,7 +39,7 @@ class CitiesList(Resource):
     @ns_city.param("page","Número da página de registros","query",type=int,required=True,default=1)
     @ns_city.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_city.param("query","Texto para busca","query")
-    #@auth.login_required
+    @auth.login_required
     def get(self):
         pag_num  =  1 if request.args.get("page") is None else int(request.args.get("page"))
         pag_size = Config.PAGINATION_SIZE.value if request.args.get("pageSize") is None else int(request.args.get("pageSize"))

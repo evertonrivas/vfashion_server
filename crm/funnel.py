@@ -83,6 +83,7 @@ class FunnelList(Resource):
                         "id": m.id,
                         "name": m.name,
                         "is_default": m.is_default,
+                        "type":m.type,
                         "stages": self.get_stages(m.id),
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                         "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
@@ -93,6 +94,7 @@ class FunnelList(Resource):
                         "id": m.id,
                         "name": m.name,
                         "is_default": m.is_default,
+                        "type":m.type,
                         "stages": self.get_stages(m.id),
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                         "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None

@@ -73,6 +73,7 @@ class FunnelStageApi(Resource):
             }
         
 class FunnelStageCustomer(Resource):
+    @auth.login_required
     def get(self):
         try:
             id_customer = request.args.get("id_customer")
@@ -92,6 +93,7 @@ class FunnelStageCustomer(Resource):
                 "error_sql": e._sql_message()
             }
         
+    @auth.login_required
     def post(self):
         try:
             req = request.get_json()
@@ -109,6 +111,7 @@ class FunnelStageCustomer(Resource):
                 "error_sql": e._sql_message()
             }
         
+    @auth.login_required
     def delete(self):
         try:
             req = request.get_json()
@@ -123,5 +126,25 @@ class FunnelStageCustomer(Resource):
                 "error_details": e._message(),
                 "error_sql": e._sql_message()
             }
-
 ns_fun_stg.add_resource(FunnelStageCustomer,'/move-customer')
+
+class FunnelStageNotification(Resource):
+    def get(self):
+        try:
+            pass
+        except exc.SQLAlchemyError as e:
+            pass
+    
+    def post(self):
+        try:
+            pass
+        except Exception as e:
+            pass
+
+    def delete(self):
+        try:
+            pass
+        except exc.SQLAlchemyError as e:
+            pass
+
+ns_fun_stg.add_resource(FunnelStageCustomer,'/notification')

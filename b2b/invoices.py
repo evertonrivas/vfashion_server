@@ -42,6 +42,7 @@ class InvoiceList(Resource):
     @ns_invoice.param("query","Texto para busca","query")
     @ns_invoice.param("order_by","Campo de ordenacao","query")
     @ns_invoice.param("order_dir","Direção da ordenação","query",enum=['ASC','DESC'])
+    @auth.login_required
     def get(self):
         pag_num  = 1 if request.args.get("page") is None else int(request.args.get("page"))
         pag_size = Config.PAGINATION_SIZE.value if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
