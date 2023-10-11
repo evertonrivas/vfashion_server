@@ -205,19 +205,21 @@ class CmmCities(db.Model,SerializerMixin):
     brazil_ibge_code= Column(String(10),nullable=True)
 
 class CmmLegalEntities(db.Model,SerializerMixin):
-    id           = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
-    origin_id    = Column(Integer,nullable=True)
-    name         = Column(String(255),nullable=False)
-    fantasy_name = Column(String(255),nullable=False)
-    taxvat       = Column(String(30),nullable=False,comment="CPF ou CNPJ no Brasil")
-    id_city      = Column(Integer,nullable=False)
-    postal_code  = Column(String(30),nullable=False)
-    neighborhood = Column(String(150),nullable=False)
-    address      = Column(String(255),nullable=False)
-    type         = Column(CHAR(1),nullable=False,default='C',comment="C = Customer(Cliente), R = Representative(Representante), S = Supplier(Fornecedor)")
-    trash        = Column(Boolean,nullable=False,server_default='0')
-    date_created = Column(DateTime,nullable=False,server_default=func.now())
-    date_updated = Column(DateTime,onupdate=func.now())
+    id             = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
+    origin_id      = Column(Integer,nullable=True)
+    name           = Column(String(255),nullable=False)
+    fantasy_name   = Column(String(255),nullable=False)
+    taxvat         = Column(String(30),nullable=False,comment="CPF ou CNPJ no Brasil")
+    id_city        = Column(Integer,nullable=False)
+    postal_code    = Column(String(30),nullable=False)
+    neighborhood   = Column(String(150),nullable=False)
+    address        = Column(String(255),nullable=False)
+    type           = Column(CHAR(1),nullable=False,default='C',comment="C = Customer(Cliente), R = Representative(Representante), S = Supplier(Fornecedor)")
+    trash          = Column(Boolean,nullable=False,server_default='0')
+    id_import      = Column(Integer,nullable=True,comment="Id da importação realizada pelo CRM, garante que poderá apagar o registro")
+    erp_integrated = Column(Boolean,nullable=False,server_default='0',comment="Flag de integração com ERP, isso irá garantir a não exclusão em caso de reversão da importação")
+    date_created   = Column(DateTime,nullable=False,server_default=func.now())
+    date_updated   = Column(DateTime,onupdate=func.now())
 
 class CmmLegalEntityContact(db.Model,SerializerMixin):
     id              = Column(Integer,primary_key=True,autoincrement=True)
@@ -371,7 +373,8 @@ class B2bCollectionPrice(db.Model,SerializerMixin):
 class CrmFunnel(db.Model,SerializerMixin):
     id           = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
     name         = Column(String(128),nullable=False)
-    is_default   = Column(Boolean,default=False,nullable=False)
+    is_default   = Column(Boolean,nullable=False,server_default='0')
+    type         = Column(CHAR(1),nullable=False,server_default='S',comment='S = Salles, P = Prospection')
     date_created = Column(DateTime,nullable=False,server_default=func.now())
     date_updated = Column(DateTime,onupdate=func.now())
     trash        = Column(Boolean,nullable=False,server_default='0')
@@ -392,6 +395,13 @@ class CrmFunnelStageCustomer(db.Model,SerializerMixin):
     id_customer     = Column(Integer,primary_key=True,nullable=False)
     date_created    = Column(DateTime,nullable=False,server_default=func.now())
     date_updated    = Column(DateTime,onupdate=func.now())
+
+class CrmImportation(db.Model,SerializerMixin):
+    id           = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
+    file         = Column(String(255),nullable=False)
+    date_created = Column(DateTime,nullable=False,server_default=func.now())
+
+
 
 class ScmCalendar(db.Model,SerializerMixin):
     time_id       = Column(Integer,primary_key=True,autoincrement=True)
@@ -427,3 +437,14 @@ class ScmEvent(db.Model,SerializerMixin):
     date_created  = Column(DateTime,nullable=False,server_default=func.now())
     date_updated  = Column(DateTime,onupdate=func.now())
     trash         = Column(Boolean,nullable=False,server_default='0')
+
+class ScmFlimv(db.Model,SerializerMixin):
+    id            = Column(Integer,primary_key=True,autoincrement=True)
+    frequency     = Column(SmallInteger,nullable=False)
+    liquidity     = Column(SmallInteger,nullable=False)
+    injury        = Column(SmallInteger,nullable=False)
+    mix           = Column(SmallInteger,nullable=False)
+    vol_min       = Column(SmallInteger,nullable=False)
+    vol_max       = Column(SmallInteger,nullable=False)
+    date_created  = Column(DateTime,nullable=False,server_default=func.now())
+    date_updated  = Column(DateTime,onupdate=func.now())
