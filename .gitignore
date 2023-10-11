@@ -163,3 +163,4 @@ migrations/
 migrations_old/
 assets/
 teste.py
+token.pickle
