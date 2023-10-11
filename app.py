@@ -7,6 +7,7 @@ from crm.api import blueprint as crm
 from b2b.api import blueprint as b2b
 from fpr.api import blueprint as fpr
 from scm.api import blueprint as scm
+from mpg.api import blueprint as mpg
 from models import db
 from flask_migrate import Migrate
 from config import Config
@@ -47,6 +48,7 @@ app.register_blueprint(crm)
 app.register_blueprint(b2b)
 app.register_blueprint(fpr)
 app.register_blueprint(scm)
+app.register_blueprint(mpg)
 
 CORS(app, resources={r"/*": {"origins": "*"}},supports_credentials=True)
 
@@ -66,18 +68,19 @@ def index():
                 <div class='col-2'>&nbsp;</div>
                 <div class='col'>
                     <div class='card border border-info'>
-                        <div class='card-header text-center fw-bold'>VFashion - API</div>
+                        <div class='card-header text-center fw-bold'>Fast2Bee - API</div>
                         <div class='card-body'>
                             <p class='card-text'>
-                            O sistema Venda Fashion possui 4 m&oacute;dulos, cada um com seu backend em REST API com sua respectiva documenta&ccedil;&atilde;o.
+                            O sistema Fast2Bee possui 6 m&oacute;dulos, cada um com seu backend em REST API com sua respectiva documenta&ccedil;&atilde;o.
                             Para acessar as documenta&ccedil;&otilde;es das APIS, clique nos links abaixo:<br/><br/>
-                            VF_B2B - Business to Business <a href='/b2b/api'>/b2b/api</a><br/>
-                            VF_FPR - Finished Product Return <a href='/fpr/api'>/fpr/api</a><br/>
-                            VF_POS - Point Of Sale <a href='/pos/api'>/pos/api</a><br/>
-                            VF_CRM - Customer Relashionship Management <a href='/crm/api'>/crm/api</a><br/>
-                            VF_SCM - Sales Calendar Management <a href='/scm/api'>/scm/api</a><hr size='1'>
+                            F2B_B2B - Business to Business <a href='/b2b/api'>/b2b/api</a><br>
+                            F2B_FPR - Finished Product Return <a href='/fpr/api'>/fpr/api</a><br>
+                            F2B_POS - Point Of Sale <a href='/pos/api'>/pos/api</a><br>
+                            F2B_CRM - Customer Relashionship Management <a href='/crm/api'>/crm/api</a><br>
+                            F2B_SCM - Sales Calendar Management <a href='/scm/api'>/scm/api</a><br>
+                            F2B_MPG - Marketing Plan Generator <a href='/mpg/api'>/mpg/api</a><hr size='1'>
 
-                            VF_CMM - M&oacute;dulo Common (Fun&ccedil;&otilde;es comuns dos m&oacute;dulos) <a href='/cmm/api'>/cmm/api</a>
+                            F2B_CMM - M&oacute;dulo Common (Fun&ccedil;&otilde;es comuns dos m&oacute;dulos) <a href='/cmm/api'>/cmm/api</a>
                             </p>
                         </div>
                     </div>

@@ -45,11 +45,11 @@ blueprint = Blueprint("pos",__name__,url_prefix="/pos/api/")
 
 api = Api(blueprint,
     version="1.0",
-    title="API Venda Fashion",
+    title="API Fast2Bee",
     description="Uma API REST para o sistema CLM - Módulo POS",
     contact_email="evertonrivas@gmail.com",
-    contact="Venda Fashion",
-    contact_url="http://www.vendafashion.com")
+    contact="Fast2Bee",
+    contact_url="http://www.fast2bee.com")
 
 for ns in nss:
     api.add_namespace(ns)
