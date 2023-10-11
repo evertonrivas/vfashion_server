@@ -1,8 +1,8 @@
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import CmmLegalEntities, CmmUserEntity, CmmUsers, _get_params,db,_save_log
-from sqlalchemy import Select, desc, exc, and_, asc, Insert,Update
+from models import CmmLegalEntities, CmmLegalEntityContact, CmmUserEntity, CmmUsers, _get_params,db,_save_log
+from sqlalchemy import Select, desc, exc, and_, asc, Insert,Update, or_
 from auth import auth
 from config import Config,CustomerAction
 
@@ -225,6 +225,33 @@ class UserAuth(Resource):
                 return obj_retorno
             else:
                 return 0 #senha invalida
+        else:
+            #tenta encontrar a entidade pelo usuario ou CNPJ/CPF
+            entity = db.session.execute(Select(CmmLegalEntities.id).distinct()\
+                .join(CmmLegalEntityContact,CmmLegalEntityContact.id_legal_entity==CmmLegalEntities.id)\
+                .where(or_(
+                CmmLegalEntities.taxvat==request.form.get("username"),
+                CmmLegalEntityContact.value==request.form.get("username")
+                )
+            )).first()
+            if entity is not None:
+                usr = CmmUsers.query.filter(and_(CmmUsers.id==(Select(CmmUserEntity.id_user).where(CmmUserEntity.id_entity==entity.id)),CmmUsers.active==True)).first()
+                if usr is not None:
+                    #verifica a senha criptografada anteriormente
+                    pwd = request.form.get("password").encode()
+                    if usr.check_pwd(pwd):
+                        obj_retorno = {
+                            "token_access": usr.get_token(),
+                            "token_type": "Bearer",
+                            "token_expire": usr.token_expire.strftime("%Y-%m-%d %H:%M:%S"),
+                            "level_access": usr.type,
+                            "id_user": usr.id,
+                            "id_profile": idProfile
+                        }
+                        usr.is_authenticate = True
+                        db.session.commit()
+                        _save_log(entity.id,CustomerAction.SYSTEM_ACCESS,'Efetuou login')
+                        return obj_retorno
         return -1 #usuario invalido
     
     def put(self):
