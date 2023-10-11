@@ -2,7 +2,7 @@ from config import Config
 import importlib
 
 if Config.CONNECT_ERP.value==True:
-    ERP = getattr(importlib.import_module(Config.ERP_MODULE.value),Config.ERP_CLASS.value)
+    ERP = getattr(importlib.import_module('integrations.'+Config.ERP_MODULE.value),Config.ERP_CLASS.value)
     erp = ERP()
 
     erp.get_representative()
