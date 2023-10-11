@@ -80,56 +80,39 @@ def _gen_pdf():
     except Exception as e:
         print(e)
         return False
-    
-def _send_email(p_to:[str],p_subject:str,p_content:str,p_tpl:MailTemplates,p_attach:[str]=None)->bool:
 
+def _send_email(p_to:[],p_subject:str,p_content:str,p_tpl:MailTemplates,p_attach:[str]=None)->bool:
     try:
         tplLoader  = jinja2.FileSystemLoader(searchpath=Config.APP_PATH.value+'assets/layout/')
         tplEnv     = jinja2.Environment(loader=tplLoader)
         layoutFile = MailTemplates.DEFAULT.value
         mailTemplate = tplEnv.get_template(layoutFile)
         mail_template = mailTemplate.render(
-            variavel_existente_no_layout=''
+            content=p_content
         )
 
-        if(ConfigEmail.LIB==EmailLib.GMAIL):
-            import smtplib,ssl
-            from email import encoders
-            from email.mime.base import MIMEBase
-            from email.mime.text import MIMEText
-            from email.mime.multipart import MIMEMultipart
+        if ConfigEmail.LIB.value==EmailLib.GMAIL:
+            #import argparse
+            from gmail_send import send_message,gmail_authenticate
+            # parser = argparse.ArgumentParser(description="Email Sender using Gmail API")
+            # parser.add_argument('destination', type=str, help='The destination email address')
+            # parser.add_argument('subject', type=str, help='The subject of the email')
+            # parser.add_argument('body', type=str, help='The body of the email')
+            # parser.add_argument('-f', '--files', type=str, help='email attachments', nargs='+')
 
-            message = MIMEMultipart("alternative")
-            message["Subject"] = p_subject
-            message["From"]    = ConfigEmail.GMAIL_USER
-            message["To"]      = ",".join(p_to)
-            message.attach(MIMEText(mail_template,"html"))
-
-            if len(p_attach)>0:
-                for att in p_attach:
-                    with open(Config.APP_PATH+'assets/tmp/'+att['name']) as f:
-                        part = MIMEBase("application","octet-stream")
-                        part.set_payload(f.read())
-                
-                encoders.encode_base64(part)
-                part.add_header(
-                    "Content-Disposition",
-                    f"attachment; filename={att['name']}"
-                )
-                message.attach(part)
-
-            context = ssl.create_default_context()
-            with smtplib.SMTP_SSL("smtp.gmail.com",587,context=context) as server:
-                server.login(ConfigEmail.GMAIL_USER,ConfigEmail.GMAIL_PASS)
-                server.sendmail(ConfigEmail.GMAIL_USER,p_to,message.as_string())
-            return True
-        elif(ConfigEmail.LIB==EmailLib.SMTP):
+            # args = parser.parse_args()
+            service = gmail_authenticate()
+            #print("autenticou no gmail")
+            retorno = send_message(service, ",".join(p_to), p_subject, mail_template, p_attach)
+            if retorno['id']!="":
+                return True
+        elif ConfigEmail.LIB.value==EmailLib.SMTP:
             import smtplib,ssl
             from email.mime.text import MIMEText
             from email.mime.multipart import MIMEMultipart
 
             pass
-        elif(ConfigEmail.LIB==EmailLib.SENDGRID):
+        elif ConfigEmail.LIB.value==EmailLib.SENDGRID:
             #abre o arquivo
             if len(p_attach)>0:
                 json_content = {
@@ -140,8 +123,8 @@ def _send_email(p_to:[str],p_subject:str,p_content:str,p_tpl:MailTemplates,p_att
                         "subject": p_subject
                     }],
                     "from":{
-                        "email":ConfigEmail.SEND_GRID_TO,
-                        "name": ConfigEmail.SEND_GRID_TO_NAME
+                        "email":ConfigEmail.SEND_GRID_TO.value,
+                        "name": ConfigEmail.SEND_GRID_TO_NAME.value
                     },
                     "content":[{
                         "type": "text/html",
@@ -162,8 +145,8 @@ def _send_email(p_to:[str],p_subject:str,p_content:str,p_tpl:MailTemplates,p_att
                         "subject": p_subject
                     }],
                     "from":{
-                        "email": ConfigEmail.SEND_GRID_TO,
-                        "name": ConfigEmail.SEND_GRID_TO_NAME
+                        "email": ConfigEmail.SEND_GRID_TO.value,
+                        "name": ConfigEmail.SEND_GRID_TO_NAME.value
                     },
                     "content":[{
                         "type": "text/html",
@@ -177,6 +160,9 @@ def _send_email(p_to:[str],p_subject:str,p_content:str,p_tpl:MailTemplates,p_att
             })
             if resp.ok:
                 return True
+            #print("esta retornando aqui...")
             return False
+        #print("nenhuma biblioteca")
     except Exception as e:
+        print(e)
         return False
