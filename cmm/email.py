@@ -9,13 +9,13 @@ from common import _send_email
 import mimetypes
 import os
 
-ns_upload = Namespace("email",description="Operações para manipular upload de dados")
+ns_email = Namespace("email",description="Operações para manipular upload de dados")
 
-@ns_upload.route("/")
+@ns_email.route("/")
 class EmailApi(Resource):
 
-    @ns_upload.response(HTTPStatus.OK.value,"Realiza envio de arquivo(s) para o servidor")
-    @ns_upload.response(HTTPStatus.BAD_REQUEST.value,"Falha ao enviar arquivo(s)!")
+    @ns_email.response(HTTPStatus.OK.value,"Realiza envio de arquivo(s) para o servidor")
+    @ns_email.response(HTTPStatus.BAD_REQUEST.value,"Falha ao enviar arquivo(s)!")
     @auth.login_required
     def post(self):
         try:
@@ -26,7 +26,7 @@ class EmailApi(Resource):
             fpath = Config.APP_PATH.value+'assets/tmp/'
             for file in req['attachments']:
                 if os.path.exists(fpath+file)==False:
-                    return False
+                    pass
                 else:
                     with open(fpath+file,"rb") as f:
                         content = base64.b64encode(f.read())
@@ -35,7 +35,12 @@ class EmailApi(Resource):
                         "type": mimetypes.guess_type(fpath+file),
                         "content": content
                     })
-            return _send_email(req['to'],req['subject'],req['content'],MailTemplates.DEFAULT,attachs)
+            if _send_email(req['to'],req['subject'],req['content'],MailTemplates.DEFAULT,attachs)==True:
+                #limpa os arquivos do tmp
+                for file in req["attachments"]:
+                    os.remove(fpath+file)
+                return True
+            return False
         except exceptions.HTTPException as e:
             return {
                 "error_code": e.code,
