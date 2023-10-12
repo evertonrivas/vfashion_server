@@ -1,8 +1,8 @@
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import CmmTranslateColors,db
-from sqlalchemy import exc, and_,desc,asc
+from models import CmmTranslateColors, _get_params,db
+from sqlalchemy import Select, exc, and_,desc,asc
 from auth import auth
 from config import Config
 
@@ -50,31 +50,38 @@ class CategoryList(Resource):
     def get(self):
         pag_num  =  1 if request.args.get("page") is None else int(request.args.get("page"))
         pag_size = Config.PAGINATION_SIZE.value if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
-        search   = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
-        list_all = False if request.args.get("list_all") is None else True
-        order_by   = "id" if request.args.get("order_by") is None else request.args.get("order_by")
-        direction  = desc if request.args.get("order_dir") == 'DESC' else asc
+        query    = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
         try:
-            if search=="":
-                rquery = CmmTranslateColors\
-                    .query\
-                    .filter(CmmTranslateColors.trash==False)\
-                    .order_by(direction(getattr(CmmTranslateColors, order_by)))
-            else:
-                rquery = CmmTranslateColors\
-                    .query\
-                    .filter(and_(CmmTranslateColors.trash==False,CmmTranslateColors.color.like(search)))\
-                    .order_by(direction(getattr(CmmTranslateColors, order_by)))
+            params = _get_params(query)
+
+            direction = asc if hasattr(params,'order')==False else asc if str(params.order).upper()=='ASC' else desc
+            order_by  = 'id' if hasattr(params,'order_by')==False else params.order_by
+            search    = None if hasattr(params,"search")==False else params.search
+            trash     = False if hasattr(params,'active')==False else True
+            list_all  = False if hasattr(params,'list_all')==False else True
+
+            rquery = Select(CmmTranslateColors.id,
+                            CmmTranslateColors.hexcode,
+                            CmmTranslateColors.name,
+                            CmmTranslateColors.color,
+                            CmmTranslateColors.date_created,
+                            CmmTranslateColors.date_updated)\
+                            .where(CmmTranslateColors.trash==trash)\
+                            .order_by(direction(getattr(CmmTranslateColors,order_by)))
+            
+            if search is not None:
+                rquery = rquery.where(CmmTranslateColors.name.like("%{}%".format(search)))
 
             if list_all==False:
-                rquery = rquery.paginate(page=pag_num,per_page=pag_size)
+                pag = db.paginate(rquery,page=pag_num,per_page=pag_size)
+                rquery = rquery.limit(pag_size).offset((pag_num - 1) * pag_size)
                 retorno = {
                     "pagination":{
-                        "registers": rquery.total,
+                        "registers": pag.total,
                         "page": pag_num,
                         "per_page": pag_size,
-                        "pages": rquery.pages,
-                        "has_next": rquery.has_next
+                        "pages": pag.pages,
+                        "has_next": pag.has_next
                     },
                     "data":[{
                         "id": m.id,
@@ -83,7 +90,7 @@ class CategoryList(Resource):
                         "color": m.color,
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                         "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
-                    } for m in rquery.items]
+                    } for m in db.session.execute(rquery)]
                 }
             else:
                 retorno = [{
@@ -93,7 +100,7 @@ class CategoryList(Resource):
                         "color": m.color,
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                         "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
-                    } for m in rquery]
+                    } for m in db.session.execute(rquery)]
             return retorno
         except exc.SQLAlchemyError as e:
             return {

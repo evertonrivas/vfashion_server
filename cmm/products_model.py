@@ -1,8 +1,8 @@
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import CmmProductsModels,db
-from sqlalchemy import exc, and_,desc,asc
+from models import CmmProductsModels, _get_params,db
+from sqlalchemy import Select, exc, and_,desc,asc
 from auth import auth
 from config import Config
 
@@ -41,53 +41,58 @@ class CategoryList(Resource):
     @ns_model.param("page","Número da página de registros","query",type=int,required=True,default=1)
     @ns_model.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_model.param("query","Texto para busca","query")
-    @ns_model.param("list_all","Ignora as paginas e lista todos os registros",type=bool,default=False)
-    @ns_model.param("order_by","Campo de ordenacao","query")
-    @ns_model.param("order_dir","Direção da ordenação","query",enum=['ASC','DESC'])
     @auth.login_required
     def get(self):
         pag_num  =  1 if request.args.get("page") is None else int(request.args.get("page"))
         pag_size = Config.PAGINATION_SIZE.value if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
-        search   = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
-        list_all = False if request.args.get("list_all") is None else True
-        order_by   = "id" if request.args.get("order_by") is None else request.args.get("order_by")
-        direction  = desc if request.args.get("order_dir") == 'DESC' else asc
+        query    = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
         try:
-            if search=="":
-                rquery = CmmProductsModels\
-                    .query\
-                    .filter(CmmProductsModels.trash==False)\
-                    .order_by(direction(getattr(CmmProductsModels, order_by)))
-            else:
-                rquery = CmmProductsModels\
-                    .query\
-                    .filter(and_(CmmProductsModels.trash==False,CmmProductsModels.name.like(search)))\
-                    .order_by(direction(getattr(CmmProductsModels, order_by)))
+            params = _get_params(query)
+            direction = asc if hasattr(params,'order')==False else asc if str(params.order).upper()=='ASC' else desc
+            order_by  = 'id' if hasattr(params,'order_by')==False else params.order_by
+            search    = None if hasattr(params,"search")==False else params.search
+            trash     = False if hasattr(params,'active')==False else True
+            list_all  = False if hasattr(params,'list_all')==False else True
+
+            rquery = Select(CmmProductsModels.id,
+                            CmmProductsModels.origin_id,
+                            CmmProductsModels.name,
+                            CmmProductsModels.date_created,
+                            CmmProductsModels.date_updated)\
+                            .where(CmmProductsModels.trash==trash)\
+                            .order_by(direction(getattr(CmmProductsModels,order_by)))
+
+            if search is not None:
+                rquery = rquery.where(CmmProductsModels.name.like("%{}%".format(search)))
 
             if list_all==False:
-                rquery = rquery.paginate(page=pag_num,per_page=pag_size)
+                pag = db.paginate(rquery,page=pag_num,per_page=pag_size)
+                rquery = rquery.limit(pag_size).offset((pag_num - 1) * pag_size)
+
                 retorno = {
                     "pagination":{
-                        "registers": rquery.total,
+                        "registers": pag.total,
                         "page": pag_num,
                         "per_page": pag_size,
-                        "pages": rquery.pages,
-                        "has_next": rquery.has_next
+                        "pages": pag.pages,
+                        "has_next": pag.has_next
                     },
                     "data":[{
                         "id": m.id,
+                        "origin_id":m.origin_id,
                         "name": m.name,
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                         "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
-                    } for m in rquery.items]
+                    } for m in db.session.execute(rquery)]
                 }
             else:
                 retorno = [{
                         "id": m.id,
+                        "origin_id": m.origin_id,
                         "name": m.name,
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                         "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
-                    } for m in rquery]
+                    } for m in db.session.execute(rquery)]
             return retorno
         except exc.SQLAlchemyError as e:
             return {

@@ -1,9 +1,9 @@
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import B2bCollection,B2bCollectionPrice,db
+from models import B2bCollection,B2bCollectionPrice, _get_params,db
 import json
-from sqlalchemy import exc,and_,desc,asc
+from sqlalchemy import Select, exc,and_,desc,asc
 from auth import auth
 from config import Config
 
@@ -53,54 +53,65 @@ class CollectionList(Resource):
     @ns_collection.param("page","Número da página de registros","query",type=int,required=True)
     @ns_collection.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_collection.param("query","Texto para busca","query")
-    @ns_collection.param("list_all","Ignora as paginas e lista todos os registros",type=bool,default=False)
-    @ns_collection.param("order_by","Campo de ordenacao","query")
-    @ns_collection.param("order_dir","Direção da ordenação","query",enum=['ASC','DESC'])
     @auth.login_required
     def get(self):
         pag_num  =  1 if request.args.get("page") is None else int(request.args.get("page"))
         pag_size = Config.PAGINATION_SIZE.value if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
-        search   = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
-        list_all = False if request.args.get("list_all") is None else True
-        order_by   = "id" if request.args.get("order_by") is None else request.args.get("order_by")
-        direction  = desc if request.args.get("order_dir") == 'DESC' else asc
+        query    = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
 
         try:
-            if search=="":
-                rquery = B2bCollection\
-                    .query\
-                    .filter(B2bCollection.trash == False)\
-                    .order_by(direction(getattr(B2bCollection, order_by)))
-                
-            else:
-                rquery = B2bCollection\
-                    .query\
-                    .filter(and_(B2bCollection.trash == False,B2bCollection.name.like(search)))\
-                    .order_by(direction(getattr(B2bCollection, order_by)))
+            params = _get_params(query)
+            direction = asc if hasattr(params,'order')==False else asc if str(params.order).upper()=='ASC' else desc
+            order_by  = 'id' if hasattr(params,'order_by')==False else params.order_by
+            search    = None if hasattr(params,"search")==False else params.search
+            trash     = False if hasattr(params,'active')==False else True
+            list_all  = False if hasattr(params,'list_all')==False else True
+
+            filter_brand = None if hasattr(params,'brand')==False or (hasattr(params,'brand')==True and params.brand==0) else params.brand
+
+            rquery = Select(B2bCollection.id,
+                            B2bCollection.id_brand,
+                            B2bCollection.name,
+                            B2bCollection.date_created,
+                            B2bCollection.date_updated)\
+                            .where(B2bCollection.trash==trash)\
+                            .order_by(direction(getattr(B2bCollection,order_by)))
+            
+            if search is not None:
+                rquery = rquery.where(B2bCollection.name.like("%{}%".format(search)))
+
+            if filter_brand is not None:
+                rquery = rquery.where(B2bCollection.id_brand==filter_brand)
+
 
             if list_all==False:
-                rquery = rquery.paginate(page=pag_num,per_page=pag_size)
+                pag = db.paginate(rquery,page=pag_num,per_page=pag_size)
+                rquery = rquery.limit(pag_size).offset((pag_num - 1) * pag_size)
 
                 retorno = {
                     "pagination":{
-                        "registers": rquery.total,
+                        "registers": pag.total,
                         "page": pag_num,
                         "per_page": pag_size,
-                        "pages": rquery.pages,
-                        "has_next": rquery.has_next
+                        "pages": pag.pages,
+                        "has_next": pag.has_next
                     },
                     "data":[{
                         "id": m.id,
                         "name": m.name,
-                        "table_prices": ''
-                    } for m in rquery.items]
+                        "table_prices": self.get_table_prices(m.id),
+                        "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+                        "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
+                    } for m in db.session.execute(rquery)]
                 }
             else:
                 retorno = [{
                         "id":m.id,
                         "name":m.name,
-                        "table_prices": self.get_table_prices(m.id)
-                    } for m in rquery]
+                        "table_prices": self.get_table_prices(m.id),
+                        "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+                        "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
+                    } for m in db.session.execute(rquery)]
             return retorno
         except exc.SQLAlchemyError as e:
             return {
