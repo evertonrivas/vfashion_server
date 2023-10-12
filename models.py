@@ -160,7 +160,7 @@ class CmmProductsModels(db.Model,SerializerMixin):
 
 class CmmProductsCategories(db.Model,SerializerMixin):
     id           = Column(Integer,primary_key=True,autoincrement=True,nullable=False)
-    orign_id     = Column(Integer,nullable=True)
+    origin_id    = Column(Integer,nullable=True)
     name         = Column(String(128),nullable=False)
     id_parent    = Column(Integer,nullable=True)
     date_created = Column(DateTime,nullable=False,server_default=func.now())
@@ -261,15 +261,15 @@ class CmmTranslateColors(db.Model,SerializerMixin):
     id      = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
     hexcode = Column(String(8),nullable=False)
     name    = Column(String(100),nullable=False)
-    color   = Column(String(10),nullable=False)
+    color   = Column(String(10),nullable=False,comment="Original color name")
     trash        = Column(Boolean,nullable=False,server_default='0')
     date_created = Column(DateTime,nullable=False,server_default=func.now())
     date_updated = Column(DateTime,onupdate=func.now())
 
 class CmmTranslateSizes(db.Model,SerializerMixin):
     id        = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
-    size_name = Column(String(10),nullable=False)
-    size      = Column(String(5),nullable=False)
+    new_size  = Column(String(10),nullable=False)
+    size      = Column(String(5),nullable=False,comment="Original size name")
     trash        = Column(Boolean,nullable=False,server_default='0')
     date_created = Column(DateTime,nullable=False,server_default=func.now())
     date_updated = Column(DateTime,onupdate=func.now())
