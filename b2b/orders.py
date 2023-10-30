@@ -244,12 +244,11 @@ class HistoryOrderList(Resource):
     @ns_order.param("order_dir","Direção da ordenação","query",enum=['ASC','DESC'])
     @auth.login_required
     def get(self,id:int):
+        pag_num   = 1 if request.args.get("page") is None else int(request.args.get("page"))
+        pag_size  = Config.PAGINATION_SIZE.value if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        order_by  = "id" if request.args.get("order_by") is None else request.args.get("order_by")
+        direction = asc if request.args.get("order_dir") == 'ASC' else desc
         try:
-            pag_num  = 1 if request.args.get("page") is None else int(request.args.get("page"))
-            pag_size = Config.PAGINATION_SIZE.value if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
-            order_by = "id" if request.args.get("order_by") is None else request.args.get("order_by")
-            direction = asc if request.args.get("order_dir") == 'ASC' else desc
-
             stmt = Select(
                           B2bOrders.id.label("id_order"),
                           B2bOrders.date_created,

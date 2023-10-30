@@ -1,7 +1,7 @@
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import CmmTranslateSizes, _get_params,db
+from models import CmmTranslateSizes, _get_params, _show_query,db
 from sqlalchemy import Select, exc, and_,desc,asc
 from auth import auth
 from config import Config
@@ -49,7 +49,7 @@ class CategoryList(Resource):
     def get(self):
         pag_num  =  1 if request.args.get("page") is None else int(request.args.get("page"))
         pag_size = Config.PAGINATION_SIZE.value if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
-        query    = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
+        query    = "" if request.args.get("query") is None else request.args.get("query")
         try:
             params = _get_params(query)
             direction = asc if hasattr(params,'order')==False else asc if str(params.order).upper()=='ASC' else desc
@@ -60,7 +60,8 @@ class CategoryList(Resource):
 
             rquery = Select(CmmTranslateSizes.id,
                             CmmTranslateSizes.new_size,
-                            CmmTranslateSizes.size,
+                            CmmTranslateSizes.name,
+                            CmmTranslateSizes.old_size,
                             CmmTranslateSizes.date_created,
                             CmmTranslateSizes.date_updated)\
                             .where(CmmTranslateSizes.trash==trash)\
@@ -68,6 +69,9 @@ class CategoryList(Resource):
 
             if search is not None:
                 rquery = rquery.where(CmmTranslateSizes.new_size.like("%{}%".format(search)))
+
+            print(params)
+            _show_query(rquery)
 
             if list_all==False:
                 pag = db.paginate(rquery,page=pag_num,per_page=pag_size)
@@ -83,7 +87,8 @@ class CategoryList(Resource):
                     "data":[{
                         "id": m.id,
                         "new_size": m.new_size,
-                        "size": m.size,
+                        "old_size": m.old_size,
+                        "name":m.name,
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                         "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
                     } for m in db.session.execute(rquery)]
@@ -92,7 +97,8 @@ class CategoryList(Resource):
                 retorno = [{
                         "id": m.id,
                         "new_size": m.new_size,
-                        "size": m.size,
+                        "old_size": m.old_size,
+                        "name":m.name,
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                         "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
                     } for m in db.session.execute(rquery)]

@@ -1,7 +1,7 @@
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import CmmProductsCategories, _get_params,db
+from models import CmmCategories, CmmCategories, _get_params,db
 from sqlalchemy import Select, exc,and_,asc,desc
 from auth import auth
 from config import Config
@@ -46,7 +46,7 @@ class CategoryList(Resource):
     def get(self):
         pag_num  =  1 if request.args.get("page") is None else int(request.args.get("page"))
         pag_size = Config.PAGINATION_SIZE.value if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
-        query    = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
+        query    = "" if request.args.get("query") is None else request.args.get("query")
 
         try:
             params = _get_params(query)
@@ -56,17 +56,17 @@ class CategoryList(Resource):
             trash     = False if hasattr(params,'active')==False else True
             list_all  = False if hasattr(params,'list_all')==False else True
             
-            rquery = Select(CmmProductsCategories.id,
-                            CmmProductsCategories.origin_id,
-                            CmmProductsCategories.id_parent,
-                            CmmProductsCategories.name,
-                            CmmProductsCategories.date_created,
-                            CmmProductsCategories.date_updated)\
-                            .where(and_(CmmProductsCategories.trash==trash,CmmProductsCategories.id_parent.is_(None)))\
-                            .order_by(direction(getattr(CmmProductsCategories,order_by)))
+            rquery = Select(CmmCategories.id,
+                            CmmCategories.origin_id,
+                            CmmCategories.id_parent,
+                            CmmCategories.name,
+                            CmmCategories.date_created,
+                            CmmCategories.date_updated)\
+                            .where(and_(CmmCategories.trash==trash,CmmCategories.id_parent.is_(None)))\
+                            .order_by(direction(getattr(CmmCategories,order_by)))
 
             if search is not None:
-                rquery = rquery.where(CmmProductsCategories.name.like("%{}%".format(search)))
+                rquery = rquery.where(CmmCategories.name.like("%{}%".format(search)))
 
             if list_all==False:
                 pag = db.paginate(rquery,page=pag_num,per_page=pag_size)
@@ -111,7 +111,7 @@ class CategoryList(Resource):
     @auth.login_required
     def post(self):
         try:
-            cat = CmmProductsCategories()
+            cat = CmmCategories()
             cat.name = request.form.get("name")
             cat.id_parent = int(request.form.get("id_parent")) if request.form.get("id_parent")!=None else None
             db.session.add(cat)
@@ -131,7 +131,7 @@ class CategoryApi(Resource):
     @auth.login_required
     def get(self,id:int):
         try:
-            return CmmProductsCategories.query.get(id).to_dict()
+            return CmmCategories.query.get(id).to_dict()
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -145,7 +145,7 @@ class CategoryApi(Resource):
     @auth.login_required
     def post(self,id:int):
         try:
-            cat = CmmProductsCategories.query.get(id)
+            cat = CmmCategories.query.get(id)
             cat.name      = cat.name if request.form.get("name") is None else request.form.get("name")
             cat.id_parent = cat.id_parent if request.form.get("id_parent") is None else int(request.form.get("id_parent"))
             db.session.commit() 
@@ -161,7 +161,7 @@ class CategoryApi(Resource):
     @auth.login_required
     def delete(self,id:int):
         try:
-            cat = CmmProductsCategories.query.get(id)
+            cat = CmmCategories.query.get(id)
             cat.trash = True
             db.session.commit()
             return True
