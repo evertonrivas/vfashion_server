@@ -2,10 +2,10 @@ from http import HTTPStatus
 import simplejson
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import B2bBrand, B2bCollectionPrice, CmmProducts, CmmProductsCategories,\
+from models import B2bBrand, B2bCollectionPrice, CmmCategories, CmmProducts, CmmProductsCategories, CmmProductsGrid, CmmProductsGridDistribution,\
     CmmProductsImages, CmmProductsTypes, \
     CmmProductsModels, B2bCollection, B2bTablePrice, \
-    B2bTablePriceProduct, CmmTranslateColors,CmmTranslateSizes, db
+    B2bTablePriceProduct, CmmTranslateColors,CmmTranslateSizes, _get_params, _show_query, db
 from sqlalchemy import desc, exc, and_, asc,Select,or_
 from auth import auth
 from decimal import Decimal
@@ -266,41 +266,60 @@ class ProductsGallery(Resource):
     @ns_prod.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
     @ns_prod.param("page","Número da página de registros","query",type=int,required=True,default=1)
     @ns_prod.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
-    @ns_prod.param("collection","Código da coleção",type=int)
-    @ns_prod.param("category","Código da categoria",type=int)
-    @ns_prod.param("model","Código do modelo",type=int)
-    @ns_prod.param("type","Código do tipo",type=int)
-    @ns_prod.param("query","Texto para busca","query")
-    @ns_prod.param("order_by","Campo de ordenacao","query")
-    @ns_prod.param("order_dir","Direção da ordenação","query",enum=['ASC','DESC'])
+    @ns_prod.param("query","Texto com parametros para busca","query")
     @auth.login_required
     def get(self):
         pag_num    = 1 if request.args.get("page") is None else int(request.args.get("page"))
         pag_size   = Config.PAGINATION_SIZE.value if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
-        search     = "" if request.args.get("query") is None or request.args.get("query")=="" else "%{}%".format(request.args.get("query"))
-        brand      = None if request.args.get("brand") is None else request.args.get("brand")
-        collection = None if request.args.get("collection") is None else request.args.get("collection")
-        category   = None if request.args.get("category") is None else request.args.get("category")
-        model      = None if request.args.get("model") is None else request.args.get("model")
-        type       = None if request.args.get("type") is None else request.args.get("type")
-        color      = None if request.args.get("color") is None else request.args.get("color")
-        size       = None if request.args.get("size") is None else request.args.get("size")
-        order_by   = "id" if request.args.get("order_by") is None else request.args.get("order_by")
-        direction  = desc if request.args.get("order_dir") == 'DESC' else asc
-        list_all   = False if request.args.get("list_all") is None else bool(request.args.get("list_all"))
+        query      = "" if request.args.get("query") is None or request.args.get("query")=="" else request.args.get("query")
 
         try:
-            query = Select(CmmProducts)\
-                .join(CmmProductsCategories,CmmProducts.id_category==CmmProductsCategories.id)\
+            params     =  _get_params(query)
+            order_by   = "id" if hasattr(params,"order_by")==False else params.order_by
+            direction  = asc if hasattr(params,"order")==False else asc if str(params.order).lower()=='asc' else desc
+            list_all   = False if hasattr(params,"list_all")==False else True
+            search     = None if hasattr(params,'search')==False else "%{}%".format(params.search)
+
+            filter_brand      = None if hasattr(params,"brand") == False else params.brand
+            filter_collection = None if hasattr(params,"collection") == False else params.collection
+            filter_category   = None if hasattr(params,"category") == False else params.category
+            filter_model      = None if hasattr(params,"model") == False else params.model
+            filter_type       = None if hasattr(params,"type") == False else params.type
+            filter_color      = None if hasattr(params,"color") == False else params.color
+            filter_size       = None if hasattr(params,"size") == False else params.size
+
+            rquery = Select(CmmProducts.id,
+                            CmmProducts.id_grid,
+                            CmmProducts.prodCode,
+                            CmmProducts.barCode,
+                            CmmProducts.refCode,
+                            CmmProducts.name,
+                            CmmProducts.description,
+                            CmmProducts.observation,
+                            CmmProducts.ncm,
+                            CmmProducts.price,
+                            CmmProducts.measure_unit,
+                            CmmProducts.structure,
+                            CmmProducts.date_created,
+                            CmmProducts.date_updated)\
                 .join(CmmProductsTypes,CmmProductsTypes.id==CmmProducts.id_type)\
                 .join(CmmProductsModels,CmmProductsModels.id==CmmProducts.id_model)\
                 .outerjoin(B2bTablePriceProduct,B2bTablePriceProduct.id_product==CmmProducts.id)\
                 .outerjoin(B2bTablePrice,B2bTablePrice.id==B2bTablePriceProduct.id_table_price)\
                 .outerjoin(B2bCollectionPrice,B2bCollectionPrice.id_table_price==B2bTablePrice.id)\
                 .outerjoin(B2bCollection,B2bCollection.id==B2bCollectionPrice.id_collection)\
-                .outerjoin(B2bBrand,B2bBrand.id==B2bCollection.id_brand)
-            if search!="":
-                query = query.where(and_(CmmProducts.trash==False,or_(
+                .outerjoin(B2bBrand,B2bBrand.id==B2bCollection.id_brand)\
+                .outerjoin(CmmProductsCategories,CmmProductsCategories.id_product==CmmProducts.id)\
+                .outerjoin(CmmCategories,CmmCategories.id==CmmProductsCategories.id_category)
+                
+
+            #color query
+            cquery = Select(CmmTranslateColors.name,CmmTranslateColors.id,CmmTranslateColors.hexcode).distinct()\
+                    .join(CmmProductsGridDistribution,CmmProductsGridDistribution.id_color==CmmTranslateColors.id)\
+                    .join(CmmProductsGrid,CmmProductsGrid.id==CmmProductsGridDistribution.id_grid)
+            
+            if search is not None:
+                rquery = rquery.where(and_(CmmProducts.trash==False,or_(
                     CmmProducts.name.like(search),
                     CmmProducts.description.like(search),
                     CmmProducts.barCode.like(search),
@@ -309,30 +328,56 @@ class ProductsGallery(Resource):
                     CmmProductsModels.name.like(search),
                     CmmProductsTypes.name.like(search)
                 )))
-            if brand!= None:       query = query.where(B2bBrand.id.in_(brand.split(',')))
-            if collection != None: query = query.where(B2bCollection.id.in_(collection.split(",")))
-            if category!= None:    query = query.where(CmmProductsCategories.id.in_(category.split(",")))
-            if model!=None:        query = query.where(CmmProductsModels.id.in_(model.split(",")))
-            if type != None:       query = query.where(CmmProductsTypes.id.in_(type.split(",")))
+            if filter_brand is not None:      rquery = rquery.where(B2bBrand.id.in_(filter_brand.split(',')))
+            if filter_collection is not None: rquery = rquery.where(B2bCollection.id.in_(filter_collection.split(",")))
+            if filter_category is not None:   
+                rquery = rquery.where(CmmProducts.id.in_(
+                    Select(CmmProductsCategories.id_product).where(CmmProductsCategories.id_category.in_(filter_category.split(",")))
+                ))
+            if filter_model is not None:      rquery = rquery.where(CmmProductsModels.id.in_(filter_model.split(",")))
+            if filter_type is not None:       rquery = rquery.where(CmmProductsTypes.id.in_(filter_type.split(",")))
+            if filter_color is not None:
+                rquery = rquery.where(CmmProducts.id_grid.in_(
+                    Select(CmmProductsGridDistribution.id_color.in_(filter_color.split(",")))
+                ))
+            
+            if filter_size is not None:
+                rquery = rquery.where(CmmProducts.id_grid.in_(
+                    Select(CmmProductsGridDistribution.id_size.in_(filter_size.split(",")))
+                ))
             #faltam adicionar cores e tamanhos
 
+            if order_by=='price':
+                rquery = rquery.order_by(direction(getattr(CmmProducts, order_by)))
+            elif order_by=='category':
+                rquery = rquery.order_by(direction(CmmCategories.name))
+            elif order_by=='collection':
+                rquery = rquery.order_by(direction(B2bCollection.name))
+            elif order_by=='brand':
+                rquery = rquery.order_by(direction(B2bBrand.name))
+            elif order_by=='model':
+                rquery = rquery.order_by(direction(CmmProductsModels.name))
+            elif order_by=='type':
+                rquery = rquery.order_by(direction(CmmProductsTypes.name))
+            elif order_by=='id':
+                rquery = rquery.order_by(direction(getattr(CmmProducts,order_by)))
 
-            query = query.order_by(direction(getattr(CmmProducts, order_by)))
+           # _show_query(rquery)
 
-            if list_all==False:
-                rquery = db.paginate(query,page=pag_num,per_page=pag_size)
+            if list_all is False:
+                pag = db.paginate(rquery,page=pag_num,per_page=pag_size)
+                rquery = rquery.limit(pag_size).offset((pag_num - 1) * pag_size)
 
                 return {
                     "pagination":{
-                        "registers": rquery.total,
+                        "registers": pag.total,
                         "page": pag_num,
                         "per_page": pag_size,
-                        "pages": rquery.pages,
-                        "has_next": rquery.has_next
+                        "pages": pag.pages,
+                        "has_next": pag.has_next
                     },
                     "data":[{
                         "id": m.id,
-                        "id_category": m.id_category,
                         "prodCode": m.prodCode,
                         "barCode": m.barCode,
                         "refCode": m.refCode,
@@ -345,13 +390,17 @@ class ProductsGallery(Resource):
                         "structure": m.structure,
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                         "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None,
-                        "images": self.get_images(m.id)
-                    } for m in rquery]
+                        "images": self.get_images(m.id),
+                        "colors": [{
+                            "id": c.id,
+                            "name": c.name,
+                            "color": c.hexcode
+                        }for c in db.session.execute(cquery.where(CmmProductsGrid.id==m.id_grid))]
+                    } for m in db.session.execute(rquery)]
                 }
             else:
                 return [{
                         "id": m.id,
-                        "id_category": m.id_category,
                         "prodCode": m.prodCode,
                         "barCode": m.barCode,
                         "refCode": m.refCode,
@@ -364,8 +413,13 @@ class ProductsGallery(Resource):
                         "structure": m.structure,
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                         "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None,
-                        "images": self.get_images(m.id)
-                    } for m in rquery.all()]
+                        "images": self.get_images(m.id),
+                        "colors": [{
+                            "id": c.id,
+                            "name": c.name,
+                            "color": c.hexcode
+                        }for c in db.session.execute(cquery.where(CmmProductsGrid.id==m.id_grid))]
+                    } for m in db.session.execute(rquery)]
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -378,7 +432,8 @@ class ProductsGallery(Resource):
         rquery = CmmProductsImages.query.filter_by(id_product=id)
         return [{
             "id": m.id,
-            "img_url":m.img_url
+            "img_url":m.img_url,
+            "default":m.img_default
         }for m in rquery]
 
 ns_prod.add_resource(ProductsGallery,'/gallery/')
