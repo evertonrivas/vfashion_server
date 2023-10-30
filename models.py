@@ -116,11 +116,21 @@ class CmmUserEntity(db.Model,SerializerMixin):
     id_entity   = Column(Integer,nullable=False,primary_key=True,default=0)
     id_consumer = Column(Integer,nullable=False,primary_key=True,default=0)
 
+class CmmCategories(db.Model,SerializerMixin):
+    id           = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
+    origin_id    = Column(Integer,nullable=True)
+    name         = Column(String(128),nullable=False)
+    id_parent    = Column(Integer,nullable=True)
+    date_created = Column(DateTime,nullable=False,server_default=func.now())
+    date_updated = Column(DateTime,onupdate=func.now())
+    trash        = Column(Boolean,nullable=False,server_default='0')
+
+
 class CmmProducts(db.Model,SerializerMixin):
     id           = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
-    id_category  = Column(Integer,nullable=False)
     id_type      = Column(Integer,nullable=False)
     id_model     = Column(Integer,nullable=False)
+    id_grid      = Column(Integer,nullable=False)
     prodCode     = Column(String(50),nullable=False)
     barCode      = Column(String(128))
     refCode      = Column(String(50),nullable=False)
@@ -159,13 +169,8 @@ class CmmProductsModels(db.Model,SerializerMixin):
     trash        = Column(Boolean,nullable=False,server_default='0')
 
 class CmmProductsCategories(db.Model,SerializerMixin):
-    id           = Column(Integer,primary_key=True,autoincrement=True,nullable=False)
-    origin_id    = Column(Integer,nullable=True)
-    name         = Column(String(128),nullable=False)
-    id_parent    = Column(Integer,nullable=True)
-    date_created = Column(DateTime,nullable=False,server_default=func.now())
-    date_updated = Column(DateTime,onupdate=func.now())
-    trash        = Column(Boolean,nullable=False,server_default='0')
+    id_category  = Column(Integer,primary_key=True,nullable=False)
+    id_product   = Column(Integer,primary_key=True,nullable=False)
 
 class CmmProductsGrid(db.Model,SerializerMixin):
     id           = Column(Integer,primary_key=True,autoincrement=True,nullable=False)
@@ -177,8 +182,8 @@ class CmmProductsGrid(db.Model,SerializerMixin):
 
 class CmmProductsGridDistribution(db.Model,SerializerMixin):
     id_grid    = Column(Integer,primary_key=True,nullable=False)
-    color      = Column(String(10),primary_key=True,nullable=False)
-    size       = Column(String(5),primary_key=True,nullable=False)
+    id_color   = Column(Integer,primary_key=True,nullable=False)
+    id_size    = Column(Integer,primary_key=True,nullable=False)
     value      = Column(Integer,nullable=False)
     is_percent = Column(Boolean,nullable=False,server_default='0')
 
@@ -267,9 +272,10 @@ class CmmTranslateColors(db.Model,SerializerMixin):
     date_updated = Column(DateTime,onupdate=func.now())
 
 class CmmTranslateSizes(db.Model,SerializerMixin):
-    id        = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
-    new_size  = Column(String(10),nullable=False)
-    size      = Column(String(5),nullable=False,comment="Original size name")
+    id           = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
+    new_size     = Column(String(10),nullable=False)
+    name         = Column(String(100),nullable=False)
+    old_size     = Column(String(5),nullable=False,comment="Original size name")
     trash        = Column(Boolean,nullable=False,server_default='0')
     date_created = Column(DateTime,nullable=False,server_default=func.now())
     date_updated = Column(DateTime,onupdate=func.now())
