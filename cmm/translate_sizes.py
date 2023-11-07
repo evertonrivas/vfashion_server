@@ -70,8 +70,8 @@ class CategoryList(Resource):
             if search is not None:
                 rquery = rquery.where(CmmTranslateSizes.new_size.like("%{}%".format(search)))
 
-            print(params)
-            _show_query(rquery)
+            # print(params)
+            # _show_query(rquery)
 
             if list_all==False:
                 pag = db.paginate(rquery,page=pag_num,per_page=pag_size)
