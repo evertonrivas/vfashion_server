@@ -69,7 +69,7 @@ class CmmUsers(db.Model,SerializerMixin):
     active          = Column(Boolean,nullable=False,server_default='1')
     token           = Column(String(255),index=True,unique=True)
     token_expire    = Column(DateTime)
-    is_authenticate = Column(Boolean,nullable=False,default=False)
+    is_authenticate = Column(Boolean,nullable=False,server_default='0')
 
     def hash_pwd(self,pwd:str):
         self.password = bcrypt.hashpw(pwd.encode(),bcrypt.gensalt()).decode()
@@ -150,7 +150,7 @@ class CmmProductsImages(db.Model,SerializerMixin):
     id          = Column(Integer,nullable=False,primary_key=True,autoincrement=True)
     id_product  = Column(Integer,nullable=False)
     img_url     = Column(String(255),nullable=False)
-    img_default = Column(Boolean,default=False)
+    img_default = Column(Boolean,default=False,server_default='0')
 
 class CmmProductsTypes(db.Model,SerializerMixin):
     id           = Column(Integer,nullable=False,primary_key=True,autoincrement=True)
@@ -176,6 +176,7 @@ class CmmProductsGrid(db.Model,SerializerMixin):
     id           = Column(Integer,primary_key=True,autoincrement=True,nullable=False)
     orign_id     = Column(Integer,nullable=True)
     name         = Column(String(128))
+    default      = Column(Boolean,nullable=False,server_default='0')
     date_created = Column(DateTime,nullable=False,server_default=func.now())
     date_updated = Column(DateTime,onupdate=func.now())
     trash        = Column(Boolean,nullable=False,server_default='0')
@@ -185,7 +186,6 @@ class CmmProductsGridDistribution(db.Model,SerializerMixin):
     id_color   = Column(Integer,primary_key=True,nullable=False)
     id_size    = Column(Integer,primary_key=True,nullable=False)
     value      = Column(Integer,nullable=False)
-    is_percent = Column(Boolean,nullable=False,server_default='0')
 
 class CmmMeasureUnit(db.Model,SerializerMixin):
     id          = Column(Integer,primary_key=True,autoincrement=True)
@@ -283,7 +283,7 @@ class CmmTranslateSizes(db.Model,SerializerMixin):
 class B2bCustomerRepresentative(db.Model,SerializerMixin):
     id_customer       = Column(Integer,primary_key=True,comment="Id da tabela CmmLegalEntities quando type=C")
     id_representative = Column(Integer,primary_key=True,comment="Id da tabela CmmLegalEntities quando type=R")
-    need_approvement  = Column(Boolean,nullable=False)
+    need_approvement  = Column(Boolean,nullable=False,server_default='0')
     date_created      = Column(DateTime,nullable=False,server_default=func.now())
     date_updated      = Column(DateTime,onupdate=func.now())
 
@@ -308,8 +308,8 @@ class B2bOrders(db.Model,SerializerMixin):
 class B2bOrdersProducts(db.Model,SerializerMixin):
     id_order   = Column(Integer,nullable=False,primary_key=True)
     id_product = Column(Integer,nullable=False,primary_key=True)
-    color      = Column(String(10),primary_key=True,nullable=False)
-    size       = Column(String(5),primary_key=True,nullable=False)
+    id_color   = Column(Integer,primary_key=True,nullable=False)
+    id_size    = Column(Integer,primary_key=True,nullable=False)
     quantity   = Column(Integer,nullable=False)
     price      = Column(DECIMAL(10,2),nullable=False)
     discount   = Column(DECIMAL(10,2))
@@ -318,18 +318,18 @@ class B2bOrdersProducts(db.Model,SerializerMixin):
 class B2bCartShopping(db.Model,SerializerMixin):
     id_customer = Column(Integer,primary_key=True)
     id_product  = Column(Integer,primary_key=True)
-    color       = Column(String(10),primary_key=True)
-    size        = Column(String(10),primary_key=True)
-    quantity   = Column(Integer,nullable=False)
-    price      = Column(DECIMAL(10,2),nullable=False)
+    id_color    = Column(Integer,primary_key=True)
+    id_size     = Column(Integer,primary_key=True)
+    quantity    = Column(Integer,nullable=False)
+    price       = Column(DECIMAL(10,2),nullable=False)
 
 class B2bProductStock(db.Model,SerializerMixin):
     id_product  = Column(Integer,nullable=False,primary_key=True)
-    color       = Column(String(10),nullable=False,primary_key=True)
-    size        = Column(String(5),nullable=False,primary_key=True)
+    id_color    = Column(Integer,nullable=False,primary_key=True)
+    id_size     = Column(Integer,nullable=False,primary_key=True)
     quantity    = Column(SmallInteger,nullable=True)
     in_order    = Column(SmallInteger,nullable=True)
-    limited     = Column(Boolean,default=False)
+    ilimited    = Column(Boolean,nullable=False,server_default='0')
 
 class B2bTablePrice(db.Model,SerializerMixin):
     id           = Column(Integer,nullable=False,primary_key=True,autoincrement=True)
@@ -338,7 +338,7 @@ class B2bTablePrice(db.Model,SerializerMixin):
     end_date     = Column(DateTime)
     date_created = Column(DateTime,nullable=False,server_default=func.now())
     date_updated = Column(DateTime,onupdate=func.now())
-    active       = Column(Boolean,nullable=False,server_default='1')
+    active       = Column(Boolean,nullable=False,server_default='0')
 
 class B2bTablePriceProduct(db.Model,SerializerMixin):
     id_table_price = Column(Integer,nullable=False,primary_key=True)
