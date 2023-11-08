@@ -136,7 +136,7 @@ class CmmProducts(db.Model,SerializerMixin):
     refCode      = Column(String(50),nullable=False)
     name         = Column(String(255),nullable=False)
     description  = Column(String(255))
-    observation  = Column(Text)
+    observation  = Column(Text,nullable=True)
     ncm          = Column(String(50),nullable=True)
     price        = Column(DECIMAL(10,2),nullable=False)
     price_pdv    = Column(DECIMAL(10,2),nullable=True)
