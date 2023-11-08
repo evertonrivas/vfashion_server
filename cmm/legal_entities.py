@@ -78,6 +78,8 @@ class EntitysList(Resource):
             type      = None if hasattr(params,'type')==False else params.type
             trash     = False if hasattr(params,'trash')==False else params.trash
 
+            filter_rep= None if hasattr(params,'representative')==False else params.filter_rep
+
             rquery = Select(
                     CmmLegalEntities.id,
                     CmmLegalEntities.name.label("social_name"),
@@ -110,6 +112,11 @@ class EntitysList(Resource):
                     CmmCities.name.like(search) |
                     CmmLegalEntities.name.like(search) |
                     CmmLegalEntities.fantasy_name.like(search))
+                
+            if filter_rep is not None:
+                rquery = rquery.where(CmmLegalEntities.id.in_(
+                    Select(B2bCustomerRepresentative.id_customer).where(B2bCustomerRepresentative.id_representative==filter_rep)
+                ))
                 
             if type!=None:
                 rquery = rquery.where(CmmLegalEntities.type==type)
