@@ -4,7 +4,7 @@ from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
 import simplejson
-from models import B2bBrand, B2bCollection, B2bCollectionPrice, B2bProductStock, B2bTablePrice, B2bTablePriceProduct, CmmCategories, CmmProducts, CmmProductsCategories, CmmProductsGrid, CmmProductsGridDistribution, CmmProductsImages, CmmProductsModels, CmmProductsTypes, CmmTranslateColors, CmmTranslateSizes, ScmEvent, _get_params, db
+from models import B2bBrand, B2bCollection, B2bCollectionPrice, B2bProductStock, B2bTablePrice, B2bTablePriceProduct, CmmCategories, CmmProducts, CmmProductsCategories, CmmProductsGrid, CmmProductsGridDistribution, CmmProductsImages, CmmProductsModels, CmmProductsTypes, CmmTranslateColors, CmmTranslateSizes, ScmEvent, _get_params, _show_query, db
 from sqlalchemy import Select, and_, exc,or_,desc,asc
 from auth import auth
 from config import Config
@@ -148,10 +148,10 @@ class ProductStockList(Resource):
         try:
             stock = B2bProductStock()
             stock.id_product = int(request.form.get("id_product"))
-            stock.color      = request.form.get("color")
-            stock.size       = request.form.get("size")
+            stock.id_color      = request.form.get("id_color")
+            stock.id_size       = request.form.get("id_size")
             stock.quantity   = int(request.form.get("quantity"))
-            stock.limited    = bool(request.form.get("limited"))
+            stock.ilimited    = bool(request.form.get("ilimited"))
             db.session.add(stock)
             db.session.commit()
             return stock.id
@@ -220,29 +220,29 @@ class ProductStockLoad(Resource):
     @ns_stock.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
     @auth.login_required
     def get(self,id_product:int):    
-        cquery = Select(CmmTranslateColors.hexcode,CmmTranslateColors.name,CmmTranslateColors.color)\
-            .distinct(B2bProductStock.id_color)\
+        cquery = Select(CmmTranslateColors.hexcode,CmmTranslateColors.name,CmmTranslateColors.id)\
+            .distinct(B2bProductStock.id_color).select_from(B2bProductStock)\
             .join(CmmTranslateColors,CmmTranslateColors.id==B2bProductStock.id_color)\
             .filter(B2bProductStock.id_product==id_product)\
-            .order_by(asc(B2bProductStock.color))
+            .order_by(asc(B2bProductStock.id_color))
 
         cquery = db.session.execute(cquery)
         
         return [{
             "color_name": m.name,
             "color_hexa": m.hexcode,
-            "color_code": m.color,
-            "sizes": self.get_sizes(id_product,m.color)
+            "color_code": m.id,
+            "sizes": self.get_sizes(id_product,m.id)
         }for m in cquery]
     
-    def get_sizes(self,id_product:int,color:str):
-        subquery = Select(B2bProductStock.quantity,B2bProductStock.ilimited,B2bProductStock.size.label("size_code"))\
-            .where(and_(B2bProductStock.id_product==id_product,B2bProductStock.color==color))\
+    def get_sizes(self,id_product:int,color:int):
+        subquery = Select(B2bProductStock.quantity,B2bProductStock.ilimited,B2bProductStock.id_size.label("size_code"))\
+            .where(and_(B2bProductStock.id_product==id_product,B2bProductStock.id_color==color))\
             .cte()
-        query = Select(CmmTranslateSizes.new_size.label("size_code"),CmmTranslateSizes.name,subquery.c.quantity,subquery.c.limited)\
-            .outerjoin(subquery,subquery.c.size_code==CmmTranslateSizes.size)
+        query = Select(CmmTranslateSizes.new_size.label("size_code"),CmmTranslateSizes.name,subquery.c.quantity,subquery.c.ilimited)\
+            .outerjoin(subquery,subquery.c.size_code==CmmTranslateSizes.id)
         
-        #print(query)
+        #_show_query(query)
 
         query = db.session.execute(query)
 
@@ -253,9 +253,9 @@ class ProductStockLoad(Resource):
             }for s in query]
     
     def formatQuantity(self,quantity:int,ilimited:bool):
-        if quantity is None and ilimited==True:
+        if (quantity is None or quantity == 0) and ilimited==True:
             return 99999
-        if quantity is None  and ilimited is None:
+        if (quantity is None or quantity == 0) and ilimited is None:
             return None
         return quantity
 
@@ -466,7 +466,7 @@ class ProductsGallery(Resource):
                         "description": m.description,
                         "observation": m.observation,
                         "ncm": m.ncm,
-                        "price": simplejson.dumps(Decimal(m.price)),
+                        "price": float(str(m.price)),
                         "measure_unit": m.measure_unit,
                         "structure": m.structure,
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
