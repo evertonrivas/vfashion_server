@@ -220,7 +220,7 @@ class ProductStockLoad(Resource):
     @ns_stock.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
     @auth.login_required
     def get(self,id_product:int):    
-        cquery = Select(CmmTranslateColors.hexcode,CmmTranslateColors.name,CmmTranslateColors.id)\
+        cquery = Select(CmmTranslateColors.hexcode,CmmTranslateColors.name,CmmTranslateColors.color,CmmTranslateColors.id)\
             .distinct(B2bProductStock.id_color).select_from(B2bProductStock)\
             .join(CmmTranslateColors,CmmTranslateColors.id==B2bProductStock.id_color)\
             .filter(B2bProductStock.id_product==id_product)\
@@ -229,9 +229,10 @@ class ProductStockLoad(Resource):
         cquery = db.session.execute(cquery)
         
         return [{
+            "color_id"  : m.id,
             "color_name": m.name,
             "color_hexa": m.hexcode,
-            "color_code": m.id,
+            "color_code": m.color,
             "sizes": self.get_sizes(id_product,m.id)
         }for m in cquery]
     
@@ -239,7 +240,7 @@ class ProductStockLoad(Resource):
         subquery = Select(B2bProductStock.quantity,B2bProductStock.ilimited,B2bProductStock.id_size.label("size_code"))\
             .where(and_(B2bProductStock.id_product==id_product,B2bProductStock.id_color==color))\
             .cte()
-        query = Select(CmmTranslateSizes.new_size.label("size_code"),CmmTranslateSizes.name,subquery.c.quantity,subquery.c.ilimited)\
+        query = Select(CmmTranslateSizes.new_size.label("size_code"),CmmTranslateSizes.id,CmmTranslateSizes.name,subquery.c.quantity,subquery.c.ilimited)\
             .outerjoin(subquery,subquery.c.size_code==CmmTranslateSizes.id)
         
         #_show_query(query)
@@ -247,9 +248,11 @@ class ProductStockLoad(Resource):
         query = db.session.execute(query)
 
         return [{
+                "size_id": s.id,
                 "size_code": s.size_code,
                 "size_name": s.name,
-                "size_value": self.formatQuantity(s.quantity,s.ilimited)
+                "size_value": self.formatQuantity(s.quantity,s.ilimited),
+                "size_saved": 0
             }for s in query]
     
     def formatQuantity(self,quantity:int,ilimited:bool):
