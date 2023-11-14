@@ -101,8 +101,13 @@ class CartApi(Resource):
     @auth.login_required
     def delete(self):
         try:
-            ids = request.get_json()
-            stmt = Delete(B2bCartShopping).where(B2bCartShopping.id_product.in_(ids))
+            req = request.get_json()
+            stmt = Delete(B2bCartShopping).where(
+                and_(
+                    B2bCartShopping.id_product.in_(req['products']),
+                    B2bCartShopping.id_customer==int(req['customer'])
+                )
+            )
             db.session.execute(stmt)
             db.session.commit()
             return True
