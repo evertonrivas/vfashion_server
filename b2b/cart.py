@@ -94,7 +94,6 @@ class CartApi(Resource):
 
         return db.session.execute(Select(CmmTranslateSizes.new_size,subquery.c.size_code,subquery.c.quantity).distinct()\
             .outerjoin(subquery,subquery.c.size_code==CmmTranslateSizes.id)).all()
-    
 
     @ns_cart.response(HTTPStatus.OK.value,"Retorna verdadeiro ou falso se conseguiu excluir o(s) registro(s)")
     @ns_cart.response(HTTPStatus.BAD_REQUEST.value,"Falha ao excluir")
@@ -118,7 +117,6 @@ class CartApi(Resource):
                 "errors_sql": e._sql_message()
             }
 
-
     @ns_cart.response(HTTPStatus.OK.value,"Salva os dados de produtos no carrinho de compras")
     @ns_cart.response(HTTPStatus.BAD_REQUEST.value,"Falha ao salvar registro!")
     @auth.login_required
@@ -141,11 +139,13 @@ class CartApi(Resource):
                     it.id_size     = item['id_size']
                     it.price       = item['price']
                     it.quantity    = int(item['quantity'])
+                    it.user_create = item["user_create"]
                     db.session.add(it)
                     db.session.commit()
                 else:
-                    pItem.price = item['price']
-                    pItem.quantity = int(item['quantity'])
+                    pItem.price       = item['price']
+                    pItem.quantity    = int(item['quantity'])
+                    pItem.user_update = item["user_create"]
                     db.session.commit()
             return True
         except exc.SQLAlchemyError as e:
@@ -217,12 +217,13 @@ class CartApi(Resource):
                                     bcs.id_size     = size.id_size
                                     bcs.price       = size.price
                                     bcs.quantity    = size.value
+                                    bcs.user_create = req['user']
                                     db.session.add(bcs)
                                     db.session.commit()
                                 
                             elif (squery.quantity-squery.in_order) >= size.value: #se a quantidade for maior ou igual ao que estah disponivel
                                 #faz uma verificacao se o produto ja nao esta no carrinho
-                                cquery = db.session.execute(Select(func.count()).select_from(B2bCartShopping).where(
+                                cquery = db.session.execute(Select(func.count().label("total")).select_from(B2bCartShopping).where(
                                     and_(
                                         B2bCartShopping.id_product==product,
                                         B2bCartShopping.id_color==req['color'],
@@ -230,7 +231,7 @@ class CartApi(Resource):
                                         B2bCartShopping.id_customer==req['customer']
                                     )
                                 )).first()
-                                if cquery is not None:
+                                if cquery.total > 0:
                                     bcs = B2bCartShopping.query.get((
                                         req['customer'],
                                         product['id'],
@@ -239,6 +240,7 @@ class CartApi(Resource):
                                     
                                     #incrementa a quantidade com o que tem na grade
                                     bcs.quantity += size.value
+                                    bcs.user_update = req["user"]
                                     db.session.commit()
                                 else:
                                     bcs = B2bCartShopping()
@@ -248,6 +250,7 @@ class CartApi(Resource):
                                     bcs.id_size     = size.id_size
                                     bcs.price       = size.price
                                     bcs.quantity    = size.value
+                                    bcs.user_create = req["user"]
                                     db.session.add(bcs)
                                     db.session.commit()
             return False if totalExecuted==False else True
@@ -259,22 +262,25 @@ class CartApi(Resource):
             }
 
 
-@ns_cart.route("/<int:id_product>")
-@ns_cart.param("id_product","Id do produto")
+@ns_cart.route("/<int:id>")
+@ns_cart.param("id","Id")
 class CartItem(Resource):
+    @ns_cart.hide
+    @ns_cart.response(HTTPStatus.OK.value,"Metodo a ser implementado")
+    @ns_cart.response(HTTPStatus.BAD_REQUEST.value,"Falha ao salvar registro!")
     @auth.login_required
-    def get(self,id_product:int):
+    def get(self,id:int):
         id_customer = int(request.args.get("id_profile"))
         cquery = Select(CmmTranslateColors.color,B2bCartShopping.id_color).distinct()\
             .join(CmmTranslateColors,CmmTranslateColors.id==B2bCartShopping.id_color)\
-            .where(and_(B2bCartShopping.id_customer==id_customer,B2bCartShopping.id_product==id_product))
+            .where(and_(B2bCartShopping.id_customer==id_customer,B2bCartShopping.id_product==id))
         
         squery = Select(CmmTranslateSizes.new_size.label("size"),B2bCartShopping.quantity).distinct()\
             .join(CmmTranslateSizes,CmmTranslateSizes.id==B2bCartShopping.id_size)\
-            .where(and_(B2bCartShopping.id_product==id_product,B2bCartShopping.id_customer==id_customer))
+            .where(and_(B2bCartShopping.id_product==id,B2bCartShopping.id_customer==id_customer))
 
         return {
-            "id_product": id_product,
+            "id_product": id,
             "ref": "",
             "name": "",
             "img_url": "",
@@ -292,6 +298,35 @@ class CartItem(Resource):
             }for c in db.session.execute(cquery)]
         }
 
+    @ns_cart.response(HTTPStatus.OK.value,"Remove os itens do carrinho de compras")
+    @ns_cart.response(HTTPStatus.BAD_REQUEST.value,"Falha ao remover registros!")
+    @auth.login_required
+    def delete(self,id:int):
+        try:
+            usr_type = request.args.get("userType")
+            if usr_type=='A':
+                #no caso do administrador apagara pelo usuario de criacao do pedido
+                #isso evitarah que apague pedidos de outros usuarios
+                stmt = Delete(B2bCartShopping).where(B2bCartShopping.user_create==id)
+            elif usr_type=='R':
+                #quando representante apagara todos os clientes do representante
+                stmt = Delete(B2bCartShopping).where(B2bCartShopping.id_customer.in_(
+                    Select(B2bCustomerRepresentative.id_customer).where(B2bCustomerRepresentative.id_customer==id)
+                    )
+                )
+            else:
+                #sendo cliente apagarah somente os proprios pedidos
+                stmt = Delete(B2bCartShopping).where(B2bCartShopping.id_customer==id)
+
+            db.session.execute(stmt)
+            db.session.commit()
+            return True
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "errors_sql": e._sql_message()
+            }
 
 @ns_cart.param('id_entity','Código do perfil',"query",type=int)
 class CartTotal(Resource):
