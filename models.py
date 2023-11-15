@@ -322,6 +322,10 @@ class B2bCartShopping(db.Model,SerializerMixin):
     id_size     = Column(Integer,primary_key=True)
     quantity    = Column(Integer,nullable=False)
     price       = Column(DECIMAL(10,2),nullable=False)
+    user_create = Column(Integer,nullable=False)
+    date_create = Column(DateTime,server_default=func.now())
+    user_update = Column(Integer,nullable=True)
+    date_update = Column(DateTime,onupdate=func.now())
 
 class B2bProductStock(db.Model,SerializerMixin):
     id_product  = Column(Integer,nullable=False,primary_key=True)
