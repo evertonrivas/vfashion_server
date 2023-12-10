@@ -46,7 +46,10 @@ class CartApi(Resource):
                 .group_by(B2bCartShopping.id_product)
             
             #colors query
-            cquery = Select(B2bCartShopping.id_color,CmmTranslateColors.hexcode,CmmTranslateColors.name).distinct()\
+            cquery = Select(B2bCartShopping.id_color,
+                            CmmTranslateColors.color,
+                            CmmTranslateColors.hexcode,
+                            CmmTranslateColors.name).distinct()\
                 .join(CmmTranslateColors,CmmTranslateColors.id==B2bCartShopping.id_color)\
             
             if user_type=='C':
@@ -69,10 +72,12 @@ class CartApi(Resource):
                 "itens": int(str(m.total)),
                 "total_price": float(str(m.total*m.price)),
                 "colors":[{
+                    "id": c.id_color,
                     "name": c.name,
                     "hexa": c.hexcode,
-                    "code": c.id_color,
+                    "code": c.color,
                     "sizes":[{
+                        "id": s.size_code,
                         "name": s.new_size,
                         "quantity": int(0 if s.quantity is None else s.quantity)
                     } for s in self.get_sizes(m.id_customer,m.id_product,c.id_color)]
@@ -125,6 +130,7 @@ class CartApi(Resource):
             itens = request.get_json()
 
             for item in itens:
+                #verifica se o produto jah estah no carrinho de compras
                 pItem = db.session.execute(Select(B2bCartShopping).where(and_(
                     B2bCartShopping.id_customer==int(item['id_customer']),
                     B2bCartShopping.id_product==int(item['id_product']),
