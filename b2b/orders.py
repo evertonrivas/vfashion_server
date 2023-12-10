@@ -108,41 +108,43 @@ class OrdersList(Resource):
         try:
             req = request.get_json()
 
-            order = B2bOrders()
-            order.id_customer          = req['id_customer']
-            #order.make_online          = req['make_online']
-            order.id_payment_condition = int(req['id_payment_condition'])
-            order.installment_value    = req['installment_value']
-            order.installments         = req['installments']
-            order.integrated           = False
-            order.total_value          = req['total_value']
-            order.total_itens          = req['total_itens']
-            db.session.add(order)
-            db.session.commit()
+            for customer in req['customers']:
+                order = B2bOrders()
+                order.id_customer          = customer
+                #order.make_online         = req['make_online']
+                order.id_payment_condition = int(req['id_payment_condition'])
+                order.installment_value    = req['installment_value']
+                order.installments         = req['installments']
+                order.integrated           = False
+                order.total_value          = req['total_value']
+                order.total_itens          = req['total_itens']
+                order.trash                = False
+                db.session.add(order)
+                db.session.commit()
 
-            stmt = Select(B2bCartShopping).where(B2bCartShopping.id_customer==req['id_customer'])
+                stmt = Select(B2bCartShopping).where(B2bCartShopping.id_customer==customer)
 
-            for cart in db.session.execute(stmt).scalars():
-                prod = B2bOrdersProducts()
-                prod.id_order = order.id
-                prod.id_product = cart.id_product
-                prod.color      = cart.color
-                prod.size       = cart.size
-                prod.price      = cart.price
-                prod.quantity   = cart.quantity
-                prod.discount   = 0
-                prod.discount_percentage = 0
-                db.session.add(prod)
-            
-            db.session.commit()
+                for cart in db.session.execute(stmt).scalars():
+                    prod = B2bOrdersProducts()
+                    prod.id_order   = order.id
+                    prod.id_product = cart.id_product
+                    prod.id_color   = cart.id_color
+                    prod.id_size    = cart.id_size
+                    prod.price      = cart.price
+                    prod.quantity   = cart.quantity
+                    prod.discount   = 0
+                    prod.discount_percentage = 0
+                    db.session.add(prod)
+                
+                db.session.commit()
 
 
-            #apaga o conteudo do carrinho de compras que nao se faz mais necessario
-            stmt = Delete(B2bCartShopping).where(B2bCartShopping.id_customer==req['id_customer'])
-            db.session.execute(stmt)
-            db.session.commit()
+                #apaga o conteudo do carrinho de compras que nao se faz mais necessario
+                stmt = Delete(B2bCartShopping).where(B2bCartShopping.id_customer==customer)
+                db.session.execute(stmt)
+                db.session.commit()
 
-            return order.id
+            return True
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -240,15 +242,18 @@ class HistoryOrderList(Resource):
     @ns_order.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
     @ns_order.param("page","Número da página de registros","query",type=int,required=True)
     @ns_order.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
-    @ns_order.param("order_by","Campo de ordenacao","query")
-    @ns_order.param("order_dir","Direção da ordenação","query",enum=['ASC','DESC'])
+    @ns_order.param("query","Texto para busca","query")
     @auth.login_required
     def get(self,id:int):
         pag_num   = 1 if request.args.get("page") is None else int(request.args.get("page"))
         pag_size  = Config.PAGINATION_SIZE.value if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
-        order_by  = "id" if request.args.get("order_by") is None else request.args.get("order_by")
-        direction = asc if request.args.get("order_dir") == 'ASC' else desc
+        query     = "" if request.args.get("query") is None else request.args.get("query")
         try:
+
+            params = _get_params(query)
+            order_by  = "id" if hasattr(params,"order_by")==False else request.args.get("order_by")
+            direction = asc if request.args.get("order_dir") == 'ASC' else desc
+
             stmt = Select(
                           B2bOrders.id.label("id_order"),
                           B2bOrders.date_created,
@@ -269,12 +274,14 @@ class HistoryOrderList(Resource):
                           B2bPaymentConditions.name.label("payment_name"))\
                 .join(B2bPaymentConditions,B2bPaymentConditions.id==B2bOrders.id_payment_condition)\
                 .join(CmmLegalEntities,CmmLegalEntities.id==B2bOrders.id_customer)\
-                .where(B2bOrders.id_customer==id)\
                 .order_by(direction(getattr(B2bOrders, order_by)))
+            
+            if id!=0:
+                stmt = stmt.where(B2bOrders.id_customer==id)
             
             pag = db.paginate(stmt,page=pag_num,per_page=pag_size)
 
-            rquery = rquery.limit(pag_size).offset((pag_num - 1) * pag_size)
+            stmt = stmt.limit(pag_size).offset((pag_num - 1) * pag_size)
             
             return {
                 "pagination":{
@@ -297,7 +304,7 @@ class HistoryOrderList(Resource):
                 "integrated": r.integrated,
                 "integration_number": r.integration_number,
                 "invoice_number": r.invoice_number,
-                "track_code": (None if Config.TRACK_ORDER.value==False else self.__getTrack(r.taxvat,r.invoice_number,r.invoice_serie,r.track_company,r.track_code) ),
+                "track": (None if Config.TRACK_ORDER.value==False else self.__getTrack(r.taxvat,r.invoice_number,r.invoice_serie,r.track_company,r.track_code) ),
                 "date_created": r.date_created.strftime("%d/%m/%Y %H:%M:%S")
             }for r in db.session.execute(stmt)]
             }
