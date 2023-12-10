@@ -30,15 +30,22 @@ class Shipping():
         if resp.status_code==200:
             consulta = resp.json()
 
-            for con in consulta['conhecimentos']:
-                retb = "<h6 class='mb-2 text-secondary'>Transportadora: BRASPRESS</h6><ul class='timeline'>"
-                for tml in con['timeLine']:
-                    retb += """<li><p class='card-text'><span class='text-danger'>{data}</span><br>Status: {status}</p></li>
-                    """.format(status=tml['descricao'],data=datetime.strptime(tml['data'],"%Y-%m-%d").strftime("%d/%m/%Y"))
-                retb += "<li><p class='card-text'><span class='text-danger'>{data}</span><br>Status: {status}</p></li>".format(data=datetime.strptime(con['previsaoEntrega'],"%Y-%m-%d").strftime("%d/%m/%Y"),status="Previsão de Entrega")
-            retb += "</ul>"
-
-            return retb
+            # for con in consulta['conhecimentos']:
+            #     retb = "<h6 class='mb-2 text-secondary'>Transportadora: BRASPRESS</h6><ul class='timeline'>"
+            #     for tml in con['timeLine']:
+            #         retb += """<li><p class='card-text'><span class='text-danger'>{data}</span><br>Status: {status}</p></li>
+            #         """.format(status=tml['descricao'],data=datetime.strptime(tml['data'],"%Y-%m-%d").strftime("%d/%m/%Y"))
+            #     retb += "<li><p class='card-text'><span class='text-danger'>{data}</span><br>Status: {status}</p></li>".format(data=datetime.strptime(con['previsaoEntrega'],"%Y-%m-%d").strftime("%d/%m/%Y"),status="Previsão de Entrega")
+            # retb += "</ul>"
+            
+            return [{
+                "shipping": "BRASPRESS",
+                "forecast": datetime.strptime(con['previsaoEntrega'],"%Y-%m-%d").strftime("%d/%m/%Y"),
+                "timeline":[{
+                    "date": datetime.strptime(tml['data'],"%Y-%m-%d").strftime("%d/%m/%Y"),
+                    "status": tml["descricao"]
+                }for tml in con["timeLine"]]
+            }for con in consulta['conhecimentos']]
         
         return False
 
@@ -62,15 +69,22 @@ class Shipping():
             consulta = resp.json()
             #realizar o retorno em formato HTML em um card
             
-            ret = "<h6 class='mb-2 text-secondary'>Transportadora: JADLOG</h6><ul class='timeline'>"
-            for cons in consulta['consulta']:
-                for evt in cons['tracking']['eventos']:
-                    ret += """<li><p class='card-text'><span class='text-danger'>{data}</span><br>Status: {status}</p></li>
-                    """.format(status=evt['status'],data=datetime.strptime(evt['data'],"%Y-%m-%d %H:%M:%S").strftime("%d/%m/%Y %H:%M:%S"))
-                ret += "<li><p class='card-text'><span class='text-danger'>{data}</span><br/>Status: {status}</p></li>".format(data=datetime.strptime(cons['previsaoEntrega'],"%Y-%m-%d").strftime("%d/%m/%Y"),status="Previsão de Entrega")
-            ret += "</ul>"
+            # ret = "<h6 class='mb-2 text-secondary'>Transportadora: JADLOG</h6><ul class='timeline'>"
+            # for cons in consulta['consulta']:
+            #     for evt in cons['tracking']['eventos']:
+            #         ret += """<li><p class='card-text'><span class='text-danger'>{data}</span><br>Status: {status}</p></li>
+            #         """.format(status=evt['status'],data=datetime.strptime(evt['data'],"%Y-%m-%d %H:%M:%S").strftime("%d/%m/%Y %H:%M:%S"))
+            #     ret += "<li><p class='card-text'><span class='text-danger'>{data}</span><br/>Status: {status}</p></li>".format(data=datetime.strptime(cons['previsaoEntrega'],"%Y-%m-%d").strftime("%d/%m/%Y"),status="Previsão de Entrega")
+            # ret += "</ul>"
 
-            return ret
+            return [{
+                "shipping":"JADLOG",
+                "forecast": datetime.strptime(cons['previsaoEntrega'],"%Y-%m-%d").strftime("%d/%m/%Y"),
+                "timeline": [{
+                    "date": datetime.strptime(evt['data'],"%Y-%m-%d %H:%M:%S").strftime("%d/%m/%Y %H:%M"),
+                    "status": evt['status']
+                }for evt in cons['tracking']['eventos']]
+            }for cons in consulta['consulta']]
         return False
 
     def __jamef_login(self):
@@ -102,11 +116,20 @@ class Shipping():
             if resp.status_code==200:
                 consulta = resp.json()
 
-                retj = "<h6 class='mb-2 text-secondary'>Transportadora: JAMEF</h6><ul class='timeline'>"
-                for cons in consulta['conhecimentos']:
-                        for evt in cons['historico']:
-                            retj += """<li><p class='card-text'><span class='text-danger'>{data}</span><br>Status: {status}</p></li>
-                            """.format(status=evt['statusRastreamento'],data=datetime.strptime(evt['dataAtualizacao'],"%d/%m/%y %H:%M").strftime("%d/%m/%Y %H:%M"))
-                        retj += "<li><p class='card-text'><span class='text-danger'>{data}</span><br>Status: {status}</p></li>".format(data=datetime.strptime(cons['dataPrevisaoEntrega'],"%d/%m/%y").strftime("%d/%m/%Y"),status="Previsão de Entrega")
-                retj += "</ul>"
+                # retj = "<h6 class='mb-2 text-secondary'>Transportadora: JAMEF</h6><ul class='timeline'>"
+                # for cons in consulta['conhecimentos']:
+                #         for evt in cons['historico']:
+                #             retj += """<li><p class='card-text'><span class='text-danger'>{data}</span><br>Status: {status}</p></li>
+                #             """.format(status=evt['statusRastreamento'],data=datetime.strptime(evt['dataAtualizacao'],"%d/%m/%y %H:%M").strftime("%d/%m/%Y %H:%M"))
+                #         retj += "<li><p class='card-text'><span class='text-danger'>{data}</span><br>Status: {status}</p></li>".format(data=datetime.strptime(cons['dataPrevisaoEntrega'],"%d/%m/%y").strftime("%d/%m/%Y"),status="Previsão de Entrega")
+                # retj += "</ul>"
+
+                return [{
+                    "shipping": "JAMEF",
+                    "forecast": datetime.strptime(cons['dataPrevisaoEntrega'],"%d/%m/%y").strftime("%d/%m/%Y"),
+                    "timeline":[{
+                        "date": datetime.strptime(evt['dataAtualizacao'],"%d/%m/%y %H:%M").strftime("%d/%m/%Y %H:%M"),
+                        "status": evt['statusRastreamento']
+                    }for evt in cons['historico']]
+                }for cons in consulta['conhecimentos']]
         return False
