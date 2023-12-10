@@ -2,7 +2,7 @@ from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
 from models import B2bPaymentConditions, _get_params,db
-from sqlalchemy import exc,and_,desc,asc
+from sqlalchemy import Select, exc,and_,desc,asc
 from auth import auth
 from config import Config
 
@@ -42,9 +42,6 @@ class PaymentConditionsList(Resource):
     @ns_payment.param("page","Número da página de registros","query",type=int,required=True,default=1)
     @ns_payment.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_payment.param("query","Texto para busca","query")
-    @ns_payment.param("list_all","Ignora as paginas e lista todos os registros",type=bool,default=False)
-    @ns_payment.param("order_by","Campo de ordenacao","query")
-    @ns_payment.param("order_dir","Direção da ordenação","query",enum=['ASC','DESC'])
     @auth.login_required
     def get(self):
         pag_num  =  1 if request.args.get("page") is None else int(request.args.get("page"))
@@ -53,19 +50,19 @@ class PaymentConditionsList(Resource):
         try:
             params = _get_params(query)
             search    = None if hasattr(params,"search")==False else params.search
-            list_all  = False if hasattr(params,"list_all") is None else True
-            order_by  = "id" if hasattr(params,"order_by") is None else params.order_by
+            trash     = False if hasattr(params,'trash')==False else True
+            list_all  = False if hasattr(params,"list_all")==False else True
+            order_by  = "id" if hasattr(params,"order_by")==False else params.order_by
             direction = desc if hasattr(params,"order_dir") == 'DESC' else asc
-            if search=="":
-                rquery = B2bPaymentConditions\
-                    .query.filter(B2bPaymentConditions.trash==False)\
-                    .order_by(direction(getattr(B2bPaymentConditions, order_by)))
-                # .paginate(page=pag_num,per_page=pag_size)
-            else:
-                rquery = B2bPaymentConditions\
-                    .query\
-                    .filter(and_(B2bPaymentConditions.name.like(search),B2bPaymentConditions.trash==False))\
-                    .order_by(direction(getattr(B2bPaymentConditions, order_by)))
+
+
+            rquery = Select(B2bPaymentConditions.id,
+                            B2bPaymentConditions.name,
+                            B2bPaymentConditions.installments,
+                            B2bPaymentConditions.received_days,
+                            B2bPaymentConditions.date_created,
+                            B2bPaymentConditions.date_updated).where(B2bPaymentConditions.trash==trash)\
+                            .order_by(direction(getattr(B2bPaymentConditions,order_by)))
 
             if list_all==False:
                 pag    = db.paginate(page=pag_num,per_page=pag_size)
