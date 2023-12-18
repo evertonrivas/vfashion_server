@@ -2,7 +2,7 @@
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import B2bCartShopping, B2bCustomerRepresentative, B2bProductStock, CmmLegalEntities, CmmProducts, CmmProductsGrid, CmmProductsGridDistribution, CmmTranslateColors, CmmTranslateSizes,CmmProductsImages, db
+from models import B2bCartShopping, B2bCustomerRepresentative, B2bProductStock, CmmLegalEntities, CmmProducts, CmmProductsGrid, CmmProductsGridDistribution, CmmTranslateColors, CmmTranslateSizes,CmmProductsImages, _show_query, db
 from sqlalchemy import exc,Select,and_,func,tuple_,distinct,desc,asc,Delete, text
 from auth import auth
 from config import Config
@@ -60,6 +60,8 @@ class CartApi(Resource):
                 )).group_by(B2bCartShopping.id_customer).order_by(asc(B2bCartShopping.id_customer))
             elif user_type=='A':
                 pquery = pquery.group_by(B2bCartShopping.id_customer).order_by(asc(B2bCartShopping.id_customer))
+
+            # _show_query(pquery)
             
             return [{
                 "id_product": m.id_product,
