@@ -411,6 +411,19 @@ class CrmImportation(db.Model,SerializerMixin):
     file         = Column(String(255),nullable=False)
     date_created = Column(DateTime,nullable=False,server_default=func.now())
 
+class FprReason(db.Model):
+    id           = Column(Integer,primary_key=True,autoincrement=True)
+    description  = Column(String(255),nullable=False)
+    date_created = Column(DateTime,nullable=False,server_default=func.now())
+    date_updated = Column(DateTime,onupdate=func.now())
+    trash        = Column(Boolean,nullable=False,server_default='0')
+
+class FprSteps(db.Model):
+    id           = Column(Integer,primary_key=True,autoincrement=True)
+    name         = Column(String(255),nullable=False)
+    date_created = Column(DateTime,nullable=False,server_default=func.now())
+    date_updated = Column(DateTime,onupdate=func.now())
+    trash        = Column(Boolean,nullable=False,server_default='0')
 
 
 class ScmCalendar(db.Model,SerializerMixin):
@@ -421,6 +434,7 @@ class ScmCalendar(db.Model,SerializerMixin):
     month         = Column(Integer,nullable=False)
     week          = Column(Integer,nullable=False)
     day_of_week   = Column(Integer,nullable=False)
+
 
 class ScmEventType(db.Model,SerializerMixin):
     id             = Column(Integer,primary_key=True,autoincrement=True)
