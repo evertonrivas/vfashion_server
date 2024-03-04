@@ -1,7 +1,7 @@
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import db,_get_params,B2bCartShopping, B2bOrders,B2bOrdersProducts, B2bPaymentConditions, CmmLegalEntities,ScmEvent,ScmEventType
+from models import CmmProducts, CmmTranslateColors, CmmTranslateSizes, db,_get_params,B2bCartShopping, B2bOrders,B2bOrdersProducts, B2bPaymentConditions, CmmLegalEntities,ScmEvent,ScmEventType
 from sqlalchemy import exc,Select,Delete,asc,desc,func,between
 import simplejson
 from auth import auth
@@ -67,10 +67,19 @@ class OrdersList(Resource):
     def get(self):
         pag_num  =  1 if request.args.get("page") is None else int(request.args.get("page"))
         pag_size = Config.PAGINATION_SIZE.value if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
-        search   = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
+        query   = "" if request.args.get("query") is None else request.args.get("query")
 
         try:
+            params    = _get_params(query)
+            direction = asc if hasattr(params,'order')==False else asc if str(params.order).upper()=='ASC' else desc
+            order_by  = 'id' if hasattr(params,'order_by')==False else params.order_by
+            search    = None if hasattr(params,"search")==False else params.search
+            trash     = True if hasattr(params,'active')==False else False #foi invertido
+            list_all  = False if hasattr(params,'list_all')==False else True
+
+
             if search!=None:
+
                 #pensar nos filtros para essa listagem
                 rquery = B2bOrders.query.paginate(page=pag_num,per_page=pag_size)
             else:
@@ -161,21 +170,74 @@ class OrderApi(Resource):
     @auth.login_required
     def get(self,id:int):
         try:
-            order = B2bOrders.query.get(id)
-            squery = B2bOrdersProducts.query.filter_by(id_order=int(request.args.get("id_order"))).all()
+            order = db.session.execute(Select(B2bOrders.total_value,
+                           B2bOrders.total_itens,
+                           B2bOrders.installments,
+                           B2bOrders.installment_value,
+                           B2bOrders.integrated,
+                           B2bOrders.integration_number,
+                           B2bOrders.track_code,
+                           B2bOrders.track_company,
+                           B2bOrders.invoice_number,
+                           B2bOrders.invoice_serie,
+                           B2bOrders.date_created,
+                           B2bOrders.date_updated,
+                           CmmLegalEntities.fantasy_name,
+                           B2bOrders.id_customer,
+                           B2bOrders.id_payment_condition,
+                           B2bPaymentConditions.name.label("payment_condition")
+                           )\
+                        .join(CmmLegalEntities,CmmLegalEntities.id==B2bOrders.id_customer)\
+                        .join(B2bPaymentConditions,B2bPaymentConditions.id==B2bOrders.id_payment_condition)\
+                        .where(B2bOrders.id==id)).first()
+            iquery = Select(B2bOrdersProducts.id_product,
+                            CmmProducts.name,
+                            B2bOrdersProducts.id_color,
+                            CmmTranslateColors.name.label("color"),
+                            B2bOrdersProducts.id_size,
+                            CmmTranslateSizes.name.label("size"),
+                            B2bOrdersProducts.quantity,
+                            B2bOrdersProducts.price,
+                            B2bOrdersProducts.discount,
+                            B2bOrdersProducts.discount_percentage)\
+                        .join(CmmProducts,CmmProducts.id==B2bOrdersProducts.id_product)\
+                        .join(CmmTranslateColors,CmmTranslateColors.id==B2bOrdersProducts.id_color)\
+                        .join(CmmTranslateSizes,CmmTranslateSizes.id==B2bOrdersProducts.id_color)\
+                        .where(B2bOrdersProducts.id_order==id)
             return {
-                "id": order.id,
-                "id_customer": order.id_customer,
-                "make_online": order.make_online,
-                "id_payment_condition": order.id_payment_condition,
+                "id": id,
+                "customer": {
+                    "id": order.id_customer,
+                    "name": order.fantasy_name,
+                },
+                "payment_condition": {
+                    "id": order.id_payment_condition,
+                    "name": order.payment_condition
+                },
+                "total_value": str(order.total_value),
+                "total_itens": str(order.total_itens),
+                "installments": str(order.installments),
+                "installment_value": str(order.installment_value),
+                "integrated": order.integrated,
+                "integration_number": str(order.integration_number),
+                "track_code": order.track_code,
+                "track_company": order.track_company,
+                "invoice_number": str(order.invoice_number),
+                "invoice_serie": str(order.invoice_serie),
                 "date_created": order.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                "date_updated": order.date_updated.strftime("%Y-%m-%d %H:%M:%S"),
+                "date_updated": None if order.date_updated is None else order.date_updated.strftime("%Y-%m-%d %H:%M:%S"),
                 "products": [{
                     "id_product": m.id_product,
+                    "name": m.name,
+                    "id_color": m.id_color,
                     "color": m.color,
+                    "id_size": m.id_size,
                     "size" : m.size,
-                    "quantity": m.quantity
-                }for m in squery]
+                    "quantity": str(m.quantity),
+                    "price": str(m.price),
+                    "discount": str(m.discount),
+                    "discount_percentage": str(m.discount_percentage)
+                }for m in db.session.execute(iquery)]
             }
         except exc.SQLAlchemyError as e:
             return {
@@ -252,7 +314,8 @@ class HistoryOrderList(Resource):
 
             params = _get_params(query)
             order_by  = "id" if hasattr(params,"order_by")==False else request.args.get("order_by")
-            direction = asc if request.args.get("order_dir") == 'ASC' else desc
+            direction = asc if hasattr(params,"order_dir")==False else desc if str(params.order_by).upper()=='DESC' else asc
+            list_all  = False if hasattr(params,"list_all")==False else True
 
             stmt = Select(
                           B2bOrders.id.label("id_order"),
@@ -279,35 +342,52 @@ class HistoryOrderList(Resource):
             if id!=0:
                 stmt = stmt.where(B2bOrders.id_customer==id)
             
-            pag = db.paginate(stmt,page=pag_num,per_page=pag_size)
+            if list_all==False:
+                pag = db.paginate(stmt,page=pag_num,per_page=pag_size)
+                stmt = stmt.limit(pag_size).offset((pag_num - 1) * pag_size)
 
-            stmt = stmt.limit(pag_size).offset((pag_num - 1) * pag_size)
-            
-            return {
-                "pagination":{
-                    "registers": pag.total,
-                    "page": pag_num,
-                    "per_page": pag_size,
-                    "pages": pag.pages,
-                    "has_next": pag.has_next
-                },
-            "data": [{
-                "id_order": '{:010d}'.format(r.id_order),
-                "id_customer": r.id_customer,
-                "customer_name": r.customer_name,
-                "id_payment_condition": r.id_payment_condition,
-                "payment_name": r.payment_name,
-                "total_value": simplejson.dumps(Decimal(r.total_value)),
-                "total_itens": r.total_itens,
-                "installments": r.installments,
-                "installment_value": simplejson.dumps(Decimal(r.installment_value)),
-                "integrated": r.integrated,
-                "integration_number": r.integration_number,
-                "invoice_number": r.invoice_number,
-                "track": (None if Config.TRACK_ORDER.value==False else self.__getTrack(r.taxvat,r.invoice_number,r.invoice_serie,r.track_company,r.track_code) ),
-                "date_created": r.date_created.strftime("%d/%m/%Y %H:%M:%S")
-            }for r in db.session.execute(stmt)]
-            }
+                return {
+                    "pagination":{
+                        "registers": pag.total,
+                        "page": pag_num,
+                        "per_page": pag_size,
+                        "pages": pag.pages,
+                        "has_next": pag.has_next
+                    },
+                    "data": [{
+                        "id_order": '{:010d}'.format(r.id_order),
+                        "id_customer": r.id_customer,
+                        "customer_name": r.customer_name,
+                        "id_payment_condition": r.id_payment_condition,
+                        "payment_name": r.payment_name,
+                        "total_value": simplejson.dumps(Decimal(r.total_value)),
+                        "total_itens": r.total_itens,
+                        "installments": r.installments,
+                        "installment_value": simplejson.dumps(Decimal(r.installment_value)),
+                        "integrated": r.integrated,
+                        "integration_number": r.integration_number,
+                        "invoice_number": r.invoice_number,
+                        "track": (None if Config.TRACK_ORDER.value==False else self.__getTrack(r.taxvat,r.invoice_number,r.invoice_serie,r.track_company,r.track_code) ),
+                        "date_created": r.date_created.strftime("%d/%m/%Y %H:%M:%S")
+                    }for r in db.session.execute(stmt)]
+                }
+            else:
+                return [{
+                        "id_order": '{:010d}'.format(r.id_order),
+                        "id_customer": r.id_customer,
+                        "customer_name": r.customer_name,
+                        "id_payment_condition": r.id_payment_condition,
+                        "payment_name": r.payment_name,
+                        "total_value": simplejson.dumps(Decimal(r.total_value)),
+                        "total_itens": r.total_itens,
+                        "installments": r.installments,
+                        "installment_value": simplejson.dumps(Decimal(r.installment_value)),
+                        "integrated": r.integrated,
+                        "integration_number": r.integration_number,
+                        "invoice_number": r.invoice_number,
+                        "track": (None if Config.TRACK_ORDER.value==False else self.__getTrack(r.taxvat,r.invoice_number,r.invoice_serie,r.track_company,r.track_code) ),
+                        "date_created": r.date_created.strftime("%d/%m/%Y %H:%M:%S")
+                    }for r in db.session.execute(stmt)]
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
