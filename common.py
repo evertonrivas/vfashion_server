@@ -1,4 +1,4 @@
-from config import ConfigEmail,EmailLib,Config,MailTemplates
+from config import Config,MailTemplates
 import jinja2
 import pdfkit
 import os
@@ -81,7 +81,7 @@ def _gen_pdf():
         print(e)
         return False
 
-def _send_email(p_to:[],p_subject:str,p_content:str,p_tpl:MailTemplates,p_attach:[str]=None)->bool:
+def _send_email(p_to:[str],p_cc:[str],p_subject:str,p_content:str,p_tpl:MailTemplates,p_attach:[]=None)->bool:
     try:
         tplLoader  = jinja2.FileSystemLoader(searchpath=Config.APP_PATH.value+'assets/layout/')
         tplEnv     = jinja2.Environment(loader=tplLoader)
@@ -91,78 +91,49 @@ def _send_email(p_to:[],p_subject:str,p_content:str,p_tpl:MailTemplates,p_attach
             content=p_content
         )
 
-        if ConfigEmail.LIB.value==EmailLib.GMAIL:
-            #import argparse
-            from gmail_send import send_message,gmail_authenticate
-            # parser = argparse.ArgumentParser(description="Email Sender using Gmail API")
-            # parser.add_argument('destination', type=str, help='The destination email address')
-            # parser.add_argument('subject', type=str, help='The subject of the email')
-            # parser.add_argument('body', type=str, help='The body of the email')
-            # parser.add_argument('-f', '--files', type=str, help='email attachments', nargs='+')
-
-            # args = parser.parse_args()
-            service = gmail_authenticate()
-            #print("autenticou no gmail")
-            retorno = send_message(service, ",".join(p_to), p_subject, mail_template, p_attach)
-            if retorno['id']!="":
-                return True
-        elif ConfigEmail.LIB.value==EmailLib.SMTP:
-            import smtplib,ssl
-            from email.mime.text import MIMEText
-            from email.mime.multipart import MIMEMultipart
-
-            pass
-        elif ConfigEmail.LIB.value==EmailLib.SENDGRID:
-            #abre o arquivo
-            if len(p_attach)>0:
-                json_content = {
-                    "personalizations":[{
-                        "to":[{
-                            "email": one_to
-                        }for one_to in p_to.split(",")],
-                        "subject": p_subject
-                    }],
-                    "from":{
-                        "email":ConfigEmail.SEND_GRID_TO.value,
-                        "name": ConfigEmail.SEND_GRID_TO_NAME.value
-                    },
-                    "content":[{
-                        "type": "text/html",
-                        "value": mail_template
-                    }],
-                    "attachments":[{
+        if len(p_attach)>0:
+            json_content= {
+                "sender": {
+                    "name": Config.EMAIL_SEND_FROM.value,
+                    "email": "resultados@neugen.com.br"
+                },
+                "to": [{
+                    "email": one_to.split()
+                }for one_to in p_to],
+                "cc": [{
+                    "email": str(one_cc).split()
+                }for one_cc in p_cc],
+                "htmlContent": mail_template,
+                "subject": p_subject,
+                "attachment": [
+                    {
                         "content": att['content'],
-                        "type": att['content_type'],
-                        "fileName": att['name']
+                        "name": att['filename']
                     }for att in p_attach]
-                }
-            else:
-                json_content = {
-                    "personalizations":[{
-                        "to":[{
-                            "email": one_to
-                        }for one_to in p_to.split(",")],
-                        "subject": p_subject
-                    }],
-                    "from":{
-                        "email": ConfigEmail.SEND_GRID_TO.value,
-                        "name": ConfigEmail.SEND_GRID_TO_NAME.value
-                    },
-                    "content":[{
-                        "type": "text/html",
-                        "value": mail_template
-                    }]
-                }
-            
-            resp = requests.post("https://api.sendgrid.com/v3/mail/send",json=json_content,headers={
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer '+ConfigEmail.SEND_GRID_TOKEN.value
-            })
-            if resp.ok:
-                return True
-            #print("esta retornando aqui...")
-            return False
-        #print("nenhuma biblioteca")
+            }
+        else:
+            json_content= {
+                "sender": {
+                    "name": Config.EMAIL_SEND_FROM.value,
+                    "email": "resultados@neugen.com.br"
+                },
+                "to": [{
+                    "email": one_to.split()
+                }for one_to in p_to],
+                "cc": [{
+                    "email": str(one_cc).split()
+                }for one_cc in p_cc],
+                "htmlContent": mail_template,
+                "subject": p_subject,
+            }
+        resp = requests.post("https://api.brevo.com/v3/smtp/email",json=json_content,headers={
+            'accept':'application/json',
+            'content-type': 'application/json',
+            'api-key': Config.BREVO_API_KEY.value
+        })
+        if resp.status_code==200:
+            return True
+        return False
     except Exception as e:
         print(e)
         return False
