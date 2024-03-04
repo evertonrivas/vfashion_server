@@ -17,25 +17,8 @@ class Config(Enum):
     LOCALE           = "pt_BR" #nao lembro o motivo do locale no python
     TOKEN_KEY        = "SMART2BEE_" #used on cmm/users.py
     APP_PATH         = "d:/development/venda_fashion/backend/" #used on cmm/upload.py
-
-
-class EmailLib(Enum):
-    GMAIL    = 0
-    SMTP     = 1
-    SENDGRID = 2
-
-class ConfigEmail(Enum):
-    LIB = EmailLib.GMAIL
-
-    SEND_GRID_TO      = None
-    SEND_GRID_TO_NAME = None
-    SEND_GRID_TOKEN   = None
-
-    SMTP_HOST = None
-    SMTP_PORT = None
-    SMTP_USER = None
-    SMTP_PASS = None
-    SMTP_NAME = None
+    BREVO_API_KEY    = ""
+    EMAIL_SEND_FROM  = "evertonrivas@gmail.com"
 
 class ShippingCompany(Enum):
     BRASPRESS = 1
