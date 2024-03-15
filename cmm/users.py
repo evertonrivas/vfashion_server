@@ -56,7 +56,7 @@ class UsersList(Resource):
             direction = asc if hasattr(params,'order')==False else asc if str(params.order).upper()=='ASC' else desc
             order_by  = 'id' if hasattr(params,'order_by')==False else params.order_by
             search    = None if hasattr(params,"search")==False else params.search
-            trash     = True if hasattr(params,'active')==False else False #foi invertido
+            trash     = True if hasattr(params,'active')==False else False if params.active=="0" else True #foi invertido
             list_all  = False if hasattr(params,'list_all')==False else True
 
             filter_type   = None if hasattr(params,'type')==False else params.type

@@ -66,14 +66,15 @@ class CategoryList(Resource):
                 rquery = rquery.where(FprReason.description.like('%{}%'.format(search)))
 
             if list_all==False:
-                rquery = rquery.paginate(page=pag_num,per_page=pag_size)
+                pag = db.paginate(rquery,page=pag_num,per_page=pag_size)
+                rquery = rquery.limit(pag_size).offset((pag_num - 1) * pag_size)
                 retorno = {
 					"pagination":{
-						"registers": rquery.total,
+						"registers": pag.total,
 						"page": pag_num,
 						"per_page": pag_size,
-						"pages": rquery.pages,
-						"has_next": rquery.has_next
+						"pages": pag.pages,
+						"has_next": pag.has_next
 					},
 					"data":[{
 						"id": m.id,

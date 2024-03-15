@@ -75,63 +75,115 @@ class ProductsList(Resource):
     def get(self):
         pag_num  = 1 if request.args.get("page") is None else int(request.args.get("page"))
         pag_size = Config.PAGINATION_SIZE.value if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
-        search   = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
-        order_by = "name" if request.args.get("order_by") is None else request.args.get("order_by")
-        direction = asc if request.args.get("order_dir") == 'ASC' else desc
+        query   = "" if request.args.get("query") is None else request.args.get("query")
 
         try:
-            if search!="":
-                rquery = CmmProducts\
-                    .query\
-                    .filter(and_(CmmProducts.trash==False,CmmProducts.name.like(search)))\
-                    .order_by(direction(getattr(CmmProducts, order_by)))\
-                    .paginate(page=pag_num,per_page=pag_size)
-            else:
-                rquery = CmmProducts\
-                    .query\
-                    .filter(CmmProducts.trash==False)\
-                    .order_by(direction(getattr(CmmProducts, order_by)))\
-                    .paginate(page=pag_num,per_page=pag_size)
+            params = _get_params(query)
+            trash     = False if hasattr(params,"trash")==False else True
+            order_by  = "name" if hasattr(params,"order_by")==False else params.order_by
+            direction = asc if hasattr(params,"order")==False else asc if str(params.order).lower()=="asc" else desc
+        
+            filter_search = None if hasattr(params,"search")==False else params.name
+            filter_type   = None if hasattr(params,"type")==False else params.type
+            filter_model  = None if hasattr(params,"model")==False else params.model
+            filter_grid   = None if hasattr(params,"grid")==False else params.grid
 
-            return {
-                "pagination":{
-                    "registers": rquery.total,
-                    "page": pag_num,
-                    "per_page": pag_size,
-                    "pages": rquery.pages,
-                    "has_next": rquery.has_next
-                },
-                "data":[{
-                    "id": m.id,
-                    "id_category": m.id_category,
-                    "prodCode": m.prodCode,
-                    "barCode": m.barCode,
-                    "refCode": m.refCode,
-                    "name": m.name,
-                    "description": m.description,
-                    "observation": m.observation,
-                    "ncm": m.ncm,
-                    "price": simplejson.dumps(Decimal(m.price)),
-                    "measure_unit": m.measure_unit,
-                    "structure": m.structure,
-                    "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                    "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None,
-                    "images": self.get_images(m.id)
-                } for m in rquery.items]
-            }
+            rquery = Select(CmmProducts.id,
+                            CmmProducts.prodCode,
+                            CmmProducts.barCode,
+                            CmmProducts.refCode,
+                            CmmProducts.name,
+                            CmmProducts.description,
+                            CmmProducts.observation,
+                            CmmProducts.ncm,
+                            CmmProducts.price,
+                            CmmProducts.measure_unit,
+                            CmmProducts.structure,
+                            CmmProducts.date_created,
+                            CmmProducts.date_updated,
+                            CmmProductsTypes.name.label("type_description"),
+                            CmmProductsModels.name.label("model_description"),
+                            CmmProductsGrid.name.label("grid_description")
+                            ).join(CmmProductsTypes,CmmProductsTypes.id==CmmProducts.id_type)\
+                            .join(CmmProductsModels,CmmProductsModels.id==CmmProducts.id_model)\
+                            .join(CmmProductsGrid,CmmProductsGrid.id==CmmProducts.id_grid)\
+                            .where(CmmProducts.trash==trash)\
+                            .order_by(direction(getattr(CmmProducts, order_by)))
+            
+            if filter_search is not None:
+                rquery.where(or_(
+                    CmmProducts.name.like("%{}%".format(filter_search)),
+                    CmmProducts.description.like("%{}%".format(filter_search)),
+                    CmmProducts.observation.like("%{}%".format(filter_search)),
+                    CmmProducts.barCode.like("%{}%".format(filter_search)),
+                    CmmProducts.refCode.like("%{}%".format(filter_search))
+                ))
+
+            if filter_model is not None:
+                rquery.where(CmmProducts.id_model==filter_model)
+
+            if filter_type is not None:
+                rquery.where(CmmProducts.id_type==filter_type)
+
+            if filter_grid is not None:
+                rquery.where(CmmProducts.id_grid==filter_grid)
+
+            if hasattr(params,'list_all')==False:
+                pag = db.paginate(rquery,page=pag_num,per_page=pag_size)
+                rquery = rquery.limit(pag_size).offset((pag_num - 1) * pag_size)
+
+                return {
+                    "pagination":{
+                        "registers": pag.total,
+                        "page": pag_num,
+                        "per_page": pag_size,
+                        "pages": pag.pages,
+                        "has_next": pag.has_next
+                    },
+                    "data":[{
+                        "id": m.id,
+                        "type_description": m.type_description,
+                        "model_description": m.model_description,
+                        "grid_description":m.grid_description,
+                        "prodCode": m.prodCode,
+                        "barCode": m.barCode,
+                        "refCode": m.refCode,
+                        "name": m.name,
+                        "description": m.description,
+                        "observation": m.observation,
+                        "ncm": m.ncm,
+                        "price": simplejson.dumps(Decimal(m.price)),
+                        "measure_unit": m.measure_unit,
+                        "structure": m.structure,
+                        "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+                        "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
+                    } for m in db.session.execute(rquery)]
+                }
+            else:
+                return [{
+                        "id": m.id,
+                        "type_description": m.type_description,
+                        "model_description": m.model_description,
+                        "grid_description":m.grid_description,
+                        "prodCode": m.prodCode,
+                        "barCode": m.barCode,
+                        "refCode": m.refCode,
+                        "name": m.name,
+                        "description": m.description,
+                        "observation": m.observation,
+                        "ncm": m.ncm,
+                        "price": simplejson.dumps(Decimal(m.price)),
+                        "measure_unit": m.measure_unit,
+                        "structure": m.structure,
+                        "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+                        "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
+                    } for m in db.session.execute(rquery)]
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
                 "error_details": e._message(),
                 "error_sql": e._sql_message()
             }
-
-    def get_images(self,id:int):
-        rquery = CmmProductsImages.query.filter_by(id_product=id)
-        return [{
-            "id": m.id,
-            "img_url":m.img_url
-        }for m in rquery]
 
     @ns_prod.response(HTTPStatus.OK.value,"Cria um novo produto no sistema")
     @ns_prod.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar novo produto!")

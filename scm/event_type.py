@@ -1,7 +1,8 @@
+from datetime import datetime
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import _get_params, db,ScmEventType
+from models import _get_params, _show_query, db,ScmEventType
 import json
 from sqlalchemy import Select, exc,and_,asc,desc
 from auth import auth
@@ -53,12 +54,16 @@ class CollectionList(Resource):
             params    = _get_params(query)
             direction = asc if hasattr(params,'order')==False else asc if str(params.order).upper()=='ASC' else desc
             order_by  = 'id' if hasattr(params,'order_by')==False else params.order_by
-            search    = None if hasattr(params,"search")==False else params.search
             trash     = False if hasattr(params,'active')==False else True
             list_all  = False if hasattr(params,'list_all')==False else True
+            
+            filter_search       = None if hasattr(params,"search")==False or str(params.search).strip()=="" else params.search
+            filter_just_parent  = False if hasattr(params,"just_parent")==False else True
+            filter_no_milestone = False if hasattr(params,"no_milestone")==False else True
 
 
             rquery = Select(ScmEventType.id,
+                            ScmEventType.id_parent,
                             ScmEventType.name,
                             ScmEventType.hex_color,
                             ScmEventType.has_budget,
@@ -66,14 +71,19 @@ class CollectionList(Resource):
                             ScmEventType.is_milestone,
                             ScmEventType.date_created,
                             ScmEventType.date_updated)\
-                            .where(and_(
-                                ScmEventType.trash==trash,
-                                ScmEventType.id_parent.is_(None)
-                            ))\
+                            .where(ScmEventType.trash==trash)\
                             .order_by(direction(getattr(ScmEventType,order_by)))
             
-            if search=="":
-                rquery = rquery.where(ScmEventType.name.like("%{}%".format(search)))
+            squery = ScmEventType.query
+            
+            if filter_search is not None:
+                rquery = rquery.where(ScmEventType.name.like("%{}%".format(filter_search)))
+
+            if filter_just_parent==True:
+                rquery = rquery.where(ScmEventType.id_parent.is_(None))
+
+            if filter_no_milestone==True:
+                rquery = rquery.where(ScmEventType.is_milestone==False)
 
             if list_all==False:
                 pag    = db.paginate(rquery,page=pag_num,per_page=pag_size)
@@ -94,7 +104,17 @@ class CollectionList(Resource):
                         "has_budget": m.has_budget,
                         "use_collection": m.use_collection,
                         "is_milestone": m.is_milestone,
-                        "children": self.__get_children(m.id),
+                        "children": [{
+                            "id": c.id,
+                            "name": c.name,
+                            "hex_color": c.hex_color,
+                            "has_budget": c.has_budget,
+                            "use_collection": c.use_collection,
+                            "is_milestone": c.is_milestone,
+                            "date_created": c.date_created.strftime("%Y-%m-%d"),
+                            "date_updated": c.date_updated.strftime("%Y-%m-%d %H:%M:%S") if c.date_updated!=None else None
+                        }for c in squery.filter(ScmEventType.id_parent==m.id).all()],
+                        "parent": self.__get_parent(m.id_parent),
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                         "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
                     } for m in db.session.execute(rquery)]
@@ -107,7 +127,17 @@ class CollectionList(Resource):
                         "has_budget": m.has_budget,
                         "use_collection": m.use_collection,
                         "is_milestone": m.is_milestone,
-                        "children": self.__get_children(m.id),
+                        "children": [{
+                            "id": c.id,
+                            "name": c.name,
+                            "hex_color": c.hex_color,
+                            "has_budget": c.has_budget,
+                            "use_collection": c.use_collection,
+                            "is_milestone": c.is_milestone,
+                            "date_created": c.date_created.strftime("%Y-%m-%d"),
+                            "date_updated": c.date_updated.strftime("%Y-%m-%d %H:%M:%S") if c.date_updated!=None else None
+                        }for c in squery.filter(ScmEventType.id_parent==m.id).all()],
+                        "parent": self.__get_parent(m.id_parent),
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                         "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
                     } for m in db.session.execute(rquery)]
@@ -118,19 +148,29 @@ class CollectionList(Resource):
                 "error_details": e._message(),
                 "error_sql": e._sql_message()
             }
-        
-    def __get_children(self,id:int):
-        regs = ScmEventType.query.filter(ScmEventType.id_parent==id)
-        return [{
-            "id": c.id,
-            "name": c.name,
-            "hex_color": c.hex_color,
-            "has_budget": c.has_budget,
-            "use_collection": c.use_collection,
-            "is_milestone": c.is_milestone,
-            "date_created": c.date_created.strftime("%Y-%m-%d"),
-            "date_updated": c.date_updated.strftime("%Y-%m-%d %H:%M:%S") if c.date_updated!=None else None
-        }for c in regs.all()]
+    
+    def __get_parent(self,id_parent:int):
+        reg = db.session.execute(Select(ScmEventType.id,
+                      ScmEventType.name,
+                      ScmEventType.hex_color,
+                      ScmEventType.has_budget,
+                      ScmEventType.use_collection,
+                      ScmEventType.is_milestone,
+                      ScmEventType.date_created,
+                      ScmEventType.date_updated).where(ScmEventType.id==id_parent)).first()
+        if reg is not None:
+            return {
+                "id": reg.id,
+                "name": reg.name,
+                "hex_color": reg.hex_color,
+                "has_budget": reg.has_budget,
+                "use_collection": reg.use_collection,
+                "is_milestone": reg.is_milestone,
+                "date_created": reg.date_created.strftime("%Y-%m-%d"),
+                "date_updated": reg.date_updated.strftime("%Y-%m-%d %H:%M:%S") if reg.date_updated!=None else None
+            }
+        else:
+            return {}
 
     @ns_event.response(HTTPStatus.OK.value,"Cria um novo tipo de evento")
     @ns_event.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar registro!")
@@ -140,10 +180,14 @@ class CollectionList(Resource):
         try:
             req = request.get_json()
             reg = ScmEventType()
-            reg.name      = req.name
-            reg.hex_color = reg.hex_color
-            reg.has_budget: reg.has_budget
-            reg.use_collection: reg.use_collection
+            reg.name           = req["name"]
+            reg.hex_color      = req["hex_color"]
+            reg.has_budget     = req["has_budget"]
+            reg.use_collection = req["use_collection"]
+            reg.is_milestone   = req["is_miliestone"]
+            reg.id_parent      = req["id_parent"]
+            reg.trash          = False
+            reg.date_created   = datetime.now()
             db.session.add(reg)
             db.session.commit()
 
@@ -188,12 +232,15 @@ class CollectionApi(Resource):
     def post(self,id:int)->bool:
         try:
             req = request.get_json()
-            reg = ScmEventType.query.get(id)
-            reg.name           = reg.name if req["name"] is None else req["name"]
-            reg.hex_color      = reg.hex_color if req["hex_color"] is None else req["hex_color"]
-            reg.trash          = reg.trash if req["trash"] is None else req["trash"]
-            reg.has_budget     = reg.has_budget if req["has_budget"] is None else req["has_budget"]
-            reg.use_collection = reg.use_collection if req["use_collection"] is None else req["use_collection"]
+            reg:ScmEventType = ScmEventType.query.get(id)
+            reg.name           = req["name"]
+            reg.hex_color      = req["hex_color"]
+            reg.has_budget     = req["has_budget"]
+            reg.use_collection = req["use_collection"]
+            reg.is_milestone   = req["is_miliestone"]
+            reg.id_parent      = req["id_parent"]
+            reg.trash          = False
+            reg.date_updated   = datetime.now()
             db.session.commit()
 
             return True
@@ -209,7 +256,7 @@ class CollectionApi(Resource):
     @auth.login_required
     def delete(self,id:int)->bool:
         try:
-            reg = ScmEventType.query.get(id)
+            reg:ScmEventType = ScmEventType.query.get(id)
             reg.trash = True
             db.session.commit()
             return True

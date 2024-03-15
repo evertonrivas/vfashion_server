@@ -2,7 +2,7 @@ from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields,RestError
 from flask import request
 from models import  CmmLegalEntityHistory, db,_save_log,_get_params,B2bCustomerRepresentative, CmmCities, CmmCountries, CmmLegalEntityContact, CmmLegalEntityFile, CmmLegalEntityWeb, CmmStateRegions, CrmFunnelStageCustomer,CmmLegalEntities,CmmUserEntity
-from sqlalchemy import Select,and_,exc,asc,desc,func
+from sqlalchemy import Select,and_,exc,asc,desc,func, or_
 from auth import auth
 from config import Config,CustomerAction
 
@@ -72,13 +72,12 @@ class EntitysList(Resource):
         try:
             params = _get_params(search)
 
-            direction = asc if hasattr(params,'order')==False else asc if params.order=='ASC' else desc
-            order_by  = 'id' if hasattr(params,'order_by')==False else params.order_by
-            search    = None if hasattr(params,"search")==False else params.search
-            type      = None if hasattr(params,'type')==False else params.type
-            trash     = False if hasattr(params,'trash')==False else params.trash
-
-            filter_rep= None if hasattr(params,'representative')==False else params.filter_rep
+            direction     = asc if hasattr(params,'order')==False else asc if params.order=='ASC' else desc
+            order_by      = 'id' if hasattr(params,'order_by')==False else params.order_by
+            trash         = False if hasattr(params,'trash')==False else params.trash
+            filter_search = None if hasattr(params,"search")==False else params.search
+            filter_type   = None if hasattr(params,'type')==False else params.type
+            filter_rep    = None if hasattr(params,'representative')==False else params.filter_rep
 
             rquery = Select(
                     CmmLegalEntities.id,
@@ -105,21 +104,27 @@ class EntitysList(Resource):
                 .where(CmmLegalEntities.trash==trash)\
                 .order_by(direction(getattr(CmmLegalEntities,order_by)))
             
-            if search!=None:
+            if filter_search!=None:
                 rquery = rquery.where(
-                    CmmCountries.name.like(search) | 
-                    CmmStateRegions.name.like(search) |
-                    CmmCities.name.like(search) |
-                    CmmLegalEntities.name.like(search) |
-                    CmmLegalEntities.fantasy_name.like(search))
+                    or_(
+                        CmmCountries.name.like("%{}%".format(filter_search)),
+                        CmmStateRegions.name.like("%{}%".format(filter_search)),
+                        CmmCities.name.like("%{}%".format(filter_search)),
+                        CmmLegalEntities.name.like("%{}%".format(filter_search)),
+                        CmmLegalEntities.fantasy_name.like("%{}%".format(filter_search)),
+                        CmmLegalEntities.address.like("%{}%".format(filter_search)),
+                        CmmLegalEntities.neighborhood.like("%{}%".format(filter_search)),
+                        CmmLegalEntities.taxvat.like("%{}%".format(filter_search))
+                    )
+                )
                 
             if filter_rep is not None:
                 rquery = rquery.where(CmmLegalEntities.id.in_(
                     Select(B2bCustomerRepresentative.id_customer).where(B2bCustomerRepresentative.id_representative==filter_rep)
                 ))
                 
-            if type!=None:
-                rquery = rquery.where(CmmLegalEntities.type==type)
+            if filter_type!=None:
+                rquery = rquery.where(CmmLegalEntities.type==filter_type)
 
             if hasattr(params,'list_all')==False:
                 pag = db.paginate(rquery,page=pag_num,per_page=pag_size)
