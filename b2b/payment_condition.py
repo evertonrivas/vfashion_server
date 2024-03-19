@@ -49,23 +49,35 @@ class PaymentConditionsList(Resource):
         query    = "" if request.args.get("query") is None else request.args.get("query")
         try:
             params = _get_params(query)
-            search    = None if hasattr(params,"search")==False else params.search
             trash     = False if hasattr(params,'trash')==False else True
             list_all  = False if hasattr(params,"list_all")==False else True
             order_by  = "id" if hasattr(params,"order_by")==False else params.order_by
             direction = desc if hasattr(params,"order_dir") == 'DESC' else asc
 
-
+            filter_search        = None if hasattr(params,"search")==False else params.search
+            filter_installments  = None if hasattr(params,"installments")==False else params.installments
+            filter_received_days = None if hasattr(params,"received_days")==False else params.received_days
+ 
             rquery = Select(B2bPaymentConditions.id,
                             B2bPaymentConditions.name,
                             B2bPaymentConditions.installments,
                             B2bPaymentConditions.received_days,
                             B2bPaymentConditions.date_created,
-                            B2bPaymentConditions.date_updated).where(B2bPaymentConditions.trash==trash)\
+                            B2bPaymentConditions.date_updated)\
+                            .where(B2bPaymentConditions.trash==trash)\
                             .order_by(direction(getattr(B2bPaymentConditions,order_by)))
+            
+            if filter_search is not None:
+                rquery = rquery.where(B2bPaymentConditions.name.like("%{}%".format(filter_search)))
+
+            if filter_installments is not None:
+                rquery = rquery.where(B2bPaymentConditions.installments==filter_installments)
+
+            if filter_received_days is not None:
+                rquery = rquery.where(B2bPaymentConditions.received_days==filter_received_days)
 
             if list_all==False:
-                pag    = db.paginate(page=pag_num,per_page=pag_size)
+                pag    = db.paginate(rquery,page=pag_num,per_page=pag_size)
                 rquery = rquery.limit(pag_size).offset((pag_num - 1) * pag_size)
                 retorno = {
                     "pagination":{

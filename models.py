@@ -63,7 +63,7 @@ class CmmUsers(db.Model,SerializerMixin):
     id              = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
     username        = Column(String(100), nullable=False,unique=True)
     password        = Column(String(255), nullable=False)
-    type            = Column(CHAR(1),nullable=False,default='L',comment='A = Administrador, L = Lojista, R = Representante, V = Vendedor, C = Company User')
+    type            = Column(CHAR(1),nullable=False,default='L',comment='A = Administrador, L = Lojista, I = Lojista (IA), R = Representante, V = Vendedor, C = Company User')
     date_created    = Column(DateTime,nullable=False,server_default=func.now())
     date_updated    = Column(DateTime,onupdate=func.now())
     active          = Column(Boolean,nullable=False,server_default='1')
@@ -174,7 +174,7 @@ class CmmProductsCategories(db.Model,SerializerMixin):
 
 class CmmProductsGrid(db.Model,SerializerMixin):
     id           = Column(Integer,primary_key=True,autoincrement=True,nullable=False)
-    orign_id     = Column(Integer,nullable=True)
+    origin_id    = Column(Integer,nullable=True)
     name         = Column(String(128))
     default      = Column(Boolean,nullable=False,server_default='0')
     date_created = Column(DateTime,nullable=False,server_default=func.now())

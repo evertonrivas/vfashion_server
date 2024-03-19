@@ -2,7 +2,7 @@ from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
 from models import CmmLegalEntities, CmmLegalEntityContact, CmmUserEntity, CmmUsers, _get_params,db,_save_log
-from sqlalchemy import Select, desc, exc, and_, asc, Insert,Update, or_
+from sqlalchemy import Select, desc, exc, and_, asc, Insert,Update, func, or_
 from auth import auth
 from config import Config,CustomerAction
 
@@ -334,3 +334,23 @@ class UserNew(Resource):
                 "error_sql": e._sql_message()
             }
 ns_user.add_resource(UserNew,'/start')
+
+
+class UserCount(Resource):
+    @ns_user.response(HTTPStatus.OK.value,"Retorna o total de Usuarios por tipo")
+    @ns_user.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_user.param("type","Tipo da Entidade","query",type=str,enum=['','A','L','R','C'])
+    @auth.login_required
+    def get(self):
+        try:
+            stmt = Select(func.count(CmmUsers.id).label("total")).select_from(CmmUsers)
+            if(request.args.get("level")!=""):
+                stmt = stmt.where(CmmUsers.type==request.args.get("level"))
+            return db.session.execute(stmt).first().total
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
+ns_user.add_resource(UserCount,'/count')

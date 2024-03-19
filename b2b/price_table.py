@@ -1,9 +1,9 @@
 from http import HTTPStatus
 from flask import request
 from flask_restx import Resource,Namespace,fields
-from models import B2bTablePrice,B2bTablePriceProduct,db
+from models import B2bTablePrice,B2bTablePriceProduct, _get_params,db
 import json
-from sqlalchemy import exc,and_,desc,asc
+from sqlalchemy import Select, exc,and_,desc,asc
 from auth import auth
 from decimal import Decimal
 from config import Config
@@ -61,41 +61,49 @@ class PriceTableList(Resource):
     def get(self):
         pag_num  =  1 if request.args.get("page") is None else int(request.args.get("page"))
         pag_size = Config.PAGINATION_SIZE.value if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
-        search   = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
+        query    = "" if request.args.get("query") is None else request.args.get("query")
         list_all = False if request.args.get("list_all") is None else True
         order_by   = "id" if request.args.get("order_by") is None else request.args.get("order_by")
         direction  = desc if request.args.get("order_dir") == 'DESC' else asc
 
         try:
-            if search=="":
-                rquery = B2bTablePrice\
-                    .query\
-                    .filter(B2bTablePrice.active==True)\
-                    .order_by(direction(getattr(B2bTablePrice, order_by)))
-            else:
-                rquery = B2bTablePrice\
-                    .query\
-                    .filter(and_(B2bTablePrice.active==True,B2bTablePrice.name.like(search)))\
-                    .order_by(direction(getattr(B2bTablePrice, order_by)))
+            params    = _get_params(query)
+            direction = asc if hasattr(params,'order')==False else asc if str(params.order).upper()=='ASC' else desc
+            order_by  = 'id' if hasattr(params,'order_by')==False else params.order_by
+            search    = None if hasattr(params,"search")==False or hasattr(params,"search")!="" else params.search
+            trash     = True if hasattr(params,'active')==False else False if params.active=="0" else True #foi invertido
+            list_all  = False if hasattr(params,'list_all')==False else True
+
+            rquery = Select(B2bTablePrice.id,
+                            B2bTablePrice.name,
+                            B2bTablePrice.start_date,
+                            B2bTablePrice.end_date,
+                            B2bTablePrice.active,
+                            B2bTablePrice.date_created,
+                            B2bTablePrice.date_updated)\
+                            .where(B2bTablePrice.active==trash)
+
+            if search is not None:
+                rquery = rquery.where(B2bTablePrice.name.like("%{}%".format(search)))
 
             if list_all==False:
-                rquery = rquery.paginate(page=pag_num,per_page=pag_size)
+                pag = db.paginate(rquery,page=pag_num,per_page=pag_size)
+                rquery = rquery.limit(pag_size).offset((pag_num - 1) * pag_size)
 
                 retorno = {
                     "pagination":{
-                        "registers": rquery.total,
+                        "registers": pag.total,
                         "page": pag_num,
                         "per_page": pag_size,
-                        "pages": rquery.pages,
-                        "has_next": rquery.has_next
+                        "pages": pag.pages,
+                        "has_next": pag.has_next
                     },
                     "data":[{
                         "id": m.id,
                         "name": m.name,
                         "start_date": m.start_date,
                         "end_date": m.end_date,
-                        "active": m.active,
-                        "products": self.get_products(m.id)
+                        "active": m.active
                     }for m in rquery.items]
                 }
             else:
@@ -104,8 +112,7 @@ class PriceTableList(Resource):
                         "name": m.name,
                         "start_date": m.start_date,
                         "end_date": m.end_date,
-                        "active": m.active,
-                        "products": self.get_products(m.id)
+                        "active": m.active
                     }for m in rquery]
             return retorno
         except exc.SQLAlchemyError as e:
@@ -114,14 +121,6 @@ class PriceTableList(Resource):
                 "error_details": e._message(),
                 "error_sql": e._sql_message()
             }
-    
-    def get_products(self,id:int):
-        rquery = B2bTablePriceProduct.query.filter(B2bTablePriceProduct.id_table_price==id)
-        return [{
-            "id_product": m.id_product,
-            "price": m.price,
-            "price_retail": m.price_retail
-        }for m in rquery]
 
     @ns_price.response(HTTPStatus.OK.value,"Cria um novo pedido")
     @ns_price.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar pedido!")
@@ -136,15 +135,6 @@ class PriceTableList(Resource):
             table.end_date   = req.end_date
             table.active     = req.active
             db.session.add(table)
-            db.session.commit()
-            for prod in table.products:
-                p = B2bTablePriceProduct()
-                p.id_product = prod.id_product
-                p.id_table_price = table.id
-                p.price          = prod.price
-                p.price_retail   = prod.price_retail
-                db.session.add(p)
-
             db.session.commit()           
             return table.id
         except exc.SQLAlchemyError as e:
@@ -164,7 +154,10 @@ class PriceTableApi(Resource):
     def get(self,id:int):
         try:
             rquery = B2bTablePrice.query.get(id)
-            squery = B2bTablePriceProduct.query.filter(B2bTablePriceProduct.id_table_price==id)
+            squery = Select(B2bTablePriceProduct.id_product,
+                            B2bTablePriceProduct.price,
+                            B2bTablePriceProduct.price_retail)\
+                            .where(B2bTablePriceProduct.id_table_price==id)
             return {
                 "id": rquery.id,
                 "name": rquery.name,
@@ -172,13 +165,7 @@ class PriceTableApi(Resource):
                 "end_date": rquery.end_date.strftime("%Y-%m-%d %H:%M:%S"),
                 "active": rquery.active,
                 "date_created": rquery.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                "date_updated": rquery.date_updated.strftime("%Y-%m-%d %H:%M:%S"),
-                "products": [{
-                    "id_product": m.id_product,
-                    "stock_quantity": m.stock_quantity,
-                    "price": m.price,
-                    "price_retail": m.price_retail
-                }for m in squery]
+                "date_updated": rquery.date_updated.strftime("%Y-%m-%d %H:%M:%S")
             }
         except exc.SQLAlchemyError as e:
             return {

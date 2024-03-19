@@ -2,8 +2,8 @@ from http import HTTPStatus
 import json
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import CmmProductsGrid,CmmProductsGridDistribution,db
-from sqlalchemy import exc, and_
+from models import CmmProductsGrid,CmmProductsGridDistribution, _get_params,db
+from sqlalchemy import Select, asc, desc, exc, and_
 from auth import auth
 from config import Config
 
@@ -56,28 +56,62 @@ class GridList(Resource):
     def get(self):
         pag_num  =  1 if request.args.get("page") is None else int(request.args.get("page"))
         pag_size = Config.PAGINATION_SIZE.value if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
-        search   = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
+        query    = None if request.args.get("query") is None else request.args.get("query")
 
         try:
-            if search!="":
-                rquery = CmmProductsGrid.query.filter(and_(CmmProductsGrid.trash==False,CmmProductsGrid.name.like(search))).paginate(page=pag_num,per_page=pag_size)
-            else:
-                rquery = CmmProductsGrid.query.filter(CmmProductsGrid.trash==False).paginate(page=pag_num,per_page=pag_size)
+            params    = _get_params(query)
+            trash     = False if hasattr(params,'trash')==False else True
+            list_all  = False if hasattr(params,"list_all")==False else True
+            order_by  = "id" if hasattr(params,"order_by")==False else params.order_by
+            direction = desc if hasattr(params,"order_dir") == 'DESC' else asc
 
-            return {
-                "pagination":{
-                    "registers": rquery.total,
-                    "page": pag_num,
-                    "per_page": pag_size,
-                    "pages": rquery.pages,
-                    "has_next": rquery.has_next
-                },
-                "data":[{
-                    "id": m.id,
-                    "name": m.name,
-                    "distribution": self.get_grid_distribution(m.id)
-                }for m in rquery.items]
-            }
+            filter_search   = None if hasattr(params,"search")==False else params.search
+            filter_default  = None if hasattr(params,"default")==False else params.default
+
+            rquery = Select(CmmProductsGrid.id,
+                            CmmProductsGrid.origin_id,
+                            CmmProductsGrid.name,
+                            CmmProductsGrid.default,
+                            CmmProductsGrid.date_created,
+                            CmmProductsGrid.date_updated)\
+                            .where(CmmProductsGrid.trash==trash)\
+                            .order_by(direction(getattr(CmmProductsGrid,order_by)))
+
+            if filter_search is not None:
+                rquery = rquery.where(CmmProductsGrid.name.like("%{}%".format(filter_search)))
+
+            if filter_default is not None:
+                rquery = rquery.where(CmmProductsGrid.default==filter_default)
+
+            if list_all==False:
+                pag    = db.paginate(rquery,page=pag_num,per_page=pag_size)
+                rquery = rquery.limit(pag_size).offset((pag_num - 1) * pag_size)
+                return {
+                    "pagination":{
+                        "registers": pag.total,
+                        "page": pag_num,
+                        "per_page": pag_size,
+                        "pages": pag.pages,
+                        "has_next": pag.has_next
+                    },
+                    "data":[{
+                        "id": m.id,
+                        "origin_id":m.origin_id,
+                        "name": m.name,
+                        "default": m.default,
+                        "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+                        "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
+                    }for m in db.session.execute(rquery)]
+                }
+            else:
+                return [{
+                        "id": m.id,
+                        "origin_id": m.origin_id,
+                        "name": m.name,
+                        "default": m.default,
+                        "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+                        "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
+                    }for m in db.session.execute(rquery)]
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
