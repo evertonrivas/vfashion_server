@@ -3,10 +3,9 @@ from http import HTTPStatus
 import simplejson
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import B2bBrand, B2bCollectionPrice, B2bProductStock, CmmCategories, CmmProducts, CmmProductsCategories, CmmProductsGrid, CmmProductsGridDistribution,\
-    CmmProductsImages, CmmProductsTypes, \
-    CmmProductsModels, B2bCollection, B2bTablePrice, \
-    B2bTablePriceProduct, CmmTranslateColors,CmmTranslateSizes, ScmCalendar, ScmEvent, _get_params, _show_query, db
+from models import CmmProducts, CmmProductsGrid, \
+    CmmProductsImages, CmmProductsTypes, CmmProductsModels, \
+    _get_params, db
 from sqlalchemy import desc, exc, and_, asc,Select, func,or_
 from auth import auth
 from decimal import Decimal

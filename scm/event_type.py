@@ -54,7 +54,7 @@ class CollectionList(Resource):
             params    = _get_params(query)
             direction = asc if hasattr(params,'order')==False else asc if str(params.order).upper()=='ASC' else desc
             order_by  = 'id' if hasattr(params,'order_by')==False else params.order_by
-            trash     = False if hasattr(params,'active')==False else True
+            trash     = False if hasattr(params,'trash')==False else True
             list_all  = False if hasattr(params,'list_all')==False else True
             
             filter_search       = None if hasattr(params,"search")==False or str(params.search).strip()=="" else params.search

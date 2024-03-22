@@ -30,6 +30,7 @@ class FunnelStagesApi(Resource):
             direction = desc if hasattr(params,"order_dir") == 'DESC' else asc
 
             filter_search = None if hasattr(params,"search")==False or params.search=="" else params.search
+            filter_funnel = None if hasattr(params,"funnel")==False else params.funnel
 
             rquery = Select(CrmFunnelStage.id,
                             CrmFunnelStage.id_funnel,
@@ -49,6 +50,9 @@ class FunnelStagesApi(Resource):
                     CrmFunnelStage.name.like("%{}%".format(filter_search)),
                     CrmFunnel.name.like("%{}%".format(filter_search))
                 ))
+
+            if filter_funnel is not None:
+                rquery = rquery.where(CrmFunnelStage.id_funnel==filter_funnel)
             
             if list_all==False:
                 pag    = db.paginate(rquery,page=pag_num,per_page=pag_size)

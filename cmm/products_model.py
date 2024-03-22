@@ -51,7 +51,7 @@ class CategoryList(Resource):
             direction = asc if hasattr(params,'order')==False else asc if str(params.order).upper()=='ASC' else desc
             order_by  = 'id' if hasattr(params,'order_by')==False else params.order_by
             search    = None if hasattr(params,"search")==False else params.search
-            trash     = False if hasattr(params,'active')==False else True
+            trash     = False if hasattr(params,'trash')==False else True
             list_all  = False if hasattr(params,'list_all')==False else True
 
             rquery = Select(CmmProductsModels.id,

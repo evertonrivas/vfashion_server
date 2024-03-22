@@ -3,7 +3,7 @@ from flask_restx import Resource,fields,Namespace
 from flask import request
 from models import _get_params,CrmFunnel,CrmFunnelStageCustomer,CrmFunnelStage,db
 import json
-from sqlalchemy import exc,and_,asc
+from sqlalchemy import desc, exc,and_,asc, Select
 from auth import auth
 from config import Config
 
@@ -59,25 +59,47 @@ class FunnelList(Resource):
     def get(self):
         pag_num  =  1 if request.args.get("page") is None else int(request.args.get("page"))
         pag_size = Config.PAGINATION_SIZE.value if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
-        search   = "" if request.args.get("query") is None else request.args.get("query")
+        query   = "" if request.args.get("query") is None else request.args.get("query")
     
         try:
-            params = _get_params(search)
+            params = _get_params(query)
+            trash     = False if hasattr(params,'trash')==False else True
+            list_all  = False if hasattr(params,"list_all")==False else True
+            order_by  = "id" if hasattr(params,"order_by")==False else params.order_by
+            direction = desc if hasattr(params,"order_dir") == 'DESC' else asc
+            search    = None if hasattr(params,"search")==False or params.search=='' else params.search
 
-            if hasattr(params,'query'):
-                rquery = CrmFunnel.query.filter(and_(CrmFunnel.trash==False,CrmFunnel.name.like( "%{}%".format(params.query) )))
-            else:
-                rquery = CrmFunnel.query.filter(CrmFunnel.trash==False)
+            filter_type    = None if hasattr(params,"type")==False else params.type
+            filter_default = None if hasattr(params,"default")==False else True if params.default=="1" else False
 
-            if hasattr(params,'list_all')==False:
-                rquery = rquery.paginate(page=pag_num,per_page=pag_size)
+            rquery = Select(CrmFunnel.id,
+                            CrmFunnel.name,
+                            CrmFunnel.is_default,
+                            CrmFunnel.date_created,
+                            CrmFunnel.date_updated,
+                            CrmFunnel.type)\
+                            .where(CrmFunnel.trash==trash)\
+                            .order_by(direction(getattr(CrmFunnel,order_by)))
+
+            if search is not None:
+                rquery = rquery.where(CrmFunnel.name.like("%{}%".format(search)))
+
+            if filter_type is not None:
+                rquery = rquery.where(CrmFunnel.type==filter_type)
+
+            if filter_default is not None:
+                rquery = rquery.filter(CrmFunnel.is_default==filter_default)
+
+            if list_all==False:
+                pag    = db.paginate(rquery,page=pag_num,per_page=pag_size)
+                rquery = rquery.limit(pag_size).offset((pag_num - 1) * pag_size)
                 return {
                     "pagination":{
-                        "registers": rquery.total,
+                        "registers": pag.total,
                         "page": pag_num,
                         "per_page": pag_size,
-                        "pages": rquery.pages,
-                        "has_next": rquery.has_next
+                        "pages": pag.pages,
+                        "has_next": pag.has_next
                     },
                     "data":[{
                         "id": m.id,
@@ -87,7 +109,7 @@ class FunnelList(Resource):
                         "stages": self.get_stages(m.id),
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                         "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
-                    } for m in rquery.items]
+                    } for m in db.session.execute(rquery)]
                 }
             else:
                 return [{
@@ -98,7 +120,7 @@ class FunnelList(Resource):
                         "stages": self.get_stages(m.id),
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                         "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
-                    } for m in rquery]
+                    } for m in db.session.execute(rquery)]
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
