@@ -81,7 +81,7 @@ def _gen_pdf():
         print(e)
         return False
 
-def _send_email(p_to:[str],p_cc:[str],p_subject:str,p_content:str,p_tpl:MailTemplates,p_attach:[]=None)->bool:
+def _send_email(p_to:[],p_cc:[],p_subject:str,p_content:str,p_tpl:MailTemplates,p_attach:[]=None)->bool: # type: ignore
     try:
         tplLoader  = jinja2.FileSystemLoader(searchpath=Config.APP_PATH.value+'assets/layout/')
         tplEnv     = jinja2.Environment(loader=tplLoader)
