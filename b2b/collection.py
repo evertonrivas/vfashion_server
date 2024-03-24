@@ -132,18 +132,19 @@ class CollectionList(Resource):
     @auth.login_required
     def post(self)->int:
         try:
-            req = json.dumps(request.get_json())
+            req = request.get_json()
             col = B2bCollection()
-            col.name = req.name
+            col.name = req["name"]
+            col.id_brand = req["id_brand"]
             db.session.add(col)
             db.session.commit()
 
-            for cst in col.prices:
-                colp = B2bCollectionPrice()
-                colp.id_collection  = col.id
-                colp.id_table_price = cst.id_table_price
-                db.session.add(colp)
-                db.session.commit()
+            # for cst in col.prices:
+            #     colp = B2bCollectionPrice()
+            #     colp.id_collection  = col.id
+            #     colp.id_table_price = cst.id_table_price
+            #     db.session.add(colp)
+            #     db.session.commit()
 
             return col.id
         except exc.SQLAlchemyError as e:

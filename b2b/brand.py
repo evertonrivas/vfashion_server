@@ -1,3 +1,4 @@
+from datetime import datetime
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
@@ -51,7 +52,7 @@ class CollectionList(Resource):
             direction = asc if hasattr(params,'order')==False else asc if str(params.order).upper()=='ASC' else desc
             order_by  = 'id' if hasattr(params,'order_by')==False else params.order_by
             search    = None if hasattr(params,"search")==False else params.search
-            trash     = False if hasattr(params,'active')==False else True
+            trash     = False if hasattr(params,'trash')==False else True
             list_all  = False if hasattr(params,'list_all')==False else True
 
             rquery = Select(B2bBrand.id,
@@ -104,13 +105,34 @@ class CollectionList(Resource):
     @auth.login_required
     def post(self)->int:
         try:
-            req = json.dumps(request.get_json())
-            col = ns_brand()
-            col.name = req.name
-            db.session.add(col)
+            req = request.get_json()
+
+            brand = B2bBrand()
+            brand.name = req["name"]
+            brand.date_created = datetime.now()
+            db.session.add(brand)
             db.session.commit()
 
-            return col.id
+            return brand.id
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
+        
+        
+    @ns_brand.response(HTTPStatus.OK.value,"Exclui os dados de uma ou mais marcas")
+    @ns_brand.response(HTTPStatus.BAD_REQUEST.value,"Falha ao excluir registro!")
+    @auth.login_required
+    def delete(self)->bool:
+        try:
+            req = request.get_json()
+            for reg in req:
+                brand = B2bBrand.query.get(reg)
+                brand.trash = True
+                db.session.commit()
+            return True
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -126,7 +148,7 @@ class CollectionApi(Resource):
     @auth.login_required
     def get(self,id:int):
         try:
-            cquery = ns_brand.query.get(id)
+            cquery = B2bBrand.query.get(id)
 
             return {
                 "id": cquery.id,
@@ -141,34 +163,18 @@ class CollectionApi(Resource):
                 "error_sql": e._sql_message()
             }
     
-    @ns_brand.response(HTTPStatus.OK.value,"Atualiza os dados de uma coleção")
+    @ns_brand.response(HTTPStatus.OK.value,"Atualiza os dados de uma marca")
     @ns_brand.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
     @ns_brand.doc(body=brand_model)
     @auth.login_required
     def post(self,id:int)->bool:
         try:
-            req = json.dumps(request.get_json())
-            col = B2bBrand.query.get(id)
-            col.name          = col.name if req.name is None else req.name
-            col.trash         = col.trash if req.trash is None else req.trash
+            req = request.get_json()
+            brand = B2bBrand.query.get(id)
+            brand.name  = req["name"]
+            brand.date_updated = datetime.now()
             db.session.commit()
 
-            return True
-        except exc.SQLAlchemyError as e:
-            return {
-                "error_code": e.code,
-                "error_details": e._message(),
-                "error_sql": e._sql_message()
-            }
-    
-    @ns_brand.response(HTTPStatus.OK.value,"Exclui os dados de uma coleção")
-    @ns_brand.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
-    @auth.login_required
-    def delete(self,id:int)->bool:
-        try:
-            grp = B2bBrand.query.get(id)
-            grp.trash = True
-            db.session.commit()
             return True
         except exc.SQLAlchemyError as e:
             return {

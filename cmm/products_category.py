@@ -55,6 +55,9 @@ class CategoryList(Resource):
             search    = None if hasattr(params,"search")==False else params.search
             trash     = False if hasattr(params,'trash')==False else True
             list_all  = False if hasattr(params,'list_all')==False else True
+
+            filter_just_parent = None if hasattr(params,'just_parent')==False else True
+            filter_just_child  = None if hasattr(params,"just_child")==False else True
             
             rquery = Select(CmmCategories.id,
                             CmmCategories.origin_id,
@@ -62,11 +65,17 @@ class CategoryList(Resource):
                             CmmCategories.name,
                             CmmCategories.date_created,
                             CmmCategories.date_updated)\
-                            .where(and_(CmmCategories.trash==trash,CmmCategories.id_parent.is_(None)))\
+                            .where(CmmCategories.trash==trash)\
                             .order_by(direction(getattr(CmmCategories,order_by)))
 
             if search is not None:
                 rquery = rquery.where(CmmCategories.name.like("%{}%".format(search)))
+
+            if filter_just_parent==True:
+                rquery = rquery.where(CmmCategories.id_parent.is_(None))
+
+            if filter_just_child==True:
+                rquery = rquery.where(CmmCategories.id_parent.is_not(None))
 
             if list_all==False:
                 pag = db.paginate(rquery,page=pag_num,per_page=pag_size)
@@ -85,7 +94,7 @@ class CategoryList(Resource):
 						"name": m.name,
 						"id_parent": m.id_parent,
 						"date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-						"date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
+						"date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated is not None else None
 					} for m in db.session.execute(rquery)]
 				}
             else:
@@ -95,7 +104,7 @@ class CategoryList(Resource):
 						"name": m.name,
 						"id_parent": m.id_parent,
 						"date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-						"date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
+						"date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated is not None else None
 					} for m in db.session.execute(rquery)]
             return retorno
         except exc.SQLAlchemyError as e:
@@ -111,9 +120,10 @@ class CategoryList(Resource):
     @auth.login_required
     def post(self):
         try:
+            req = request.get_json()
             cat = CmmCategories()
-            cat.name = request.form.get("name")
-            cat.id_parent = int(request.form.get("id_parent")) if request.form.get("id_parent")!=None else None
+            cat.name = req["name"]
+            cat.id_parent = int(req["id_parent"]) if req["id_parent"] is not None else None
             db.session.add(cat)
             db.session.commit()
             return cat.id
