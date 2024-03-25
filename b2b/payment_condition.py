@@ -116,16 +116,14 @@ class PaymentConditionsList(Resource):
 
     @ns_payment.response(HTTPStatus.OK.value,"Cria uma nova condição de pagamento no sistema")
     @ns_payment.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar nova condicao de pagamento!")
-    @ns_payment.param("name","Nome da condição de pagamento","formData",required=True)
-    @ns_payment.param("received_days","Dias para recebimento","formData",type=int,required=True)
-    @ns_payment.param("installments","Número de parcelas","formData",type=int,required=True)
     @auth.login_required
     def post(self)->int:
         try:
+            req = request.get_json()
             payCond = B2bPaymentConditions()
-            payCond.name          = request.form.get("name")
-            payCond.received_days = request.form.get("received_days")
-            payCond.installments  = request.form.get("installments")
+            payCond.name          = req["name"]
+            payCond.received_days = req["received_days"]
+            payCond.installments  = req["installments"]
             db.session.add(payCond)
             db.session.commit()
             return payCond.id
@@ -154,16 +152,14 @@ class PaymentConditionApi(Resource):
 
     @ns_payment.response(HTTPStatus.OK.value,"Salva dados de uma condição de pgamento")
     @ns_payment.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
-    @ns_payment.param("name","Nome da condição de pagamento","formData",required=True)
-    @ns_payment.param("received_days","Dias para recebimento","formData",type=int,required=True)
-    @ns_payment.param("installments","Número de parcelas","formData",type=int,required=True)
     @auth.login_required
     def post(self,id:int)->bool:
         try:
+            req = request.get_json()
             payCond = B2bPaymentConditions.query.get(id)
-            payCond.name          = payCond.name if request.form.get("name") is None else request.form.get("name")
-            payCond.received_days = payCond.received_days if request.form.get("received_days") is None else request.form.get("received_days")
-            payCond.installments  = payCond.installments if request.form.get("installments") is None else request.form.get("installments")
+            payCond.name          = req["name"]
+            payCond.received_days = req["received_days"]
+            payCond.installments  = req["installments"]
             db.session.commit()
             return True
         except exc.SQLAlchemyError as e:

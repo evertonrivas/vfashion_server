@@ -107,8 +107,10 @@ class CategoryList(Resource):
     @auth.login_required
     def post(self):
         try:
+            req = request.get_json()
             type = CmmProductsModels()
-            type.name = request.form.get("name")
+            type.name = req["name"]
+            type.origin_id = None if not "origin_id" in req else req['origin_id']
             db.session.add(type)
             db.session.commit()
             return type.id

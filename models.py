@@ -162,7 +162,7 @@ class CmmProductsTypes(db.Model,SerializerMixin):
 
 class CmmProductsModels(db.Model,SerializerMixin):
     id           = Column(Integer,nullable=False,primary_key=True,autoincrement=True)
-    origin_id    = Column(Integer,nullable=True)
+    origin_id    = Column(Integer,nullable=True,comment="Utilizado em caso de importacao")
     name         = Column(String(255),nullable=False)
     date_created = Column(DateTime,nullable=False,server_default=func.now())
     date_updated = Column(DateTime,onupdate=func.now())

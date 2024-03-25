@@ -1,7 +1,7 @@
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import B2bCollection,B2bCollectionPrice, _get_params,db
+from models import B2bBrand, B2bCollection,B2bCollectionPrice, _get_params,db
 import json
 from sqlalchemy import Select, exc,and_,desc,asc
 from auth import auth
@@ -73,7 +73,9 @@ class CollectionList(Resource):
                             B2bCollection.id_brand,
                             B2bCollection.name,
                             B2bCollection.date_created,
-                            B2bCollection.date_updated)\
+                            B2bCollection.date_updated,
+                            B2bBrand.name.label("brand"))\
+                            .join(B2bBrand,B2bBrand.id==B2bCollection.id_brand)\
                             .where(B2bCollection.trash==trash)\
                             .order_by(direction(getattr(B2bCollection,order_by)))
             
@@ -99,6 +101,8 @@ class CollectionList(Resource):
                     "data":[{
                         "id": m.id,
                         "name": m.name,
+                        "id_brand": m.id_brand,
+                        "brand": m.brand,
                         "table_prices": self.get_table_prices(m.id),
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                         "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
@@ -108,6 +112,8 @@ class CollectionList(Resource):
                 retorno = [{
                         "id":m.id,
                         "name":m.name,
+                        "id_brand": m.id_brand,
+                        "brand": m.brand,
                         "table_prices": self.get_table_prices(m.id),
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                         "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
