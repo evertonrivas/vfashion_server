@@ -72,7 +72,7 @@ class CollectionList(Resource):
                             B2bCustomerGroup.date_updated,
                             B2bCustomerGroup.id_representative,
                             CmmLegalEntities.name.label("representative"))\
-                            .join(CmmLegalEntities,CmmLegalEntities.id==B2bCustomerGroup.id_representative)\
+                            .outerjoin(CmmLegalEntities,CmmLegalEntities.id==B2bCustomerGroup.id_representative)\
                             .where(B2bCustomerGroup.trash==trash)\
                             .order_by(direction(getattr(B2bCustomerGroup,order_by)))
             
@@ -99,6 +99,7 @@ class CollectionList(Resource):
                         "name": m.name,
                         "id_representative": m.id_representative,
                         "representative": m.representative,
+                        "need_approvement": m.need_approvement,
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                         "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated is not None else None
                     } for m in db.session.execute(rquery)]
@@ -109,6 +110,7 @@ class CollectionList(Resource):
                         "name":m.name,
                         "id_representative": m.id_representative,
                         "representative": m.representative,
+                        "need_approvement": m.need_approvement,
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                         "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated is not None else None
                     } for m in db.session.execute(rquery)]
@@ -129,17 +131,10 @@ class CollectionList(Resource):
             req = request.get_json()
             grp = B2bCustomerGroup()
             grp.name = req["name"]
-            grp.id_representative = req["id_representative"]
-            grp.need_approvement = req["need_approvement"]
+            grp.id_representative = None if req["id_representative"]=="null" or req["id_representative"]=="undefined" else int(req["id_representative"])
+            grp.need_approvement = int(req["need_approvement"])
             db.session.add(grp)
             db.session.commit()
-
-            for cst in grp["customers"]:
-                colp = B2bCustomerRepresentative()
-                colp.id_customer_group  = grp.id
-                colp.id_customer = cst["id"]
-                db.session.add(colp)
-                db.session.commit()
 
             return grp.id
         except exc.SQLAlchemyError as e:
@@ -176,7 +171,7 @@ class CollectionApi(Resource):
     def get(self,id:int):
         try:
             cquery = B2bCustomerGroup.query.get(id)
-            squery = B2bCustomerRepresentative.query.filter(B2bCustomerRepresentative.id_collection == id)
+            squery = B2bCustomerRepresentative.query.filter(B2bCustomerRepresentative.id_customer_group == id)
 
             return {
                 "id": cquery.id,
@@ -203,20 +198,10 @@ class CollectionApi(Resource):
             req = request.get_json()
             grp:B2bCustomerGroup = B2bCustomerGroup.query.get(id)
             grp.name = req["name"]
-            grp.id_representative = req["id_representative"]
-            grp.need_approvement = req["need_approvement"]
+            grp.id_representative = None if req["id_representative"]=="null" or req["id_representative"]=="undefined" else int(req["id_representative"])
+            grp.need_approvement = int(req["need_approvement"])
             db.session.add(grp)
             db.session.commit()
-
-            db.session.delete(B2bCustomerRepresentative()).where(B2bCustomerRepresentative.id_customer_group==id)
-            db.session.commit()
-
-            for cst in grp["customers"]:
-                colp = B2bCustomerRepresentative()
-                colp.id_customer_group  = id
-                colp.id_customer = cst["id"]
-                db.session.add(colp)
-                db.session.commit()
 
             return True
         except exc.SQLAlchemyError as e:
