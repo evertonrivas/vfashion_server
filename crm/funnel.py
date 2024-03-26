@@ -3,7 +3,7 @@ from flask_restx import Resource,fields,Namespace
 from flask import request
 from models import _get_params,CrmFunnel,CrmFunnelStageCustomer,CrmFunnelStage,db
 import json
-from sqlalchemy import desc, exc,and_,asc, Select
+from sqlalchemy import Update, desc, exc,and_,asc, Select
 from auth import auth
 from config import Config
 
@@ -146,9 +146,17 @@ class FunnelList(Resource):
     @auth.login_required
     def post(self)->int:
         try:
-            req = json.dumps(request.get_json())
-            fun = CrmFunnel()
-            fun.name = req.name
+            req = request.get_json()
+
+            #so pode haver um default
+            if req["is_default"]==1:
+                db.session.execute(Update(CrmFunnel).values(is_default=0))
+                db.session.commit()
+
+            fun:CrmFunnel  = CrmFunnel()
+            fun.name       = req["name"]
+            fun.is_default = req["is_default"]
+            fun.type       = req["type"]
             db.session.add(fun)
             db.session.commit()
 
@@ -166,6 +174,20 @@ class FunnelList(Resource):
                 "error_details": e._message(),
                 "error_sql": e._sql_message()
             }
+        
+    @ns_funil.response(HTTPStatus.OK.value,"Exclui os dados de um funil")
+    @ns_funil.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
+    @auth.login_required
+    def delete(self)->bool:
+        try:
+            req = request.get_json()
+            for id in req["ids"]:
+                fun = CrmFunnel.query.get(id)
+                fun.trash = True
+                db.session.commit()
+            return True
+        except:
+            return False
 
 @ns_funil.route("/<int:id>")
 @ns_funil.param("id","Id do registro")
@@ -203,6 +225,13 @@ class FunnelApi(Resource):
     @auth.login_required
     def post(self,id:int)->bool:
         try:
+            req = request.get_json()
+
+            #so pode haver um default
+            if req["is_default"]==1:
+                db.session.execute(Update(CrmFunnel).values(is_default=0))
+                db.session.commit()
+            
             fun = CrmFunnel.query.get(id)
             fun.name = fun.name if request.form.get("name") is None else request.form.get("name")
             db.session.commit()
@@ -213,15 +242,3 @@ class FunnelApi(Resource):
                 "error_details": e._message(),
                 "error_sql": e._sql_message()
             }
-    
-    @ns_funil.response(HTTPStatus.OK.value,"Exclui os dados de um funil")
-    @ns_funil.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
-    @auth.login_required
-    def delete(self,id:int)->bool:
-        try:
-            fun = CrmFunnel.query.get(id)
-            fun.trash = True
-            db.session.commit()
-            return True
-        except:
-            return False

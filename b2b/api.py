@@ -8,6 +8,7 @@ from b2b.brand import ns_brand
 from b2b.product_stock import ns_stock
 from b2b.cart import ns_cart
 from b2b.invoices import ns_invoice
+from b2b.customer_group import ns_customer_g
 
 """ Módulo Business to Business (Gestão de Vendas entre empresas)
     Módulo para realizar pedidos que realiza:
@@ -35,6 +36,7 @@ Keyword arguments: vendas, b2c, produtos, cliente, pedidos, condições de pagam
 nss = [ns_brand,
        ns_cart,
        ns_collection,
+       ns_customer_g,
        ns_invoice,
        ns_order,
        ns_payment,

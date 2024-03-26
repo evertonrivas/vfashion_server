@@ -184,6 +184,24 @@ class CollectionApi(Resource):
                 "error_details": e._message(),
                 "error_sql": e._sql_message()
             }
+        
+    @ns_collection.response(HTTPStatus.OK.value,"Exclui os dados de uma coleção")
+    @ns_collection.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @auth.login_required
+    def delete(self)->bool:
+        try:
+            req = request.get_json()
+            for id in req["ids"]:
+                grp = B2bCollection.query.get(id)
+                grp.trash = True
+                db.session.commit()
+            return True
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
     
     @ns_collection.response(HTTPStatus.OK.value,"Atualiza os dados de uma coleção")
     @ns_collection.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
@@ -209,22 +227,6 @@ class CollectionApi(Resource):
                 db.session.add(colp)
                 db.session.commit()
 
-            return True
-        except exc.SQLAlchemyError as e:
-            return {
-                "error_code": e.code,
-                "error_details": e._message(),
-                "error_sql": e._sql_message()
-            }
-    
-    @ns_collection.response(HTTPStatus.OK.value,"Exclui os dados de uma coleção")
-    @ns_collection.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
-    @auth.login_required
-    def delete(self,id:int)->bool:
-        try:
-            grp = B2bCollection.query.get(id)
-            grp.trash = True
-            db.session.commit()
             return True
         except exc.SQLAlchemyError as e:
             return {

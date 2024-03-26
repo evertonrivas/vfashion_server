@@ -133,6 +133,24 @@ class PaymentConditionsList(Resource):
                 "error_details": e._message(),
                 "error_sql": e._sql_message()
             }
+        
+    @ns_payment.response(HTTPStatus.OK.value,"Exclui os dados de uma condição de pagamento")
+    @ns_payment.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @auth.login_required
+    def delete(self)->bool:
+        try:
+            req = request.get_json()
+            for id in req["ids"]:
+                payCond = B2bPaymentConditions.query.get(id)
+                payCond.trash = True
+                db.session.commit()
+            return True
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
 
 @ns_payment.route("/<int:id>")
 @ns_payment.param("id","Id do registro")
@@ -160,22 +178,6 @@ class PaymentConditionApi(Resource):
             payCond.name          = req["name"]
             payCond.received_days = req["received_days"]
             payCond.installments  = req["installments"]
-            db.session.commit()
-            return True
-        except exc.SQLAlchemyError as e:
-            return {
-                "error_code": e.code,
-                "error_details": e._message(),
-                "error_sql": e._sql_message()
-            }
-    
-    @ns_payment.response(HTTPStatus.OK.value,"Exclui os dados de uma condição de pagamento")
-    @ns_payment.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
-    @auth.login_required
-    def delete(self,id:int)->bool:
-        try:
-            payCond = B2bPaymentConditions.query.get(id)
-            payCond.trash = True
             db.session.commit()
             return True
         except exc.SQLAlchemyError as e:

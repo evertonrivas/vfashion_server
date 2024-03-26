@@ -2,8 +2,8 @@ from http import HTTPStatus
 import json
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import CmmProductsGrid,CmmProductsGridDistribution, _get_params,db
-from sqlalchemy import Select, asc, desc, exc, and_
+from models import CmmProductsGrid,CmmProductsGridDistribution, CmmTranslateColors, CmmTranslateSizes, _get_params,db
+from sqlalchemy import Select, Update, asc, desc, exc, and_
 from auth import auth
 from config import Config
 
@@ -83,6 +83,18 @@ class GridList(Resource):
             if filter_default is not None:
                 rquery = rquery.where(CmmProductsGrid.default==filter_default)
 
+            cquery = Select(CmmProductsGridDistribution.id_color,
+                            CmmTranslateColors.name.label("color"))\
+                            .join(CmmTranslateColors,CmmTranslateColors.id==CmmProductsGridDistribution.id_color)\
+                            .group_by(CmmProductsGridDistribution.id_color)\
+                            .order_by(asc(CmmTranslateColors.name))
+            
+            squery = Select(CmmProductsGridDistribution.id_size,
+                            CmmTranslateSizes.new_size.label("size"),
+                            CmmProductsGridDistribution.value)\
+                            .join(CmmTranslateSizes,CmmTranslateSizes.id==CmmProductsGridDistribution.id_size)\
+                            .order_by(asc(CmmTranslateSizes.id))
+
             if list_all==False:
                 pag    = db.paginate(rquery,page=pag_num,per_page=pag_size)
                 rquery = rquery.limit(pag_size).offset((pag_num - 1) * pag_size)
@@ -99,6 +111,15 @@ class GridList(Resource):
                         "origin_id":m.origin_id,
                         "name": m.name,
                         "default": m.default,
+                        "distribution": [{
+                            "id_color": g.id_color,
+                            "color": g.color,
+                            "sizes" : [{
+                                "id_size": s.id_size,
+                                "size": s.size,
+                                "value": s.value
+                            }for s in db.session.execute(squery.where(and_(CmmProductsGridDistribution.id_grid==m.id,CmmProductsGridDistribution.id_color==g.id_color)))],
+                        }for g in db.session.execute(cquery.where(CmmProductsGridDistribution.id_grid==m.id))],
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                         "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
                     }for m in db.session.execute(rquery)]
@@ -109,6 +130,15 @@ class GridList(Resource):
                         "origin_id": m.origin_id,
                         "name": m.name,
                         "default": m.default,
+                        "distribution": [{
+                            "id_color": g.id_color,
+                            "color": g.color,
+                            "sizes" : [{
+                                "id_size": s.id_size,
+                                "size": s.size,
+                                "value": s.value
+                            }for s in db.session.execute(squery.where(and_(CmmProductsGridDistribution.id_grid==m.id,CmmProductsGridDistribution.id_color==g.id_color)))],
+                        }for g in db.session.execute(cquery.where(CmmProductsGridDistribution.id_grid==m.id))],
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                         "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
                     }for m in db.session.execute(rquery)]
@@ -119,39 +149,52 @@ class GridList(Resource):
                 "error_sql": e._sql_message()
             }
 
-    def get_grid_distribution(self,id:int):
-        rquery = CmmProductsGridDistribution.query.find_by(id_grid=id)
-        return [{
-            "size": m.size,
-            "color": m.color,
-            "value": m.value,
-            "is_percent": m.is_percent
-        } for m in rquery]
-
-
     @ns_gprod.response(HTTPStatus.OK.value,"Cria uma nova grade no sistema")
     @ns_gprod.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar nova grade!")
     @ns_gprod.doc(body=grd_model)
     @auth.login_required
     def post(self)->int:
         try:
+
+            if req["default"]==1:
+                db.session.execute(Update(CmmProductsGrid).values(default=0))
+                db.session.commit()
+
             req = json.dumps(request.get_json())
             grid = CmmProductsGrid()
-            grid.name = req.name
+            grid.name    = req["name"]
+            grid.default = req["default"]
             db.session.add(grid)
             db.session.commit()
 
-            for dist in req.distribution:
+            for dist in req["distribution"]:
                 gridd         = CmmProductsGridDistribution()
-                gridd.id_grid = grid.id
-                gridd.color   = dist.color
-                gridd.size    = dist.size
-                gridd.value   = dist.value
-                gridd.is_percent = dist.is_percent
+                gridd.id_grid  = grid.id
+                gridd.id_color = dist["id_color"]
+                gridd.id_size  = dist["id_size"]
+                gridd.value   = dist["value"]
                 db.session.add(gridd)
                 db.session.commit()
 
             return grid.id
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
+        
+    @ns_gprod.response(HTTPStatus.OK.value,"Exclui os dados de uma grade")
+    @ns_gprod.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @auth.login_required
+    def delete(self)->bool:
+        try:
+            req = request.get_json()
+            for id in req["ids"]:
+                grid = CmmProductsGrid.query.get(id)
+                grid.trash = True
+                db.session.commit()
+            return True
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -210,22 +253,6 @@ class GridApi(Resource):
                 gridd.is_percent = dist.is_percent
                 db.session.add(gridd)
                 db.session.commit()
-            return True
-        except exc.SQLAlchemyError as e:
-            return {
-                "error_code": e.code,
-                "error_details": e._message(),
-                "error_sql": e._sql_message()
-            }
-    
-    @ns_gprod.response(HTTPStatus.OK.value,"Exclui os dados de uma grade")
-    @ns_gprod.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
-    @auth.login_required
-    def delete(self,id:int)->bool:
-        try:
-            grid       = CmmProductsGrid.query.get(id)
-            grid.trash = True
-            db.session.commit()
             return True
         except exc.SQLAlchemyError as e:
             return {

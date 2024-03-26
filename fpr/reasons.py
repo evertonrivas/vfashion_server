@@ -115,6 +115,24 @@ class CategoryList(Resource):
                 "error_details": e._message(),
                 "error_sql": e._sql_message()
             }
+    
+    @ns_reason.response(HTTPStatus.OK.value,"Exclui os dados de um país")
+    @ns_reason.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @auth.login_required
+    def delete(self)->bool:
+        try:
+            req = request.get_json()
+            for id in req["ids"]:
+                reg:FprReason = FprReason.query.get(id)
+                reg.trash = True
+                db.session.commit()
+            return True
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
 
 @ns_reason.route("/<int:id>")
 class CategoryApi(Resource):
@@ -141,22 +159,6 @@ class CategoryApi(Resource):
             reg = FprReason.query.get(id)
             reg.description = reg.description if req["description"] is None else req["description"]
             db.session.commit() 
-        except exc.SQLAlchemyError as e:
-            return {
-                "error_code": e.code,
-                "error_details": e._message(),
-                "error_sql": e._sql_message()
-            }
-
-    @ns_reason.response(HTTPStatus.OK.value,"Exclui os dados de um país")
-    @ns_reason.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
-    @auth.login_required
-    def delete(self,id:int):
-        try:
-            reg:FprReason = FprReason.query.get(id)
-            reg.trash = True
-            db.session.commit()
-            return True
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,

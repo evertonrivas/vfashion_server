@@ -198,6 +198,24 @@ class CollectionList(Resource):
                 "error_details": e._message(),
                 "error_sql": e._sql_message()
             }
+    
+    @ns_event.response(HTTPStatus.OK.value,"Exclui os dados de um tipo de evento")
+    @ns_event.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @auth.login_required
+    def delete(self)->bool:
+        try:
+            req = request.get_json()
+            for id in req["ids"]:
+                reg:ScmEventType = ScmEventType.query.get(id)
+                reg.trash = True
+                db.session.commit()
+            return True
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
 
 @ns_event.route("/<int:id>")
 @ns_event.param("id","Id do registro")
@@ -243,22 +261,6 @@ class CollectionApi(Resource):
             reg.date_updated   = datetime.now()
             db.session.commit()
 
-            return True
-        except exc.SQLAlchemyError as e:
-            return {
-                "error_code": e.code,
-                "error_details": e._message(),
-                "error_sql": e._sql_message()
-            }
-    
-    @ns_event.response(HTTPStatus.OK.value,"Exclui os dados de um tipo de evento")
-    @ns_event.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
-    @auth.login_required
-    def delete(self,id:int)->bool:
-        try:
-            reg:ScmEventType = ScmEventType.query.get(id)
-            reg.trash = True
-            db.session.commit()
             return True
         except exc.SQLAlchemyError as e:
             return {

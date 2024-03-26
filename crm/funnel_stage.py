@@ -106,6 +106,24 @@ class FunnelStagesApi(Resource):
                 "error_details": e._message(),
                 "error_sql": e._sql_message()
             }
+        
+    @ns_fun_stg.response(HTTPStatus.OK.value,"Exclui um estágio de um funil")
+    @ns_fun_stg.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @auth.login_required
+    def delete(self)->bool:
+        try:
+            req = request.get_json()
+            for id in req["ids"]:
+                stage = CrmFunnelStage.query.get(id)
+                db.session.delete(stage)
+                db.session.commit()
+            return True
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
 
 @ns_fun_stg.route("/<int:id>")
 @ns_fun_stg.param("id","Id do registro")
@@ -146,22 +164,6 @@ class FunnelStageApi(Resource):
                 db.session.add(stage)
                 db.session.commit()
                 return stage.id
-        except exc.SQLAlchemyError as e:
-            return {
-                "error_code": e.code,
-                "error_details": e._message(),
-                "error_sql": e._sql_message()
-            }
-
-    @ns_fun_stg.response(HTTPStatus.OK.value,"Exclui um estágio de um funil")
-    @ns_fun_stg.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
-    @auth.login_required
-    def delete(self,id:int):
-        try:
-            stage = CrmFunnelStage.query.get(id)
-            db.session.delete(stage)
-            db.session.commit()
-            return True
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,

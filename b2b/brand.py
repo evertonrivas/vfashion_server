@@ -128,8 +128,8 @@ class CollectionList(Resource):
     def delete(self)->bool:
         try:
             req = request.get_json()
-            for reg in req:
-                brand = B2bBrand.query.get(reg)
+            for id in req["ids"]:
+                brand = B2bBrand.query.get(id)
                 brand.trash = True
                 db.session.commit()
             return True

@@ -81,7 +81,8 @@ class PriceTableList(Resource):
                             B2bTablePrice.active,
                             B2bTablePrice.date_created,
                             B2bTablePrice.date_updated)\
-                            .where(B2bTablePrice.active==trash)
+                            .where(B2bTablePrice.active==trash)\
+                            .order_by(direction(getattr(B2bTablePrice,order_by)))
 
             if search is not None:
                 rquery = rquery.where(B2bTablePrice.name.like("%{}%".format(search)))
@@ -104,7 +105,7 @@ class PriceTableList(Resource):
                         "start_date": m.start_date,
                         "end_date": m.end_date,
                         "active": m.active
-                    }for m in rquery.items]
+                    }for m in db.session.execute(rquery)]
                 }
             else:
                 retorno = [{
@@ -113,7 +114,7 @@ class PriceTableList(Resource):
                         "start_date": m.start_date,
                         "end_date": m.end_date,
                         "active": m.active
-                    }for m in rquery]
+                    }for m in db.session.execute(rquery)]
             return retorno
         except exc.SQLAlchemyError as e:
             return {
@@ -137,6 +138,24 @@ class PriceTableList(Resource):
             db.session.add(table)
             db.session.commit()           
             return table.id
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
+        
+    @ns_price.response(HTTPStatus.OK.value,"Exclui os dados de um carrinho")
+    @ns_price.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @auth.login_required
+    def delete(self)->bool:
+        try:
+            req = request.get_json()
+            for id in req["ids"]:
+                price = B2bTablePrice.query.get(id)
+                price.active = False
+                db.session.commit()
+            return True
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -186,22 +205,6 @@ class PriceTableApi(Resource):
             price.start_date = price.start_date if req.start_date is None else req.start_date
             price.end_date   = price.end_date if req.end_date is None else req.end_date
             price.active     = price.active   if req.active is None else req.active
-            db.session.commit()
-            return True
-        except exc.SQLAlchemyError as e:
-            return {
-                "error_code": e.code,
-                "error_details": e._message(),
-                "error_sql": e._sql_message()
-            }
-
-    @ns_price.response(HTTPStatus.OK.value,"Exclui os dados de um carrinho")
-    @ns_price.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
-    @auth.login_required
-    def delete(self,id:int)->bool:
-        try:
-            price = B2bTablePrice.query.get(id)
-            price.active = False
             db.session.commit()
             return True
         except exc.SQLAlchemyError as e:

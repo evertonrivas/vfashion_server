@@ -128,6 +128,24 @@ class CategoryList(Resource):
                 "error_details": e._message(),
                 "error_sql": e._sql_message()
             }
+        
+    @ns_size.response(HTTPStatus.OK.value,"Exclui os dados de uma nova tradução de tamanho")
+    @ns_size.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @auth.login_required
+    def delete(self)->bool:
+        try:
+            req = request.get_json()
+            for id in req["ids"]:
+                cor = CmmTranslateSizes.query.get(id)
+                cor.trash = True
+                db.session.commit()
+            return True
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
 
 @ns_size.route("/<int:id>")
 class CategoryApi(Resource):
@@ -154,22 +172,6 @@ class CategoryApi(Resource):
             cor.new_size = cor.hexcode if request.form.get("size_name") is None else request.form.get("size_name")
             cor.size     = cor.color if request.form.get("size") is None else request.form.get("size")
             db.session.commit() 
-        except exc.SQLAlchemyError as e:
-            return {
-                "error_code": e.code,
-                "error_details": e._message(),
-                "error_sql": e._sql_message()
-            }
-
-    @ns_size.response(HTTPStatus.OK.value,"Exclui os dados de uma nova tradução de tamanho")
-    @ns_size.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
-    @auth.login_required
-    def delete(self,id:int):
-        try:
-            cor = CmmTranslateSizes.query.get(id)
-            cor.trash = True
-            db.session.commit()
-            return True
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,

@@ -133,6 +133,24 @@ class CategoryList(Resource):
                 "error_details": e._message(),
                 "error_sql": e._sql_message()
             }
+        
+    @ns_cat.response(HTTPStatus.OK.value,"Exclui os dados de uma categoria")
+    @ns_cat.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @auth.login_required
+    def delete(self)->bool:
+        try:
+            req = request.get_json()
+            for id in req["ids"]:
+                cat = CmmCategories.query.get(id)
+                cat.trash = True
+                db.session.commit()
+            return True
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
 
 @ns_cat.route("/<int:id>")
 class CategoryApi(Resource):
@@ -159,22 +177,6 @@ class CategoryApi(Resource):
             cat.name      = cat.name if request.form.get("name") is None else request.form.get("name")
             cat.id_parent = cat.id_parent if request.form.get("id_parent") is None else int(request.form.get("id_parent"))
             db.session.commit() 
-        except exc.SQLAlchemyError as e:
-            return {
-                "error_code": e.code,
-                "error_details": e._message(),
-                "error_sql": e._sql_message()
-            }
-
-    @ns_cat.response(HTTPStatus.OK.value,"Exclui os dados de uma categoria")
-    @ns_cat.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
-    @auth.login_required
-    def delete(self,id:int):
-        try:
-            cat = CmmCategories.query.get(id)
-            cat.trash = True
-            db.session.commit()
-            return True
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
