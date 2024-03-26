@@ -283,7 +283,7 @@ class CmmTranslateSizes(db.Model,SerializerMixin):
 class B2bCustomerGroup(db.Model):
     id                = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
     name              = Column(String(100),nullable=False)
-    id_representative = Column(Integer,primary_key=True,comment="Id da tabela CmmLegalEntities quando type=R")
+    id_representative = Column(Integer,nullable=True,comment="Id da tabela CmmLegalEntities quando type=R")
     need_approvement  = Column(Boolean,nullable=False,server_default='0',default=0)
     trash             = Column(Boolean,nullable=False,server_default='0',default=0)
     date_created      = Column(DateTime,nullable=False,server_default=func.now())

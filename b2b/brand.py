@@ -130,7 +130,7 @@ class CollectionList(Resource):
             req = request.get_json()
             for id in req["ids"]:
                 brand = B2bBrand.query.get(id)
-                brand.trash = True
+                brand.trash = req["toTrash"]
                 db.session.commit()
             return True
         except exc.SQLAlchemyError as e:
