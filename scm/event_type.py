@@ -207,7 +207,7 @@ class CollectionList(Resource):
             req = request.get_json()
             for id in req["ids"]:
                 reg:ScmEventType = ScmEventType.query.get(id)
-                reg.trash = True
+                reg.trash = req["toTrash"]
                 db.session.commit()
             return True
         except exc.SQLAlchemyError as e:

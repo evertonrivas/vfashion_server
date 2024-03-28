@@ -183,7 +183,7 @@ class FunnelList(Resource):
             req = request.get_json()
             for id in req["ids"]:
                 fun = CrmFunnel.query.get(id)
-                fun.trash = True
+                fun.trash = req["toTrash"]
                 db.session.commit()
             return True
         except:
@@ -198,19 +198,26 @@ class FunnelApi(Resource):
     def get(self,id:int):
         try:
             rquery = CrmFunnel.query.get(id)
-            squery = CrmFunnelStage.query.filter(CrmFunnelStage.id_funnel==id)
+            squery = Select(CrmFunnelStage.id,
+                            CrmFunnelStage.name,
+                            CrmFunnelStage.order,
+                            CrmFunnelStage.date_created,
+                            CrmFunnelStage.date_updated)\
+                            .where(CrmFunnelStage.id_funnel==id)
             return {
                 "id": rquery.id,
                 "name": rquery.name,
+                "type": rquery.type,
+                "is_default": rquery.is_default,
                 "date_created": rquery.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                "date_updated": rquery.date_updated.strftime("%Y-%m-%d %H:%M:%S"),
+                "date_updated": None if rquery.date_updated is None else rquery.date_updated.strftime("%Y-%m-%d %H:%M:%S"),
                 "stages": [{
                     "id": m.id,
                     "name": m.name,
                     "order": m.order,
                     "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                    "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S")
-                }for m in squery.items]
+                    "date_updated": None if m.date_updated is None else m.date_updated.strftime("%Y-%m-%d %H:%M:%S")
+                }for m in db.session.execute(squery)]
             }
         except exc.SQLAlchemyError as e:
             return {
@@ -228,12 +235,14 @@ class FunnelApi(Resource):
             req = request.get_json()
 
             #so pode haver um default
-            if req["is_default"]==1:
+            if req["is_default"]==1 or req["is_default"]=="true":
                 db.session.execute(Update(CrmFunnel).values(is_default=0))
                 db.session.commit()
             
             fun = CrmFunnel.query.get(id)
-            fun.name = fun.name if request.form.get("name") is None else request.form.get("name")
+            fun.name       = fun.name if request.form.get("name") is None else request.form.get("name")
+            fun.is_default = 1 if req["is_default"]==1 or req["is_default"]=="true" else 0
+            fun.type       = req["type"]
             db.session.commit()
             return True
         except exc.SQLAlchemyError as e:

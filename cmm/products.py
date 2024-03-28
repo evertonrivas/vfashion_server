@@ -213,6 +213,24 @@ class ProductsList(Resource):
                 "error_details": e._message(),
                 "error_sql": e._sql_message()
             }
+        
+    @ns_prod.response(HTTPStatus.OK.value,"Exclui os dados de produto(s)")
+    @ns_prod.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
+    @auth.login_required
+    def delete(self)->bool:
+        try:
+            req = request.get_json()
+            for id in req["ids"]:
+                prod = CmmProducts.query.get(id)
+                prod.trash = req["toTrash"]
+                db.session.commit()
+            return True
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
 
 
 @ns_prod.route("/<int:id>")

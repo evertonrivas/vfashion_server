@@ -192,7 +192,7 @@ class GridList(Resource):
             req = request.get_json()
             for id in req["ids"]:
                 grid = CmmProductsGrid.query.get(id)
-                grid.trash = True
+                grid.trash = req["toTrash"]
                 db.session.commit()
             return True
         except exc.SQLAlchemyError as e:

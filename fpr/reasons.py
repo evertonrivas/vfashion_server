@@ -124,7 +124,7 @@ class CategoryList(Resource):
             req = request.get_json()
             for id in req["ids"]:
                 reg:FprReason = FprReason.query.get(id)
-                reg.trash = True
+                reg.trash = req["toTrash"]
                 db.session.commit()
             return True
         except exc.SQLAlchemyError as e:

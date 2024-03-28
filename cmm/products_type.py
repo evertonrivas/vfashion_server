@@ -128,7 +128,7 @@ class CategoryList(Resource):
             req = request.get_json()
             for id in req["ids"]:
                 cat = CmmProductsTypes.query.get(id)
-                cat.trash = True
+                cat.trash = req["toTrash"]
                 db.session.commit()
             return True
         except exc.SQLAlchemyError as e:
