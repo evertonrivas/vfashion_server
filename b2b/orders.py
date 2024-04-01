@@ -1,11 +1,11 @@
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import CmmProducts, CmmTranslateColors, CmmTranslateSizes, db,_get_params,B2bCartShopping, B2bOrders,B2bOrdersProducts, B2bPaymentConditions, CmmLegalEntities,ScmEvent,ScmEventType
+from models import CmmProducts, CmmTranslateColors, CmmTranslateSizes, _save_log, db,_get_params,B2bCartShopping, B2bOrders,B2bOrdersProducts, B2bPaymentConditions, CmmLegalEntities,ScmEvent,ScmEventType
 from sqlalchemy import exc,Select,Delete,asc,desc,func,between
 import simplejson
 from auth import auth
-from config import Config
+from config import Config, CustomerAction
 from decimal import Decimal
 from integrations.shipping import Shipping,ShippingCompany
 from datetime import datetime
@@ -153,6 +153,8 @@ class OrdersList(Resource):
                 db.session.execute(stmt)
                 db.session.commit()
 
+                _save_log(customer,CustomerAction.ORDER_CREATED,'Novo pedido realizado ('+order.id+') - em '+datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
+
             return True
         except exc.SQLAlchemyError as e:
             return {
@@ -253,7 +255,7 @@ class OrderApi(Resource):
     @auth.login_required
     def post(self,id:int)->bool:
         try:
-            # req = json.dumps(request.get_json())
+            # req = request.get_json()
             # order = B2bOrders.query.get(id)
             # order.id_customer          = order.id_customer if req.id_customer is None else req.id_customer
             # order.make_online          = order.make_online if req.make_online is None else req.make_online
@@ -274,6 +276,8 @@ class OrderApi(Resource):
             #     db.session.add(prd)
             # db.session.commit()
 
+            # _save_log(req['id_customer'],CustomerAction.ORDER_CREATED,'Pedido atualizado ('+id+') - em '+datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
+
             return True
         except exc.SQLAlchemyError as e:
             return {
@@ -287,9 +291,15 @@ class OrderApi(Resource):
     @auth.login_required
     def delete(self,id:int)->bool:
         try:
-            order = B2bOrders.query.get(id)
+            req   = request.get_json()
+            order:B2bOrders = B2bOrders.query.get(id)
             order.trash = True
             db.session.commit()
+            if (req["id_customer"]!=0):
+                _save_log(req['id_customer'],CustomerAction.ORDER_DELETED,'Pedido ('+id+') cancelado pelo cliente em '+datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
+            else:
+                legal = CmmLegalEntities.query.get(req["id_representative"])
+                _save_log(order.id_customer,CustomerAction.ORDER_DELETED,'Pedido ('+id+') cancelado pelo representante ('+legal.name+') em '+datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
             return True
         except exc.SQLAlchemyError as e:
             return {
