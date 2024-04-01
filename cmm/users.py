@@ -1,8 +1,9 @@
+from datetime import datetime
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import CmmLegalEntities, CmmLegalEntityContact, CmmUserEntity, CmmUsers, _get_params,db,_save_log
-from sqlalchemy import Select, desc, exc, and_, asc, Insert,Update, func, or_
+from models import CmmLegalEntities, CmmLegalEntityContact, CmmUserEntity, CmmUsers, _get_params, _show_query,db,_save_log
+from sqlalchemy import Delete, Select, desc, exc, and_, asc, Insert,Update, func, or_
 from auth import auth
 from config import Config,CustomerAction
 
@@ -119,15 +120,39 @@ class UsersList(Resource):
         try:
             req = request.get_json()
 
-            db.session.execute(
-                Insert(CmmUsers),[{
-                    "username": usr["username"],
-                    "password": CmmUsers().hash_pwd(usr["password"]),
-                    "type": usr["type"]
-                }for usr in req]
-            )
-            db.session.commit()
-            return  True
+            for usr in req:
+                user = CmmUsers()
+                user.username = usr["username"]
+                user.password = user.hash_pwd(usr["password"])
+                user.type     = usr["type"]
+                db.session.add(user)
+                db.session.commit()
+
+                if usr["id_entity"]!="undefined":
+                    usrEn = CmmUserEntity()
+                    usrEn.id_user   = user.id
+                    usrEn.id_entity = usr["id_entity"]
+                    db.session.add(usrEn)
+                    db.session.commit()
+            return True
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
+        
+    @ns_user.response(HTTPStatus.OK.value,"Exclui os dados de um usuario")
+    @ns_user.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
+    @auth.login_required
+    def delete(self)->bool:
+        try:
+            req = request.get_json()
+            for id in req["ids"]:
+                usr = CmmUsers.query.get(id)
+                usr.active = False if req["toTrash"]==True else True
+                db.session.commit()
+            return True
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -144,7 +169,28 @@ class UserApi(Resource):
     @auth.login_required
     def get(self,id:int):
         try:
-            return CmmUsers.query.get(id).to_dict()
+            rquery = Select(CmmUsers.username,
+                                             CmmUsers.type,
+                                             CmmUsers.active,
+                                             CmmUserEntity.id_entity,
+                                             CmmUsers.date_created,
+                                             CmmUsers.date_updated)\
+                                             .outerjoin(CmmUserEntity,CmmUserEntity.id_user==CmmUsers.id)\
+                                             .where(CmmUsers.id==id)
+            
+            # _show_query(rquery)
+            user = db.session.execute(rquery).first()
+
+            return {
+                "id": id,
+                "username": user.username,
+                "type": user.type,
+                "active": user.active,
+                "id_entity": user.id_entity,
+                "password": None,
+                "date_created": user.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+                "date_updated": user.date_updated.strftime("%Y-%m-%d %H:%M:%S") if user.date_updated!=None else None
+            }
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -154,18 +200,27 @@ class UserApi(Resource):
 
     @ns_user.response(HTTPStatus.OK.value,"Salva dados de um usuario")
     @ns_user.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
-    @ns_user.param("username","Nome de login","formData",required=True)
-    @ns_user.param("password","Senha do usuário","formData")
-    @ns_user.param("type","Tipo do usuário","formData",required=True,enum=['A','L','R','V','U'])
     @auth.login_required
     def post(self,id:int)->bool:
         try:
-            usr = CmmUsers.query.get(id)
-            usr.username = usr.username if request.form.get("username") is None else request.form.get("username")
-            usr.password = usr.password if request.form.get("password") is None else usr.hash_pwd(request.form.get("password"))
-            usr.type     = usr.type if request.form.get("type") is None else request.form.get("type")
-            usr.active   = usr.active if request.form.get("active") is None else bool(request.form.get("active"))
+            req = request.get_json()
+            usr:CmmUsers = CmmUsers.query.get(id)
+            usr.username = req["username"]
+            usr.password = usr.hash_pwd(req["password"])
+            usr.type     = req["type"]
             db.session.commit()
+
+            #caso trenha trocado de entidade para aquele usuario. Ex: era lojista e virou representante
+            db.session.execute(Delete(CmmUserEntity).where(CmmUserEntity.id_user==id))
+            db.session.commit()
+
+            if req["id_entity"]!="undefined":
+                    usrEn = CmmUserEntity()
+                    usrEn.id_user   = id
+                    usrEn.id_entity = usr["id_entity"]
+                    db.session.add(usrEn)
+                    db.session.commit()
+
             return True
         except exc.DatabaseError as e:
             return {
@@ -334,6 +389,24 @@ class UserNew(Resource):
             }
 ns_user.add_resource(UserNew,'/start')
 
+class UserPasswordNew(Resource):
+    @ns_user.response(HTTPStatus.OK.value,"Gera uma nova senha padrão para um usuário!")
+    @ns_user.response(HTTPStatus.BAD_REQUEST.value,"Falha ao atualizar!") 
+    @auth.login_required
+    def get(self,id:int):
+        try:
+            pwd = str(Config.TOKEN_KEY.value).lower()+str(datetime.now().year)
+            usr:CmmUsers = db.session.execute(Select(CmmUsers).where(CmmUsers.id==id)).first()[0]
+            usr.password = usr.hash_pwd(pwd)
+            db.session.commit()
+            return pwd
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
+ns_user.add_resource(UserPasswordNew,"/set-new-password/<int:id>")
 
 class UserCount(Resource):
     @ns_user.response(HTTPStatus.OK.value,"Retorna o total de Usuarios por tipo")

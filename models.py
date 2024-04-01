@@ -67,8 +67,8 @@ class CmmUsers(db.Model,SerializerMixin):
     date_created    = Column(DateTime,nullable=False,server_default=func.now())
     date_updated    = Column(DateTime,onupdate=func.now())
     active          = Column(Boolean,nullable=False,server_default='1',default=1)
-    token           = Column(String(255),index=True,unique=True)
-    token_expire    = Column(DateTime)
+    token           = Column(String(255),index=True,unique=True,nullable=True)
+    token_expire    = Column(DateTime,nullable=True)
     is_authenticate = Column(Boolean,nullable=False,server_default='0',default=0)
 
     def hash_pwd(self,pwd:str):
@@ -113,8 +113,7 @@ IDX_USERNAME = Index("IDX_USERNAME",CmmUsers.username,unique=True)
 
 class CmmUserEntity(db.Model,SerializerMixin):
     id_user     = Column(Integer,nullable=False,primary_key=True)
-    id_entity   = Column(Integer,nullable=False,primary_key=True,default=0)
-    id_consumer = Column(Integer,nullable=False,primary_key=True,default=0)
+    id_entity   = Column(Integer,nullable=False,primary_key=True,default=0,comment="Id da tabela CmmLegalEntities")
 
 class CmmCategories(db.Model,SerializerMixin):
     id           = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
