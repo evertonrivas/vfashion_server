@@ -2,7 +2,7 @@ from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
 from models import CmmCountries, _get_params,db
-from sqlalchemy import desc, exc, asc
+from sqlalchemy import Select, desc, exc, asc
 from auth import auth
 from config import Config
 
@@ -54,41 +54,35 @@ class CategoryList(Resource):
             search = None if hasattr(params,"search")==False else params.search
             list_all = False if hasattr(params,"list_all")==False else params.list_all
 
+            rquery = Select(CmmCountries.id,
+                            CmmCountries.name).select_from(CmmCountries)\
+                            .order_by(direction(getattr(CmmCountries,order_by)))
 
-            if search=="":
-                rquery = CmmCountries\
-                    .query\
-                    .order_by(direction(getattr(CmmCountries, order_by)))
-            else:
-                rquery = CmmCountries\
-                    .query\
-                    .filter(CmmCountries.name.like(search))\
-                    .order_by(direction(getattr(CmmCountries, order_by)))
+            if search is not None:
+                rquery = rquery.where(CmmCountries.name.like("%{}%".format(search)))
 
             if list_all==False:
-                rquery = rquery.paginate(page=pag_num,per_page=pag_size)
+                pag = db.paginate(rquery,page=pag_num,per_page=pag_size)
+                rquery = rquery.limit(pag_size).offset((pag_num - 1) * pag_size)
+
                 retorno = {
 					"pagination":{
-						"registers": rquery.total,
+						"registers": pag.total,
 						"page": pag_num,
 						"per_page": pag_size,
-						"pages": rquery.pages,
-						"has_next": rquery.has_next
+						"pages": pag.pages,
+						"has_next": pag.has_next
 					},
 					"data":[{
 						"id": m.id,
-						"name": m.name,
-						"date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-						"date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
-					} for m in rquery.items]
+						"name": m.name
+					} for m in db.session.execute(rquery)]
 				}
             else:
                 retorno = [{
 						"id": m.id,
-						"name": m.name,
-						"date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-						"date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
-					} for m in rquery]
+						"name": m.name
+					} for m in db.session.execute(rquery)]
             return retorno
         except exc.SQLAlchemyError as e:
             return {
@@ -103,11 +97,30 @@ class CategoryList(Resource):
     @auth.login_required
     def post(self):
         try:
+            req = request.get_json()
             reg = CmmCountries()
-            reg.name = request.form.get("name")
+            reg.name = req["name"]
             db.session.add(reg)
             db.session.commit()
             return reg.id
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
+        
+    @ns_country.response(HTTPStatus.OK.value,"Exclui os dados de um país")
+    @ns_country.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @auth.login_required
+    def delete(self):
+        try:
+            req = request.get_json()
+            for id in req["ids"]:
+                reg = CmmCountries.query.get(id)
+                reg.trash = req["toTrash"]
+                db.session.commit()
+            return True
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -138,7 +151,7 @@ class CategoryApi(Resource):
         try:
             req = request.get_json()
             reg = CmmCountries.query.get(id)
-            reg.name = reg.name if req["name"] is None else req["name"]
+            reg.name = req["name"]
             db.session.commit() 
         except exc.SQLAlchemyError as e:
             return {

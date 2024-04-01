@@ -56,7 +56,7 @@ class UsersList(Resource):
             direction = asc if hasattr(params,'order')==False else asc if str(params.order).upper()=='ASC' else desc
             order_by  = 'id' if hasattr(params,'order_by')==False else params.order_by
             search    = None if hasattr(params,"search")==False else params.search
-            trash     = True if hasattr(params,'active')==False else False if params.active=="0" else True #foi invertido
+            trash     = True if hasattr(params,'active')==False else False if params.active=="1" else True #foi invertido
             list_all  = False if hasattr(params,'list_all')==False else True
 
             filter_type   = None if hasattr(params,'type')==False else params.type
@@ -67,15 +67,14 @@ class UsersList(Resource):
                           CmmUsers.date_created,
                           CmmUsers.date_updated,
                           CmmUsers.active
-                          ).where(CmmUsers.active==trash)
+                          ).where(CmmUsers.active==trash)\
+                          .order_by(direction(getattr(CmmUsers, order_by)))
 
             if filter_type is not None:
                 rquery = rquery.where(CmmUsers.type==filter_type)
 
             if search is not None:
                 rquery = rquery.where(CmmUsers.username.like("%{}%".format(search)))
-
-            rquery.order_by(direction(getattr(CmmUsers, order_by)))
 
             if list_all==False:
                 pag = db.paginate(rquery,page=pag_num,per_page=pag_size)
@@ -346,6 +345,21 @@ class UserCount(Resource):
             stmt = Select(func.count(CmmUsers.id).label("total")).select_from(CmmUsers)
             if(request.args.get("level")!=""):
                 stmt = stmt.where(CmmUsers.type==request.args.get("level"))
+            return db.session.execute(stmt).first().total
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
+    
+    @ns_user.hide
+    def post(self):
+        try:
+            req = request.get_json()
+            stmt = Select(func.count(CmmUsers.id).label("total")).select_from(CmmUsers)
+            if(req["level"]!=""):
+                stmt = stmt.where(CmmUsers.type==req["level"])
             return db.session.execute(stmt).first().total
         except exc.SQLAlchemyError as e:
             return {

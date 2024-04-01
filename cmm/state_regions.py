@@ -2,7 +2,7 @@ from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
 from models import CmmStateRegions, _get_params,db
-from sqlalchemy import desc, exc, asc
+from sqlalchemy import Select, desc, exc, asc, or_
 from auth import auth
 from config import Config
 
@@ -45,48 +45,51 @@ class CategoryList(Resource):
         pag_size = Config.PAGINATION_SIZE.value if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
 
         try:
-            params = _get_params(request.args.get("query"))
-            direction = asc if hasattr(params,'order')==False else asc if params.order=='ASC' else desc
+            params    = _get_params(request.args.get("query"))
+            direction = asc if hasattr(params,'order')==False else asc if str(params.order).upper()=='ASC' else desc
             order_by  = 'id' if hasattr(params,'order_by')==False else params.order_by
-            search = None if hasattr(params,"search")==False else params.search
-            list_all = False if hasattr(params,"list_all")==False else params.list_all
+            search    = None if hasattr(params,"search")==False else params.search
+            list_all  = False if hasattr(params,"list_all")==False else params.list_all
+
+            rquery = Select(CmmStateRegions.id,
+                            CmmStateRegions.id_country,
+                            CmmStateRegions.name,
+                            CmmStateRegions.acronym)\
+                            .select_from(CmmStateRegions)\
+                            .order_by(direction(getattr(CmmStateRegions,order_by)))
             
-            if search=="":
-                rquery = CmmStateRegions\
-                    .query\
-                    .order_by(direction(getattr(CmmStateRegions, order_by)))
-            else:
-                rquery = CmmStateRegions\
-                    .query\
-                    .filter(CmmStateRegions.name.like(search))\
-                    .order_by(direction(getattr(CmmStateRegions, order_by)))
+            if search is not None:
+                rquery = rquery.where(or_(
+                    CmmStateRegions.name.like("%{}%".format(search)),
+                    CmmStateRegions.acronym.like("%{}%".format(search))
+                ))
 
             if list_all==False:
-                rquery = rquery.paginate(page=pag_num,per_page=pag_size)
+                pag = db.paginate(rquery,page=pag_num,per_page=pag_size)
+                rquery = rquery.limit(pag_size).offset((pag_num - 1) * pag_size)
+
                 retorno = {
 					"pagination":{
-						"registers": rquery.total,
+						"registers": pag.total,
 						"page": pag_num,
 						"per_page": pag_size,
-						"pages": rquery.pages,
-						"has_next": rquery.has_next
+						"pages": pag.pages,
+						"has_next": pag.has_next
 					},
 					"data":[{
 						"id": m.id,
                         "id_country": m.id_country,
 						"name": m.name,
-						"date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-						"date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
-					} for m in rquery.items]
+                        "acronym": m.acronym
+					} for m in db.session.execute(rquery)]
 				}
             else:
                 retorno = [{
 						"id": m.id,
                         "id_country": m.id_country,
 						"name": m.name,
-						"date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-						"date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
-					} for m in rquery]
+                        "acronym": m.acronym
+					} for m in db.session.execute(rquery)]
             return retorno
         except exc.SQLAlchemyError as e:
             return {

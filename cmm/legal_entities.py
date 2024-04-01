@@ -72,12 +72,16 @@ class EntitysList(Resource):
         try:
             params = _get_params(search)
 
-            direction     = asc if hasattr(params,'order')==False else asc if params.order=='ASC' else desc
-            order_by      = 'id' if hasattr(params,'order_by')==False else params.order_by
-            trash         = False if hasattr(params,'trash')==False else params.trash
+            direction = asc if hasattr(params,'order')==False else asc if params.order=='ASC' else desc
+            order_by  = 'id' if hasattr(params,'order_by')==False else params.order_by
+            trash     = False if hasattr(params,"trash")==False else True
+            list_all  = False if hasattr(params,"list_all")==False else True
+
             filter_search = None if hasattr(params,"search")==False else params.search
             filter_type   = None if hasattr(params,'type')==False else params.type
             filter_rep    = None if hasattr(params,'representative')==False else params.filter_rep
+            filter_country = None if hasattr(params,'id_country')==False else params.id_country
+            filter_state_region = None if hasattr(params,'id_state_region')==False else params.state_region
 
             rquery = Select(
                     CmmLegalEntities.id,
@@ -123,10 +127,16 @@ class EntitysList(Resource):
                     Select(B2bCustomerRepresentative.id_customer).where(B2bCustomerRepresentative.id_representative==filter_rep)
                 ))
                 
-            if filter_type!=None:
+            if filter_type is not None:
                 rquery = rquery.where(CmmLegalEntities.type==filter_type)
 
-            if hasattr(params,'list_all')==False:
+            if filter_state_region is not None:
+                rquery = rquery.where(CmmStateRegions.id==filter_state_region)
+
+            if filter_country is not None:
+                rquery = rquery.where(CmmCountries.id==filter_country)
+
+            if list_all==False:
                 pag = db.paginate(rquery,page=pag_num,per_page=pag_size)
                 rquery = rquery.limit(pag_size).offset((pag_num - 1) * pag_size)
 
@@ -224,6 +234,25 @@ class EntitysList(Resource):
             _save_log(cst.id,CustomerAction.DATA_REGISTERED,'Registro criado')
 
             return cst.id
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
+        
+    @ns_legal.response(HTTPStatus.OK.value,"Exclui os dados de um cliente/representante")
+    @ns_legal.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @auth.login_required
+    def delete(self)->bool:
+        try:
+            req = request.get_json()
+            for id in req["ids"]:
+                cst = CmmLegalEntities.query.get(id)
+                cst.trash = req["toTrash"]
+                db.session.commit()
+                _save_log(id,CustomerAction.DATA_DELETED,'Registro '+('movido para a' if req["toTrash"]==1 else 'removido da') +' Lixeira')
+            return True
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
