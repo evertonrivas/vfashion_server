@@ -51,6 +51,8 @@ class CitiesList(Resource):
             search = None if hasattr(params,"search")==False else params.search
             list_all = False if hasattr(params,"list_all")==False else params.list_all
 
+            filter_state = None if hasattr(params,"state_region")==False else params.state_region
+
             rquery = Select(CmmCities.id,
                    CmmCities.name,
                    CmmStateRegions.id.label("state_region_id"),
@@ -67,6 +69,11 @@ class CitiesList(Resource):
                     CmmCities.name.like('%{}%'.format(search)) |
                     CmmStateRegions.name.like('%{}%'.format(search)) |
                     CmmCountries.name.like('%{}%'.format(search))
+                )
+
+            if filter_state is not None:
+                rquery = rquery.where(
+                    CmmCities.id_state_region==filter_state
                 )
 
             #print(rquery)
