@@ -4,7 +4,7 @@ from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
 import simplejson
-from models import B2bBrand, B2bCollection, B2bCollectionPrice, B2bProductStock, B2bTablePrice, B2bTablePriceProduct, CmmCategories, CmmProducts, CmmProductsCategories, CmmProductsGrid, CmmProductsGridDistribution, CmmProductsImages, CmmProductsModels, CmmProductsTypes, CmmTranslateColors, CmmTranslateSizes, ScmEvent, _get_params, _show_query, db
+from models import B2bBrand, B2bCollection, B2bCollectionPrice, B2bProductStock, B2bTablePrice, B2bTablePriceProduct, CmmCategories, CmmMeasureUnit, CmmProducts, CmmProductsCategories, CmmProductsGrid, CmmProductsGridDistribution, CmmProductsImages, CmmProductsModels, CmmProductsTypes, CmmTranslateColors, CmmTranslateSizes, ScmEvent, _get_params, _show_query, db
 from sqlalchemy import Select, and_, exc,or_,desc,asc
 from auth import auth
 from config import Config
@@ -296,12 +296,13 @@ class ProductsGallery(Resource):
             #realiza a busca das colecoes que tem restricao no calendario
             rquery = Select(CmmProducts.id,CmmProducts.id_grid,CmmProducts.prodCode,CmmProducts.barCode,
                             CmmProducts.refCode,CmmProducts.name,CmmProducts.description,CmmProducts.observation,
-                            CmmProducts.ncm,CmmProducts.price,CmmProducts.measure_unit,CmmProducts.structure,
+                            CmmProducts.ncm,CmmProducts.price,CmmMeasureUnit.code.label("measure_unit"),CmmProducts.structure,
                             CmmProducts.date_created,CmmProducts.date_updated,CmmCategories.name.label("category_name"),
                             B2bCollection.name.label("collection_name"),B2bBrand.name.label("brand_name"),
                             CmmProductsTypes.name.label("product_type_name"),CmmProductsModels.name.label("product_model_name"))\
                 .join(CmmProductsTypes,CmmProductsTypes.id==CmmProducts.id_type)\
                 .join(CmmProductsModels,CmmProductsModels.id==CmmProducts.id_model)\
+                .join(CmmMeasureUnit,CmmMeasureUnit.id==CmmProducts.id_measure_unit)\
                 .outerjoin(B2bTablePriceProduct,B2bTablePriceProduct.id_product==CmmProducts.id)\
                 .outerjoin(B2bTablePrice,B2bTablePrice.id==B2bTablePriceProduct.id_table_price)\
                 .outerjoin(B2bCollectionPrice,B2bCollectionPrice.id_table_price==B2bTablePrice.id)\
@@ -335,12 +336,13 @@ class ProductsGallery(Resource):
             #busca as colecoes que nao possuem restricao (irrestrict)
             iquery = Select(CmmProducts.id,CmmProducts.id_grid,CmmProducts.prodCode,CmmProducts.barCode,
                             CmmProducts.refCode,CmmProducts.name,CmmProducts.description,CmmProducts.observation,
-                            CmmProducts.ncm,CmmProducts.price,CmmProducts.measure_unit,CmmProducts.structure,
+                            CmmProducts.ncm,CmmProducts.price,CmmMeasureUnit.code.label("measure_unit"),CmmProducts.structure,
                             CmmProducts.date_created,CmmProducts.date_updated,CmmCategories.name.label("category_name"),
                             B2bCollection.name.label("collection_name"),B2bBrand.name.label("brand_name"),
                             CmmProductsTypes.name.label("product_type_name"),CmmProductsModels.name.label("product_model_name"))\
                 .join(CmmProductsTypes,CmmProductsTypes.id==CmmProducts.id_type)\
                 .join(CmmProductsModels,CmmProductsModels.id==CmmProducts.id_model)\
+                .join(CmmMeasureUnit,CmmMeasureUnit.id==CmmProducts.id_measure_unit)\
                 .outerjoin(B2bTablePriceProduct,B2bTablePriceProduct.id_product==CmmProducts.id)\
                 .outerjoin(B2bTablePrice,B2bTablePrice.id==B2bTablePriceProduct.id_table_price)\
                 .outerjoin(B2bCollectionPrice,B2bCollectionPrice.id_table_price==B2bTablePrice.id)\
@@ -382,7 +384,7 @@ class ProductsGallery(Resource):
                     CmmProducts.description.like(search),
                     CmmProducts.barCode.like(search),
                     CmmProducts.observation.like(search),
-                    CmmProductsCategories.name.like(search),
+                    CmmCategories.name.like(search),
                     CmmProductsModels.name.like(search),
                     CmmProductsTypes.name.like(search)
                 )))
@@ -392,7 +394,7 @@ class ProductsGallery(Resource):
                     CmmProducts.description.like(search),
                     CmmProducts.barCode.like(search),
                     CmmProducts.observation.like(search),
-                    CmmProductsCategories.name.like(search),
+                    CmmCategories.name.like(search),
                     CmmProductsModels.name.like(search),
                     CmmProductsTypes.name.like(search)
                 )))
