@@ -121,18 +121,25 @@ class UsersList(Resource):
             req = request.get_json()
 
             for usr in req:
-                user = CmmUsers()
-                user.username = usr["username"]
-                user.password = user.hash_pwd(usr["password"])
-                user.type     = usr["type"]
-                db.session.add(user)
-                db.session.commit()
+                if usr["id"]==0:
+                    user = CmmUsers()
+                    user.username = usr["username"]
+                    user.password = user.hash_pwd(usr["password"])
+                    user.type     = usr["type"]
+                    db.session.add(user)
+                    db.session.commit()
 
-                if usr["id_entity"]!="undefined":
-                    usrEn = CmmUserEntity()
-                    usrEn.id_user   = user.id
-                    usrEn.id_entity = usr["id_entity"]
-                    db.session.add(usrEn)
+                    if usr["id_entity"]!="undefined":
+                        usrEn = CmmUserEntity()
+                        usrEn.id_user   = user.id
+                        usrEn.id_entity = usr["id_entity"]
+                        db.session.add(usrEn)
+                        db.session.commit()
+                else:
+                    user = CmmUsers.query.get(usr["id"])
+                    user.username = usr["username"]
+                    user.password = user.hash_pwd(usr["password"])
+                    user.type     = usr["type"]
                     db.session.commit()
             return True
         except exc.SQLAlchemyError as e:
@@ -201,7 +208,7 @@ class UserApi(Resource):
     @ns_user.response(HTTPStatus.OK.value,"Salva dados de um usuario")
     @ns_user.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
     @auth.login_required
-    def post(self,id:int)->bool:
+    def post(self,id:int):
         try:
             req = request.get_json()
             usr:CmmUsers = CmmUsers.query.get(id)
@@ -347,18 +354,105 @@ ns_user.add_resource(UserAuthLogout,"/logout/<int:id>")
 
 
 class UserUpdate(Resource):
+    def __get_username(self,id,rule):
+        name = db.session.execute(Select(CmmLegalEntities.name).where(CmmLegalEntities.id==id)).first().name
+        name = str(name).replace(".","")
+        name = ''.join([i for i in name if not str(i).isdigit()])
+        name = str(name.lower()\
+                   .replace("ltda","")\
+                   .replace("eireli","")\
+                   .replace("'","")\
+                   .replace("`","")\
+                   .replace("´","")\
+                   .replace("’","")\
+                   .replace("”","")\
+                   .replace("“","")).lstrip().rstrip()
+
+        new_name = ""
+        if rule=="FL":
+            new_name = name.split(" ")[0]+"."+name.split(" ")[len(name.split(" "))-1]
+        elif rule=="IL":
+            new_name = name.split(" ")[0][0:1]+"."+name.split(" ")[len(name.split(" "))-1]
+        else: #PI
+            new_name = name.split(" ")[0]+"."+name.split(" ")[len(name.split(" "))-1][0:1]
+
+        return new_name
+
     @ns_user.response(HTTPStatus.OK.value,"Cria um ou mais novo(s) usuário(s) no sistema")
     @ns_user.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar!")
     @auth.login_required
     def post(self):
         try:
             req = request.get_json()
-            db.session.execute(Update(CmmUsers),[{
-                "id": m["id"],
-                "active":m["active"],
-                "type": m["type"]
-            }for m in req])
-            db.session.commit()
+            for id_entity in req["ids"]:
+
+                exist_entity = db.session.execute(
+                    Select(func.count().label("total")).select_from(CmmUserEntity)\
+                        .where(CmmUserEntity.id_entity==id_entity)
+                ).first().total
+
+                if exist_entity == 0:
+
+                    exist_uname = db.session.execute(
+                        Select(CmmUsers.username,CmmUsers.id)\
+                        .where(CmmUsers.username==self.__get_username(id_entity,req["rule"]))
+                    ).first()
+
+                    #forca o tipo do usuario a ser R quando for representante
+                    entity_type = db.session.execute(Select(CmmLegalEntities.type).where(CmmLegalEntities.id==id_entity)).first().type
+                    if entity_type=='R' and req["type"]=='R':
+                        new_type = 'R'
+                    elif entity_type=='R' and req['type']!='R':
+                        new_type = 'R'
+                    elif entity_type=='C' and req['type']=="L":
+                        new_type = req['type']
+                    elif entity_type=='C' and req['type']=='I':
+                        new_type = req['type']=="I"
+                    else:
+                        new_type = 'L' #forca como lojista basico se nao souber ou tiver indicado errado
+
+                    if exist_uname is None:
+                        usr = CmmUsers()
+                        usr.username = self.__get_username(id_entity,req["rule"])
+                        usr.password = usr.hash_pwd(req["password"])
+                        usr.type     = new_type
+                        db.session.add(usr)
+                        db.session.commit()
+
+                        usrE = CmmUserEntity()
+                        usrE.id_user   = usr.id
+                        usrE.id_entity = id_entity
+                        db.session.add(usrE)
+                        db.session.commit()
+                else:
+                    #forca o tipo do usuario a ser R quando for representante
+                    entity_type = db.session.execute(Select(CmmLegalEntities.type).where(CmmLegalEntities.id==id_entity)).first()
+                    if entity_type=='R' and req["type"]=='R':
+                        new_type = 'R'
+                    elif entity_type=='R' and req['type']!='R':
+                        new_type = 'R'
+                    elif entity_type=='C' and req['type']=="L":
+                        new_type = req['type']
+                    elif entity_type=='C' and req['type']=='I':
+                        new_type = req['type']=="I"
+                    else:
+                        new_type = 'L' #forca como lojista basico se nao souber ou tiver indicado errado
+
+                    # atualiza apenas o username e o password
+                    usrE = db.session.execute(Select(CmmUserEntity.id_user).where(CmmUserEntity.id_entity==id_entity)).first()
+                    usr:CmmUsers = CmmUsers.query.get(usrE.id_user)
+                    usr.password = usr.hash_pwd(req["password"])
+                    usr.username = self.__get_username(id_entity,req["rule"])
+                    usr.type     = new_type
+                    db.session.commit()
+                    
+                #''.join([i for i in s if not i.isdigit()])
+            # db.session.execute(Update(CmmUsers),[{
+            #     "id": m["id"],
+            #     "active":m["active"],
+            #     "type": m["type"]
+            # }for m in req])
+            # db.session.commit()
             return True
         except exc.SQLAlchemyError as e:
             return {
