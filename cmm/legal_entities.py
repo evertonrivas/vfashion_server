@@ -1,7 +1,7 @@
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields,RestError
 from flask import request
-from models import  CmmLegalEntityHistory, db,_save_log,_get_params,B2bCustomerRepresentative, CmmCities, CmmCountries, CmmLegalEntityContact, CmmLegalEntityFile, CmmLegalEntityWeb, CmmStateRegions, CrmFunnelStageCustomer,CmmLegalEntities,CmmUserEntity
+from models import  CmmLegalEntityHistory, _show_query, db,_save_log,_get_params,B2bCustomerRepresentative, CmmCities, CmmCountries, CmmLegalEntityContact, CmmLegalEntityFile, CmmLegalEntityWeb, CmmStateRegions, CrmFunnelStageCustomer,CmmLegalEntities,CmmUserEntity
 from sqlalchemy import Select,and_,exc,asc,desc,func, or_
 from auth import auth
 from config import Config,CustomerAction
@@ -81,7 +81,8 @@ class EntitysList(Resource):
             filter_type   = None if hasattr(params,'type')==False else params.type
             filter_rep    = None if hasattr(params,'representative')==False else params.filter_rep
             filter_country = None if hasattr(params,'id_country')==False else params.id_country
-            filter_state_region = None if hasattr(params,'id_state_region')==False else params.state_region
+            filter_city    = None if hasattr(params,"id_city")==False else params.id_city
+            filter_state_region = None if hasattr(params,'id_state_region')==False else params.id_state_region
 
             rquery = Select(
                     CmmLegalEntities.id,
@@ -129,6 +130,9 @@ class EntitysList(Resource):
                 
             if filter_type is not None:
                 rquery = rquery.where(CmmLegalEntities.type==filter_type)
+
+            if filter_city is not None:
+                rquery = rquery.where(CmmCities.id==filter_city)
 
             if filter_state_region is not None:
                 rquery = rquery.where(CmmStateRegions.id==filter_state_region)
@@ -519,6 +523,7 @@ class EntityOfStage(Resource):
     @ns_legal.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
     @ns_legal.param("page","Número da página de registros","query",type=int,required=True)
     @ns_legal.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
+    @ns_legal.param("query","Número de registros por página","query",type=str)
     @auth.login_required
     def get(self,id:int):
         pag_num   =  1 if request.args.get("page") is None else int(request.args.get("page"))
@@ -556,6 +561,8 @@ class EntityOfStage(Resource):
             .join(CrmFunnelStageCustomer,CrmFunnelStageCustomer.id_customer==CmmLegalEntities.id)\
             .where(CrmFunnelStageCustomer.id_funnel_stage==id)\
             .order_by(direction(getattr(CmmLegalEntities,order_by)))
+
+            #_show_query(rquery)
 
             if search!=None:
                 rquery = rquery.where(
