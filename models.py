@@ -139,7 +139,7 @@ class CmmProducts(db.Model,SerializerMixin):
     ncm          = Column(String(50),nullable=True)
     price        = Column(DECIMAL(10,2),nullable=False)
     price_pdv    = Column(DECIMAL(10,2),nullable=True)
-    measure_unit = Column(CHAR(2),nullable=False)
+    id_measure_unit = Column(Integer,nullable=False,comment="Id da tabela cmm_measure_unit")
     structure    = Column(CHAR(1),nullable=False,default='S',comment="S = Simples, C = Composto")
     date_created = Column(DateTime,nullable=False,server_default=func.now())
     date_updated = Column(DateTime,onupdate=func.now())
