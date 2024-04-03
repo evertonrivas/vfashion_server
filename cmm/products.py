@@ -3,7 +3,7 @@ from http import HTTPStatus
 import simplejson
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import CmmProducts, CmmProductsGrid, \
+from models import CmmMeasureUnit, CmmProducts, CmmProductsGrid, \
     CmmProductsImages, CmmProductsTypes, CmmProductsModels, \
     _get_params, db
 from sqlalchemy import desc, exc, and_, asc,Select, func,or_
@@ -96,7 +96,7 @@ class ProductsList(Resource):
                             CmmProducts.observation,
                             CmmProducts.ncm,
                             CmmProducts.price,
-                            CmmProducts.measure_unit,
+                            CmmMeasureUnit.code.label("measure_unit"),
                             CmmProducts.structure,
                             CmmProducts.date_created,
                             CmmProducts.date_updated,
@@ -106,6 +106,7 @@ class ProductsList(Resource):
                             ).join(CmmProductsTypes,CmmProductsTypes.id==CmmProducts.id_type)\
                             .join(CmmProductsModels,CmmProductsModels.id==CmmProducts.id_model)\
                             .join(CmmProductsGrid,CmmProductsGrid.id==CmmProducts.id_grid)\
+                            .join(CmmMeasureUnit,CmmMeasureUnit.id==CmmProducts.id_measure_unit)\
                             .where(CmmProducts.trash==trash)\
                             .order_by(direction(getattr(CmmProducts, order_by)))
             
