@@ -115,13 +115,14 @@ class CategoryList(Resource):
     @auth.login_required
     def post(self):
         try:
+            req = request.get_json()
             cor = CmmTranslateColors()
-            cor.hexcode = request.form.get("hexcode")
-            cor.name    = request.form.get("name")
-            cor.color   = request.form.get("color")
-            db.session.add(type)
+            cor.hexcode = req["hexcode"]
+            cor.name    = req["name"]
+            cor.color   = req["color"]
+            db.session.add(cor)
             db.session.commit()
-            return type.id
+            return cor.id
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
