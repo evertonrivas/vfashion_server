@@ -232,6 +232,7 @@ class CollectionApi(Resource):
                 "name": qry.name,
                 "hex_color": qry.hex_color,
                 "has_budget": qry.has_budget,
+                "is_milestone": qry.is_milestone,
                 "use_collection": qry.use_collection,
                 "date_created": qry.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                 "date_updated": qry.date_updated.strftime("%Y-%m-%d %H:%M:%S") if qry.date_updated!=None else None
