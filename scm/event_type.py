@@ -182,11 +182,9 @@ class CollectionList(Resource):
             reg = ScmEventType()
             reg.name           = req["name"]
             reg.hex_color      = req["hex_color"]
-            reg.has_budget     = req["has_budget"]
-            reg.use_collection = req["use_collection"]
-            reg.is_milestone   = req["is_miliestone"]
-            reg.id_parent      = req["id_parent"]
-            reg.trash          = False
+            reg.has_budget     = False if req["has_budget"]=='0' else True
+            reg.use_collection = False if req["use_collection"]=='0' else True
+            reg.is_milestone   = False if req["is_milestone"]=='0' else True
             reg.date_created   = datetime.now()
             db.session.add(reg)
             db.session.commit()
@@ -254,11 +252,9 @@ class CollectionApi(Resource):
             reg:ScmEventType = ScmEventType.query.get(id)
             reg.name           = req["name"]
             reg.hex_color      = req["hex_color"]
-            reg.has_budget     = req["has_budget"]
-            reg.use_collection = req["use_collection"]
-            reg.is_milestone   = req["is_miliestone"]
-            reg.id_parent      = req["id_parent"]
-            reg.trash          = False
+            reg.has_budget     = False if req["has_budget"]=='0' else True
+            reg.use_collection = False if req["use_collection"]=='0' else True
+            reg.is_milestone   = False if req["is_milestone"]=='0' else True
             reg.date_updated   = datetime.now()
             db.session.commit()
 

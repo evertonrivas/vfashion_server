@@ -101,8 +101,10 @@ class CollectionList(Resource):
                     "data":[{
                         "id": m.id,
                         "name": m.name,
-                        "id_brand": m.id_brand,
-                        "brand": m.brand,
+                        "brand":{
+                            "id_brand": m.id_brand,
+                            "name": m.brand
+                        },
                         "table_prices": self.get_table_prices(m.id),
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                         "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
@@ -112,8 +114,10 @@ class CollectionList(Resource):
                 retorno = [{
                         "id":m.id,
                         "name":m.name,
-                        "id_brand": m.id_brand,
-                        "brand": m.brand,
+                        "brand": {
+                            "id_brand": m.id_brand,
+                            "name": m.brand
+                        },
                         "table_prices": self.get_table_prices(m.id),
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                         "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
@@ -168,12 +172,23 @@ class CollectionApi(Resource):
     @auth.login_required
     def get(self,id:int):
         try:
-            cquery = B2bCollection.query.get(id)
+            cquery = db.session.execute(Select(B2bCollection.id,
+                            B2bCollection.name,
+                            B2bCollection.date_created,
+                            B2bCollection.date_created,
+                            B2bCollection.id_brand,
+                            B2bBrand.name.label("brand"))\
+                            .join(B2bBrand,B2bBrand.id==B2bCollection.id_brand)\
+                            .where(B2bCollection.id==id)).first()
             squery = B2bCollectionPrice.query.filter(B2bCollectionPrice.id_collection == id)
 
             return {
                 "id": cquery.id,
                 "name": cquery.name,
+                "brand":{
+                    "id": cquery.id_brand,
+                    "name": cquery.brand
+                },
                 "table_prices": [{
                     "id": m.id_table_price
                 }for m in squery]
@@ -209,23 +224,16 @@ class CollectionApi(Resource):
     @auth.login_required
     def post(self,id:int)->bool:
         try:
-            req = json.dumps(request.get_json())
-            col = B2bCollection.query.get(id)
-            col.name          = col.name if req.name is None else req.name
-            col.trash         = col.trash if req.trash is None else req.trash
+            req = request.get_json()
+            col:B2bCollection = B2bCollection.query.get(id)
+            col.name     = req["name"]
+            col.id_brand = req["id_brand"]
             db.session.commit()
 
 
             #apaga e recria os clientes dependentes
-            db.session.delete(B2bCollectionPrice()).where(B2bCollectionPrice().id_id_collection==id)
+            db.session.delete(B2bCollectionPrice).where(B2bCollectionPrice.id_collection==id)
             db.session.commit()
-
-            for it in col.prices:
-                colp = B2bCollectionPrice()
-                colp.id_collection  = id
-                colp.id_table_price = it.id_table_price
-                db.session.add(colp)
-                db.session.commit()
 
             return True
         except exc.SQLAlchemyError as e:

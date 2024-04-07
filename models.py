@@ -279,6 +279,37 @@ class CmmTranslateSizes(db.Model,SerializerMixin):
     date_created = Column(DateTime,nullable=False,server_default=func.now())
     date_updated = Column(DateTime,onupdate=func.now())
 
+class B2bBrand(db.Model,SerializerMixin):
+    id = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
+    name = Column(String(100),nullable=False)
+    date_created  = Column(DateTime,nullable=False,server_default=func.now())
+    date_updated  = Column(DateTime,onupdate=func.now())
+    trash         = Column(Boolean,nullable=False,server_default='0',default=0)
+
+class B2bCartShopping(db.Model,SerializerMixin):
+    id_customer = Column(Integer,primary_key=True)
+    id_product  = Column(Integer,primary_key=True)
+    id_color    = Column(Integer,primary_key=True)
+    id_size     = Column(Integer,primary_key=True)
+    quantity    = Column(Integer,nullable=False)
+    price       = Column(DECIMAL(10,2),nullable=False)
+    user_create = Column(Integer,nullable=False)
+    date_create = Column(DateTime,server_default=func.now())
+    user_update = Column(Integer,nullable=True)
+    date_update = Column(DateTime,onupdate=func.now())
+
+class B2bCollection(db.Model,SerializerMixin):
+    id            = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
+    id_brand      = Column(Integer,nullable=False)
+    name          = Column(String(128),nullable=False)
+    date_created  = Column(DateTime,nullable=False,server_default=func.now())
+    date_updated  = Column(DateTime,onupdate=func.now())
+    trash         = Column(Boolean,nullable=False,server_default='0',default=0)
+
+class B2bCollectionPrice(db.Model,SerializerMixin):
+    id_collection  = Column(Integer,primary_key=True,nullable=False)
+    id_table_price = Column(Integer,primary_key=True,nullable=False)
+
 class B2bCustomerGroup(db.Model):
     id                = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
     name              = Column(String(100),nullable=False)
@@ -320,18 +351,6 @@ class B2bOrdersProducts(db.Model,SerializerMixin):
     discount   = Column(DECIMAL(10,2))
     discount_percentage = Column(DECIMAL(10,2))
 
-class B2bCartShopping(db.Model,SerializerMixin):
-    id_customer = Column(Integer,primary_key=True)
-    id_product  = Column(Integer,primary_key=True)
-    id_color    = Column(Integer,primary_key=True)
-    id_size     = Column(Integer,primary_key=True)
-    quantity    = Column(Integer,nullable=False)
-    price       = Column(DECIMAL(10,2),nullable=False)
-    user_create = Column(Integer,nullable=False)
-    date_create = Column(DateTime,server_default=func.now())
-    user_update = Column(Integer,nullable=True)
-    date_update = Column(DateTime,onupdate=func.now())
-
 class B2bProductStock(db.Model,SerializerMixin):
     id_product  = Column(Integer,nullable=False,primary_key=True)
     id_color    = Column(Integer,nullable=False,primary_key=True)
@@ -363,25 +382,6 @@ class B2bPaymentConditions(db.Model,SerializerMixin):
     date_created  = Column(DateTime,nullable=False,server_default=func.now())
     date_updated  = Column(DateTime,onupdate=func.now())
     trash         = Column(Boolean,nullable=False,server_default='0',default=0)
-
-class B2bBrand(db.Model,SerializerMixin):
-    id = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
-    name = Column(String(100),nullable=False)
-    date_created  = Column(DateTime,nullable=False,server_default=func.now())
-    date_updated  = Column(DateTime,onupdate=func.now())
-    trash         = Column(Boolean,nullable=False,server_default='0',default=0)
-
-class B2bCollection(db.Model,SerializerMixin):
-    id            = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
-    id_brand      = Column(Integer,nullable=False)
-    name          = Column(String(128),nullable=False)
-    date_created  = Column(DateTime,nullable=False,server_default=func.now())
-    date_updated  = Column(DateTime,onupdate=func.now())
-    trash         = Column(Boolean,nullable=False,server_default='0',default=0)
-
-class B2bCollectionPrice(db.Model,SerializerMixin):
-    id_collection  = Column(Integer,primary_key=True,nullable=False)
-    id_table_price = Column(Integer,primary_key=True,nullable=False)
 
 
 
