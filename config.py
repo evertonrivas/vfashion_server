@@ -16,7 +16,7 @@ class Config(Enum):
     ERP_CLASS        = "VirtualAge" #used on task_manager.py
     LOCALE           = "pt_BR" #nao lembro o motivo do locale no python
     TOKEN_KEY        = "SMART2BEE_" #used on cmm/users.py
-    APP_PATH         = "d:/development/venda_fashion/backend/" #used on cmm/upload.py
+    APP_PATH         = "d:/development/fast2bee/backend/" #used on cmm/upload.py
     BREVO_API_KEY    = ""
     EMAIL_SEND_FROM  = "evertonrivas@gmail.com"
 

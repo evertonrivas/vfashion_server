@@ -3,7 +3,7 @@ from http import HTTPStatus
 import simplejson
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import CmmMeasureUnit, CmmProducts, CmmProductsGrid, \
+from models import CmmMeasureUnit, CmmProducts, CmmProductsCategories, CmmProductsGrid, \
     CmmProductsImages, CmmProductsTypes, CmmProductsModels, \
     _get_params, db
 from sqlalchemy import desc, exc, and_, asc,Select, func,or_
@@ -191,21 +191,26 @@ class ProductsList(Resource):
     @auth.login_required
     def post(self)->int:
         try:
-            req = simplejson.dumps(request.get_json())
-            prod = CmmProducts()
-            prod.id_category   = int(req.id_category)
-            prod.prodCode      = req.prodCode
-            prod.barCode       = req.barCode
-            prod.refCode       = req.refCode
-            prod.name          = req.name
-            prod.description   = req.description
-            prod.observation   = req.observation
-            prod.ncm           = req.ncm
-            prod.image         = req.image
-            prod.price         = float(req.price)
-            prod.measure_unit  = req.measure_unit
+            req = request.get_json()
+            prod:CmmProducts = CmmProducts()
+            prod.id_type       = req["id_type"]
+            prod.id_model      = req["id_model"]
+            prod.id_grid       = req["id_grid"]
+            prod.prodCode      = req["prod_code"]
+            prod.barCode       = req["bar_code"]
+            prod.refCode       = req["ref_code"]
+            prod.name          = req["name"]
+            prod.description   = req["description"]
+            prod.observation   = None if req["observation"]=="undefined" else req["observation"]
+            prod.price         = float(req["price"])
+            prod.id_measure_unit = req["id_measure_unit"]
             db.session.add(prod)
             db.session.commit()
+
+            if req["id_category"] is not None:
+                cat = CmmProductsCategories()
+                cat.id_category = req["id_category"]
+                cat.id_product  = prod.id
             
             return prod.id
         except exc.SQLAlchemyError as e:
@@ -247,6 +252,9 @@ class ProductApi(Resource):
             iquery = CmmProductsImages.query.filter_by(id_product=id)
             return {
                 "id": rquery.id,
+                "id_type": rquery.id_type,
+                "id_model": rquery.id_model,
+                "id_grid": rquery.id_grid,
                 "prodCode": rquery.prodCode,
                 "barCode": rquery.barCode,
                 "refCode": rquery.refCode,
@@ -255,13 +263,14 @@ class ProductApi(Resource):
                 "observation": rquery.observation,
                 "ncm": rquery.ncm,
                 "price": simplejson.dumps(Decimal(rquery.price)),
-                "measure_unit": rquery.measure_unit,
+                "id_measure_unit": rquery.id_measure_unit,
                 "structure": rquery.structure,
                 "date_created": rquery.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                 "date_updated": rquery.date_updated.strftime("%Y-%m-%d %H:%M:%S") if rquery.date_updated!=None else None,
                 "images":[{
                     "id": m.id,
-                    "img_url": m.img_url
+                    "img_url": m.img_url,
+                    "default": m.img_default
                 }for m in iquery]
             }
         except exc.SQLAlchemyError as e:
@@ -277,35 +286,20 @@ class ProductApi(Resource):
     def post(self,id:int)->bool:
         try:
             req = request.get_json()
-            prod = CmmProducts.query.get(id)
-            prod.id_category   = prod.id_category if req.id_category is None else int(req.id_category)
-            prod.id_prod_type  = prod.id_prod_type if req.id_prod_type is None else int(req.id_prod_type)
-            prod.id_prod_model = prod.id_prod_model if req.id_prod_model is None else int(req.id_prod_model)
-            prod.prodCode      = prod.prodCode if req.prodCode is None else req.prodCode
-            prod.barCode       = prod.barCode if req.barCode is None else req.barCode
-            prod.refCode       = prod.refCode if req.refCode is None else req.refCode
-            prod.name          = prod.name if req.name is None else req.name
-            prod.description   = prod.description if req.description is None else req.description
-            prod.observation   = prod.observation if req.observation is None else req.observation
-            prod.ncm           = prod.ncm if req.ncm is None else req.ncm
-            prod.price         = prod.price if req.price is None else float(req.price)
-            prod.measure_unit  = prod.measure_unit if req.measure_unit is None else req.measure_unit
-            prod.trash         = prod.trash if req.trash is None else req.trash
+            prod:CmmProducts = CmmProducts.query.get(id)
+            prod.id_type         = req["id_type"]
+            prod.id_model        = req["id_model"]
+            prod.id_grid         = req["id_grid"]
+            prod.prodCode        = req["prod_code"]
+            prod.barCode         = req["bar_code"]
+            prod.refCode         = req["ref_code"]
+            prod.name            = req["name"]
+            prod.description     = req["description"]
+            prod.observation     = None if req["observation"]=="undefined" else req["observation"]
+            prod.price           = float(req["price"])
+            prod.id_measure_unit = req["id_measure_unit"]
             db.session.commit()
-
-            #apaga todos as imagens registradas e realiza novo registro
-            #eh mais facil do que realizar testes para saber se saiu ou entrou registro
-            db.session.delete(CmmProductsImages()).where(CmmProductsImages().id_product==id)
-            db.session.commit()
-            for s in req.images:
-                img = CmmProductsImages()
-                img.id_product = id
-                img.img_url    = s.img_url
-                db.session.add(img)
-
-            db.session.commit()
-
-
+            
             return True
         except exc.SQLAlchemyError as e:
             return {

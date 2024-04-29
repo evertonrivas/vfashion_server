@@ -204,7 +204,7 @@ class OrderApi(Resource):
                             B2bOrdersProducts.discount_percentage)\
                         .join(CmmProducts,CmmProducts.id==B2bOrdersProducts.id_product)\
                         .join(CmmTranslateColors,CmmTranslateColors.id==B2bOrdersProducts.id_color)\
-                        .join(CmmTranslateSizes,CmmTranslateSizes.id==B2bOrdersProducts.id_color)\
+                        .join(CmmTranslateSizes,CmmTranslateSizes.id==B2bOrdersProducts.id_size)\
                         .where(B2bOrdersProducts.id_order==id)
             return {
                 "id": id,
@@ -366,6 +366,7 @@ class HistoryOrderList(Resource):
                     },
                     "data": [{
                         "id_order": '{:010d}'.format(r.id_order),
+                        "id_order_number": r.id_order,
                         "id_customer": r.id_customer,
                         "customer_name": r.customer_name,
                         "id_payment_condition": r.id_payment_condition,
@@ -384,6 +385,7 @@ class HistoryOrderList(Resource):
             else:
                 return [{
                         "id_order": '{:010d}'.format(r.id_order),
+                        "id_order_number": r.id_order,
                         "id_customer": r.id_customer,
                         "customer_name": r.customer_name,
                         "id_payment_condition": r.id_payment_condition,

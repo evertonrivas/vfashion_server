@@ -319,7 +319,7 @@ class B2bCustomerGroup(db.Model):
     date_created      = Column(DateTime,nullable=False,server_default=func.now())
     date_updated      = Column(DateTime,onupdate=func.now())
 
-class B2bCustomerRepresentative(db.Model,SerializerMixin):
+class B2bCustomerGroupCustomers(db.Model,SerializerMixin):
     id_customer_group = Column(Integer,primary_key=True,comment="Id da tabela B2bCustomerGroup")
     id_customer       = Column(Integer,primary_key=True,comment="Id da tabela CmmLegalEntities quando type=C")
 

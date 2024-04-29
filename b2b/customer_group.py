@@ -1,9 +1,9 @@
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import B2bCustomerGroup,B2bCustomerRepresentative, CmmLegalEntities, _get_params,db
+from models import B2bCustomerGroup,B2bCustomerGroupCustomers, CmmLegalEntities, _get_params,db
 import json
-from sqlalchemy import Select, exc,and_,desc,asc
+from sqlalchemy import Delete, Select, exc,and_,desc,asc
 from auth import auth
 from config import Config
 
@@ -171,7 +171,7 @@ class CollectionApi(Resource):
     def get(self,id:int):
         try:
             cquery = B2bCustomerGroup.query.get(id)
-            squery = B2bCustomerRepresentative.query.filter(B2bCustomerRepresentative.id_customer_group == id)
+            squery = B2bCustomerGroupCustomers.query.filter(B2bCustomerGroupCustomers.id_customer_group == id)
 
             return {
                 "id": cquery.id,
@@ -189,7 +189,7 @@ class CollectionApi(Resource):
                 "error_sql": e._sql_message()
             }
     
-    @ns_customer_g.response(HTTPStatus.OK.value,"Atualiza os dados de uma coleção")
+    @ns_customer_g.response(HTTPStatus.OK.value,"Atualiza os dados de um grupo de clientes")
     @ns_customer_g.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
     @ns_customer_g.doc(body=grp_model)
     @auth.login_required
@@ -210,7 +210,86 @@ class CollectionApi(Resource):
                 "error_details": e._message(),
                 "error_sql": e._sql_message()
             }
-        
+    
+    @ns_customer_g.response(HTTPStatus.OK.value,"Adiciona os clientes em um grupo")
+    @ns_customer_g.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_customer_g.doc(body=grp_model)
+    @auth.login_required
+    def put(self,id:int):
+        try:
+            req = request.get_json()
+
+            #apaga o grupo onde cada usuario se encontra
+            db.session.execute(
+                Delete(B2bCustomerGroupCustomers).where(B2bCustomerGroupCustomers.id_customer.in_(req["ids"]))
+            )
+            db.session.commit()
+
+            for id_customer in req["ids"]:
+                grp = B2bCustomerGroupCustomers()
+                grp.id_customer_group = id
+                grp.id_customer = id_customer
+                db.session.add(grp)
+                db.session.commit()
+            return True
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
+
+class CustomersApi(Resource):
+    @ns_customer_g.response(HTTPStatus.OK.value,"Obtem os clientes que compoem uma colecao")
+    @ns_customer_g.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_customer_g.param("page","Número da página de registros","query",type=int,required=True)
+    @ns_customer_g.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
+    @ns_customer_g.param("query","Texto para busca","query")
+    def get(self):
+        pag_num =  1 if request.args.get("page") is None else int(request.args.get("page"))
+        pag_size = Config.PAGINATION_SIZE.value if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        query = "" if request.args.get("query") is None else request.args.get("query")
+
+        try:
+            #filter_id_group
+            params = _get_params(query)
+            filter_id_group = None if hasattr(params,'id_group')==False else params.id_group
+
+            print(filter_id_group)
+
+            rquery = Select(CmmLegalEntities.name,
+                            B2bCustomerGroupCustomers.id_customer)\
+                            .join(B2bCustomerGroupCustomers,B2bCustomerGroupCustomers.id_customer==CmmLegalEntities.id)\
+                            .order_by(asc(CmmLegalEntities.name))
+            
+            if filter_id_group is not None:
+                rquery = rquery.where(B2bCustomerGroupCustomers.id_customer_group==filter_id_group)
+
+            pag = db.paginate(rquery,page=pag_num,per_page=pag_size)
+            rquery = rquery.limit(pag_size).offset((pag_num - 1) * pag_size)
+
+            return {
+                    "pagination":{
+                        "registers": pag.total,
+                        "page": pag_num,
+                        "per_page": pag_size,
+                        "pages": pag.pages,
+                        "has_next": pag.has_next
+                    },
+                    "data":[{
+                        "id": m.id_customer,
+                        "name": m.name
+                    } for m in db.session.execute(rquery)]
+                }
+
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
+
+ns_customer_g.add_resource(CustomersApi,'/customers/')
 
 # class ColletionPriceApi(Resource):
 

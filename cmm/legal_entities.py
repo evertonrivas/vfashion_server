@@ -1,8 +1,8 @@
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields,RestError
 from flask import request
-from models import  CmmLegalEntityHistory, _show_query, db,_save_log,_get_params,B2bCustomerRepresentative, CmmCities, CmmCountries, CmmLegalEntityContact, CmmLegalEntityFile, CmmLegalEntityWeb, CmmStateRegions, CrmFunnelStageCustomer,CmmLegalEntities,CmmUserEntity
-from sqlalchemy import Select,and_,exc,asc,desc,func, or_
+from models import  B2bCustomerGroup, CmmLegalEntityHistory, _show_query, db,_save_log,_get_params,B2bCustomerGroupCustomers, CmmCities, CmmCountries, CmmLegalEntityContact, CmmLegalEntityFile, CmmLegalEntityWeb, CmmStateRegions, CrmFunnelStageCustomer,CmmLegalEntities,CmmUserEntity
+from sqlalchemy import Delete, Select,and_,exc,asc,desc,func, or_
 from auth import auth
 from config import Config,CustomerAction
 
@@ -125,7 +125,7 @@ class EntitysList(Resource):
                 
             if filter_rep is not None:
                 rquery = rquery.where(CmmLegalEntities.id.in_(
-                    Select(B2bCustomerRepresentative.id_customer).where(B2bCustomerRepresentative.id_representative==filter_rep)
+                    Select(B2bCustomerGroupCustomers.id_customer).where(B2bCustomerGroupCustomers.id_representative==filter_rep)
                 ))
                 
             if filter_type is not None:
@@ -411,8 +411,8 @@ class EntityApi(Resource):
                 .join(CmmCities,CmmCities.id==CmmLegalEntities.id_city)\
                 .join(CmmStateRegions,CmmStateRegions.id==CmmCities.id_state_region)\
                 .join(CmmCountries,CmmCountries.id==CmmStateRegions.id_country)\
-                .join(B2bCustomerRepresentative,B2bCustomerRepresentative.id_representative==CmmLegalEntities.id)\
-                .where(and_(CmmLegalEntities.trash==False,B2bCustomerRepresentative.id_customer==id))
+                .join(B2bCustomerGroupCustomers,B2bCustomerGroupCustomers.id_representative==CmmLegalEntities.id)\
+                .where(and_(CmmLegalEntities.trash==False,B2bCustomerGroupCustomers.id_customer==id))
             
             m = db.session.execute(rquery).first()
 
@@ -455,7 +455,7 @@ class EntityApi(Resource):
     def post(self,id:int)->bool:
         try:
             req = request.get_json()
-            cst = CmmLegalEntities.query.get(id)
+            cst:CmmLegalEntities = CmmLegalEntities.query.get(id)
             cst.name         = cst.name if req["name"] is None else req["name"]
             cst.fantasy_name = cst.fantasy_name if req["fantasy_name"] is None else req["fantasy_name"]
             cst.taxvat       = cst.taxvat if req["taxvat"] is None else req["taxvat"]
@@ -463,17 +463,24 @@ class EntityApi(Resource):
             cst.postal_code  = cst.postal_code if req["postal_code"] is None else req["postal_code"]
             cst.neighborhood = cst.neighborhood if req["neighborhood"] is None else req["neighborhood"]
             cst.type         = cst.type if req["type"] is None else req["type"]
+            db.session.commit()
+
+            #limpa o que existe no grupo para nao gerar duplicacao de chave
+            db.session.execute(Delete(B2bCustomerGroupCustomers).where(B2bCustomerGroupCustomers.id_customer==id))
+            db.session.commit()
 
             if req["representative_id"]!=0:
-                rep = B2bCustomerRepresentative()
-                rep.id_customer       = id
-                rep.id_representative = req["representative_id"]
-                rep.need_approvement  = False #verificar como fazer esse need approvement, talvez colocar no cadastro do REP
-                db.session.add(rep)
-                db.session.commit()
+                #busca o grupo que possui o representante
+                grp = db.session.execute(Select(B2bCustomerGroup.id).where(B2bCustomerGroup.id_representative==req["representative_id"])).first()
+
+                if grp is not None:
+                    rep = B2bCustomerGroupCustomers()
+                    rep.id_customer       = cst.id
+                    rep.id_customer_group = grp.id
+                    db.session.add(rep)
+                    db.session.commit()
             
-            _save_log(id,CustomerAction.DATA_UPDATED,'Registro atualizado')
-            db.session.commit()
+            _save_log(id,CustomerAction.DATA_UPDATED,'Registro alterado')
             return id
         except exc.SQLAlchemyError as e:
             return {

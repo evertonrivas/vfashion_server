@@ -2,7 +2,7 @@
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import B2bCartShopping, B2bCustomerRepresentative, B2bProductStock, CmmLegalEntities, CmmProducts, CmmProductsGrid, CmmProductsGridDistribution, CmmTranslateColors, CmmTranslateSizes,CmmProductsImages, _show_query, db
+from models import B2bCartShopping, B2bCustomerGroupCustomers, B2bProductStock, CmmLegalEntities, CmmProducts, CmmProductsGrid, CmmProductsGridDistribution, CmmTranslateColors, CmmTranslateSizes,CmmProductsImages, _show_query, db
 from sqlalchemy import exc,Select,and_,func,tuple_,distinct,desc,asc,Delete, text
 from auth import auth
 from config import Config
@@ -56,7 +56,7 @@ class CartApi(Resource):
                 pquery = pquery.where(B2bCartShopping.id_customer==id_profile).order_by(direction(getattr(B2bCartShopping,order_by)))
             elif user_type=='R':
                 pquery = pquery.where(B2bCartShopping.id_customer.in_(
-                    Select(B2bCustomerRepresentative.id_customer).where(B2bCustomerRepresentative.id_representative==id_profile)
+                    Select(B2bCustomerGroupCustomers.id_customer).where(B2bCustomerGroupCustomers.id_representative==id_profile)
                 )).group_by(B2bCartShopping.id_customer).order_by(asc(B2bCartShopping.id_customer))
             elif user_type=='A':
                 pquery = pquery.group_by(B2bCartShopping.id_customer).order_by(asc(B2bCartShopping.id_customer))
@@ -319,7 +319,7 @@ class CartItem(Resource):
             elif usr_type=='R':
                 #quando representante apagara todos os clientes do representante
                 stmt = Delete(B2bCartShopping).where(B2bCartShopping.id_customer.in_(
-                    Select(B2bCustomerRepresentative.id_customer).where(B2bCustomerRepresentative.id_customer==id)
+                    Select(B2bCustomerGroupCustomers.id_customer).where(B2bCustomerGroupCustomers.id_customer==id)
                     )
                 )
             else:
@@ -352,7 +352,7 @@ class CartTotal(Resource):
         if userType=='R':
             #aqui precisa buscar todos os os do representante
             query = query.where(B2bCartShopping.id_customer.in_(
-                Select(B2bCustomerRepresentative.id_customer).where(B2bCustomerRepresentative.id_representative==id_entity))
+                Select(B2bCustomerGroupCustomers.id_customer).where(B2bCustomerGroupCustomers.id_representative==id_entity))
             )
         else:
             query = query.where(B2bCartShopping.id_customer==id_entity)
