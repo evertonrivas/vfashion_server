@@ -177,10 +177,7 @@ class CollectionApi(Resource):
                 "id": cquery.id,
                 "name": cquery.name,
                 "id_representative": cquery.id_representative,
-                "need_approvement": cquery.need_approvement,
-                "customers": [{
-                    "id": m.id_table_price
-                }for m in squery]
+                "need_approvement": cquery.need_approvement
             }
         except exc.SQLAlchemyError as e:
             return {
@@ -255,7 +252,7 @@ class CustomersApi(Resource):
             params = _get_params(query)
             filter_id_group = None if hasattr(params,'id_group')==False else params.id_group
 
-            print(filter_id_group)
+            # print(filter_id_group)
 
             rquery = Select(CmmLegalEntities.name,
                             B2bCustomerGroupCustomers.id_customer)\
