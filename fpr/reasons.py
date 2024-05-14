@@ -104,8 +104,9 @@ class CategoryList(Resource):
     @auth.login_required
     def post(self):
         try:
+            req = request.get_json()
             reg = FprReason()
-            reg.description = request.form.get("name")
+            reg.description = req["description"]
             db.session.add(reg)
             db.session.commit()
             return reg.id
@@ -141,7 +142,13 @@ class CategoryApi(Resource):
     @auth.login_required
     def get(self,id:int):
         try:
-            return FprReason.query.get(id).to_dict()
+            reason = FprReason.query.get(id)
+            return {
+                "id": reason.id,
+                "description": reason.description,
+                "date_created": reason.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+                "date_updated": reason.date_updated.strftime("%Y-%m-%d %H:%M:%S") if reason.date_updated!=None else None
+            }
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -156,9 +163,10 @@ class CategoryApi(Resource):
     def post(self,id:int):
         try:
             req = request.get_json()
-            reg = FprReason.query.get(id)
-            reg.description = reg.description if req["description"] is None else req["description"]
-            db.session.commit() 
+            reg:FprReason = FprReason.query.get(id)
+            reg.description = req["description"]
+            db.session.commit()
+            return True
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
