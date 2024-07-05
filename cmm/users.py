@@ -5,7 +5,7 @@ from flask import request
 from models import CmmLegalEntities, CmmLegalEntityContact, CmmUserEntity, CmmUsers, _get_params, _show_query,db,_save_log
 from sqlalchemy import Delete, Select, desc, exc, and_, asc, Insert,Update, func, or_
 from auth import auth
-from config import Config,CustomerAction
+from config import Config, ContactType,CustomerAction
 
 ns_user = Namespace("users",description="Operações para manipular dados de usuários do sistema")
 
@@ -259,7 +259,22 @@ class UserAuth(Resource):
     @ns_user.param("password","Senha do sistema","formData",required=True)
     def post(self):
         #req = request.get_json()
-        usr = CmmUsers.query.filter(and_(CmmUsers.username==request.form.get("username"),CmmUsers.active==True)).first()
+        query = Select(CmmUsers)\
+                     .outerjoin(CmmUserEntity,CmmUserEntity.id_user==CmmUsers.id)\
+                     .outerjoin(CmmLegalEntities,CmmLegalEntities.id==CmmUserEntity.id_entity)\
+                     .outerjoin(CmmLegalEntityContact,CmmLegalEntityContact.id_legal_entity==CmmLegalEntities.id)\
+                     .where(CmmUsers.active==True)\
+                     .where(or_(
+                         CmmUsers.username==request.form.get("username"),
+                         CmmLegalEntities.taxvat==request.form.get("username"),
+                         and_(
+                             CmmLegalEntityContact.contact_type==ContactType.EMAIL.value,
+                             CmmLegalEntityContact.is_default==True,
+                             CmmLegalEntityContact.value==request.form.get("username")
+                         )
+                     ))
+        usr = db.session.execute(query).first()[0]
+        # usr = CmmUsers.query.filter(and_(CmmUsers.username==request.form.get("username"),CmmUsers.active==True)).first()
         if usr is not None:
 
             #tenta buscar um profile
