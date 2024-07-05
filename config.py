@@ -80,4 +80,6 @@ class CustomerAction(Enum):
     FINANCIAL_BLOQUED     = 'FB'
     FINANCIAL_UNBLOQUED   = 'FU'
     
-
+class ContactType(Enum):
+    EMAIL = 'E'
+    PHONE = 'P'
