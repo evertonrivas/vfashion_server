@@ -134,7 +134,7 @@ class CalendarEventApi(Resource):
                 "id_parent": qry.id_parent,
                 "name": qry.name,
                 "year": qry.year,
-                "start_week": date(qry.start_date.year,qry.end_date.month,qry.end_date.day).isocalendar().week,
+                "start_week": date(qry.start_date.year,qry.start_date.month,qry.start_date.day).isocalendar().week,
                 "end_week": date(qry.end_date.year,qry.end_date.month,qry.end_date.day).isocalendar().week,
                 "start_date": qry.start_date,
                 "end_date": qry.end_date,

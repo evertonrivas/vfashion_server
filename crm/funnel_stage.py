@@ -37,6 +37,7 @@ class FunnelStagesApi(Resource):
                             CrmFunnel.name.label("funnel"),
                             CrmFunnelStage.name,
                             CrmFunnelStage.icon,
+                            CrmFunnelStage.icon_color,
                             CrmFunnelStage.color,
                             CrmFunnelStage.order,
                             CrmFunnelStage.date_created,
@@ -71,6 +72,7 @@ class FunnelStagesApi(Resource):
                         "funnel": m.funnel,
                         "name": m.name,
                         "icon": m.icon,
+                        "icon_color": m.icon_color,
                         "color": m.color,
                         "order": m.order,
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
@@ -84,6 +86,7 @@ class FunnelStagesApi(Resource):
                         "funnel": m.funnel,
                         "name": m.name,
                         "icon": m.icon,
+                        "icon_color": m.icon_color,
                         "color": m.color,
                         "order": m.order,
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
@@ -99,7 +102,24 @@ class FunnelStagesApi(Resource):
     @auth.login_required
     def post(self):
         try:
-            pass
+            req = request.get_json()
+
+            color = str(req["hex_color"]).replace("#","")
+            c1 = hex(int(color[0:2],16)-101).replace("0x","")
+            c2 = hex(int(color[2:4],16)-101).replace("0x","")
+            c3 = hex(int(color[4:6],16)-101).replace("0x","")
+            icon_color = "#"+c1+c2+c3
+
+            stage = CrmFunnelStage()
+            stage.id_funnel  = req["id_funnel"]
+            stage.name       = req["name"]
+            stage.icon       = req["icon"]
+            stage.icon_color = icon_color
+            stage.color      = req["hex_color"]
+            stage.order      = req["order"]
+            db.session.add(stage)
+            db.session.commit()
+            return True
         except exc.SQLAlchemyError as e:
             return{
                 "error_code": e.code,
@@ -149,18 +169,32 @@ class FunnelStageApi(Resource):
     @auth.login_required
     def post(self,id:int):
         try:
+            req = request.get_json()
+
+            color = str(req["hex_color"]).replace("#","")
+            c1 = hex(int(color[0:2],16)-101).replace("0x","")
+            c2 = hex(int(color[2:4],16)-101).replace("0x","")
+            c3 = hex(int(color[4:6],16)-101).replace("0x","")
+            icon_color = "#"+c1+c2+c3
+
             if id > 0:
-                stage = CrmFunnelStage.query.get(id)
-                stage.id_funnel = stage.id_funnel if request.form.get("id_funnel") is None else request.form.get("id_funel")
-                stage.name  = stage.name if request.form.get("name") is None else request.form.get("name")
-                stage.order = stage.order if request.form.get("order") is None else request.form.get("order")
+                stage:CrmFunnelStage = CrmFunnelStage.query.get(id)
+                stage.id_funnel  = req["id_funnel"]
+                stage.name       = req["name"]
+                stage.icon       = req["icon"]
+                stage.icon_color = icon_color
+                stage.color      = req["hex_color"]
+                stage.order      = req["order"]
                 db.session.commit()
                 return stage.id
             else:
                 stage = CrmFunnelStage()
-                stage.id_funnel = int(request.form.get("id_funnel"))
-                stage.name = request.form.get("name")
-                stage.order = request.form.get("order")
+                stage.id_funnel  = req["id_funnel"]
+                stage.name       = req["name"]
+                stage.icon       = req["icon"]
+                stage.icon_color = icon_color
+                stage.color      = req["hex_color"]
+                stage.order      = req["order"]
                 db.session.add(stage)
                 db.session.commit()
                 return stage.id

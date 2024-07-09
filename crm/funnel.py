@@ -134,6 +134,7 @@ class FunnelList(Resource):
             "id": m.id,
             "name": m.name,
             "icon": m.icon,
+            "icon_color": m.icon_color,
             "color": m.color,
             "order": m.order,
             "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),

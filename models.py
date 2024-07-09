@@ -399,6 +399,7 @@ class CrmFunnelStage(db.Model,SerializerMixin):
     id_funnel    = Column(Integer,nullable=False)
     name         = Column(String(128),nullable=False)
     icon         = Column(String(20),nullable=True)
+    icon_color   = Column(String(20),nullable=True)
     color        = Column(String(20),nullable=True)
     order        = Column(Integer,nullable=False)
     date_created = Column(DateTime,nullable=False,server_default=func.now())
