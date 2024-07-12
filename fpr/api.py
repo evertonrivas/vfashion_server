@@ -1,6 +1,7 @@
 from flask import Blueprint
 from flask_restx import Api
 from fpr.reasons import ns_reason
+from fpr.steps import ns_step
 #from fpr.funil import api as ns_funil
 
 """ Módulo Finished Product Return (Devolução de Produto acabado). 
@@ -9,7 +10,7 @@ from fpr.reasons import ns_reason
 Keyword arguments: devolução, cliente, produto
 """
 
-nss = [ns_reason]
+nss = [ns_reason, ns_step]
 
 blueprint = Blueprint("fpr",__name__,url_prefix="/fpr/api/")
 

@@ -240,8 +240,8 @@ class FunnelApi(Resource):
                 db.session.execute(Update(CrmFunnel).values(is_default=0))
                 db.session.commit()
             
-            fun = CrmFunnel.query.get(id)
-            fun.name       = fun.name if request.form.get("name") is None else request.form.get("name")
+            fun:CrmFunnel  = CrmFunnel.query.get(id)
+            fun.name       = req["name"]
             fun.is_default = 1 if req["is_default"]==1 or req["is_default"]=="true" else 0
             fun.type       = req["type"]
             db.session.commit()
