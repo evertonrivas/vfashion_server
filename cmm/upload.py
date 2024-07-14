@@ -117,8 +117,9 @@ class UploadReturn(Resource):
     @ns_upload.response(HTTPStatus.OK.value,"Realiza envio de arquivo(s) para o servidor na pasta temporaria")
     @ns_upload.response(HTTPStatus.BAD_REQUEST.value,"Falha ao enviar arquivo(s)!")
     @auth.login_required
-    def post(self,id:int,idprod:int):
+    def post(self,id:int,idprod:int,idcolor:int,idsize:int):
         try:
+            files = []
             #obtem os arquivos para upload
             fpath = Config.APP_PATH.value+'assets/tmp/'
             data = ImmutableMultiDict(request.files)
@@ -126,11 +127,12 @@ class UploadReturn(Resource):
             for file in data.getlist('files[]'):
                 parts = file.filename.split(".")
                 ext = parts[len(parts)-1]
-                newFileName = "return_"+str(id)+"_"+str(idprod)+"_"+str(file_count)+"."+ext
+                newFileName = "return_"+str(id)+"_"+str(idprod)+"_"+str(idcolor)+"_"+str(idsize)+"_"+str(file_count)+"."+ext
                 file.save(fpath+newFileName)
                 file.close()
                 file_count += 1
-            return True
+                files.append(newFileName)
+            return files
         except exceptions.HTTPException as e:
             print(e)
             return False

@@ -117,7 +117,7 @@ class CmmUserEntity(db.Model,SerializerMixin):
 
 class CmmCategories(db.Model,SerializerMixin):
     id           = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
-    origin_id    = Column(Integer,nullable=True)
+    origin_id    = Column(Integer,nullable=True,index=True)
     name         = Column(String(128),nullable=False)
     id_parent    = Column(Integer,nullable=True)
     date_created = Column(DateTime,nullable=False,server_default=func.now())
@@ -127,9 +127,9 @@ class CmmCategories(db.Model,SerializerMixin):
 
 class CmmProducts(db.Model,SerializerMixin):
     id           = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
-    id_type      = Column(Integer,nullable=False)
-    id_model     = Column(Integer,nullable=False)
-    id_grid      = Column(Integer,nullable=False)
+    id_type      = Column(Integer,nullable=False,index=True)
+    id_model     = Column(Integer,nullable=False,index=True)
+    id_grid      = Column(Integer,nullable=False,index=True)
     prodCode     = Column(String(50),nullable=False)
     barCode      = Column(String(128))
     refCode      = Column(String(50),nullable=False)
@@ -139,7 +139,7 @@ class CmmProducts(db.Model,SerializerMixin):
     ncm          = Column(String(50),nullable=True)
     price        = Column(DECIMAL(10,2),nullable=False)
     price_pdv    = Column(DECIMAL(10,2),nullable=True)
-    id_measure_unit = Column(Integer,nullable=False,comment="Id da tabela cmm_measure_unit")
+    id_measure_unit = Column(Integer,nullable=False,index=True,comment="Id da tabela cmm_measure_unit")
     structure    = Column(CHAR(1),nullable=False,default='S',comment="S = Simples, C = Composto")
     date_created = Column(DateTime,nullable=False,server_default=func.now())
     date_updated = Column(DateTime,onupdate=func.now())
@@ -147,13 +147,13 @@ class CmmProducts(db.Model,SerializerMixin):
 
 class CmmProductsImages(db.Model,SerializerMixin):
     id          = Column(Integer,nullable=False,primary_key=True,autoincrement=True)
-    id_product  = Column(Integer,nullable=False)
+    id_product  = Column(Integer,nullable=False,index=True,comment="Id da tabela CmmProduct")
     img_url     = Column(String(255),nullable=False)
     img_default = Column(Boolean,nullable=False,server_default='0',default=0)
 
 class CmmProductsTypes(db.Model,SerializerMixin):
     id           = Column(Integer,nullable=False,primary_key=True,autoincrement=True)
-    origin_id    = Column(Integer,nullable=True)
+    origin_id    = Column(Integer,nullable=True,comment="Utilizado em caso de importacao")
     name         = Column(String(128),nullable=False)
     date_created = Column(DateTime,nullable=False,server_default=func.now())
     date_updated = Column(DateTime,onupdate=func.now())
@@ -173,7 +173,7 @@ class CmmProductsCategories(db.Model,SerializerMixin):
 
 class CmmProductsGrid(db.Model,SerializerMixin):
     id           = Column(Integer,primary_key=True,autoincrement=True,nullable=False)
-    origin_id    = Column(Integer,nullable=True)
+    origin_id    = Column(Integer,nullable=True,comment="Utilizado em caso de importacao")
     name         = Column(String(128))
     default      = Column(Boolean,nullable=False,server_default='0',default=0)
     date_created = Column(DateTime,nullable=False,server_default=func.now())
@@ -198,23 +198,23 @@ class CmmCountries(db.Model,SerializerMixin):
 
 class CmmStateRegions(db.Model,SerializerMixin):
     id         = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
-    id_country = Column(Integer,nullable=False)
+    id_country = Column(Integer,nullable=False,index=True,comment="Id da tabela CmmCoutries")
     name       = Column(String(100),nullable=False)
     acronym    = Column(String(10),nullable=False)
 
 class CmmCities(db.Model,SerializerMixin):
     id              = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
-    id_state_region = Column(Integer,nullable=False)
+    id_state_region = Column(Integer,nullable=False,index=True,comment="Id da tabela CmmStateRegions")
     name            = Column(String(100),nullable=False)
     brazil_ibge_code= Column(String(10),nullable=True)
 
 class CmmLegalEntities(db.Model,SerializerMixin):
     id             = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
-    origin_id      = Column(Integer,nullable=True)
+    origin_id      = Column(Integer,nullable=True,comment="Utilizado em caso de importacao")
     name           = Column(String(255),nullable=False)
     fantasy_name   = Column(String(255),nullable=False)
     taxvat         = Column(String(30),nullable=False,comment="CPF ou CNPJ no Brasil")
-    id_city        = Column(Integer,nullable=False)
+    id_city        = Column(Integer,nullable=False,index=True,comment="Id da tabela CmmCities")
     postal_code    = Column(String(30),nullable=False)
     neighborhood   = Column(String(150),nullable=False)
     address        = Column(String(255),nullable=False)
@@ -227,7 +227,7 @@ class CmmLegalEntities(db.Model,SerializerMixin):
 
 class CmmLegalEntityContact(db.Model,SerializerMixin):
     id              = Column(Integer,primary_key=True,autoincrement=True)
-    id_legal_entity = Column(Integer,nullable=False)
+    id_legal_entity = Column(Integer,nullable=False,index=True,comment="Id da tabela CmmLegalEntities")
     name            = Column(String(150),nullable=False)
     contact_type    = Column(CHAR(1),nullable=False,server_default='E',default='E',comment='E = E-mail, P = Phone')
     value           = Column(String(200),nullable=False)
@@ -238,7 +238,7 @@ class CmmLegalEntityContact(db.Model,SerializerMixin):
 
 class CmmLegalEntityWeb(db.Model,SerializerMixin):
     id              = Column(Integer,primary_key=True,autoincrement=True)
-    id_legal_entity = Column(Integer,nullable=False)
+    id_legal_entity = Column(Integer,nullable=False,index=True,comment="Id da tabela CmmLegalEntities")
     name            = Column(String(150),nullable=False)
     web_type        = Column(CHAR(1),nullable=False,server_default='E',default='E',comment='W = Website, B = Blog, S = Social Media')
     value           = Column(String(255),nullable=False)
@@ -247,14 +247,14 @@ class CmmLegalEntityWeb(db.Model,SerializerMixin):
 
 class CmmLegalEntityHistory(db.Model,SerializerMixin):
     id              = Column(Integer,primary_key=True,autoincrement=True)
-    id_legal_entity = Column(Integer,nullable=False)
+    id_legal_entity = Column(Integer,nullable=False,index=True,comment="Id da tabela CmmLegalEntities")
     history         = Column(Text,nullable=False)
     action          = Column(CHAR(2),nullable=False,comment='DR = Data Registered,DU = Data Updated, MC = Move CRM Funil/Stage, CS = Chat Message Sended, CR = Chat Message Received, OC = Order Created, OU = Order Update, OD = Order Canceled, SA = System Access, TC = Task Created, FA = File Attached, FD = File Dettached, ES = E-mail Sended, ER = E-mail Replied, RC = Return Created, RU = Return Updated, FB = Financial Bloqued, FU = Financial Unbloqued')
     date_created    = Column(DateTime,nullable=False,server_default=func.now())
 
 class CmmLegalEntityFile(db.Model,SerializerMixin):
     id              = Column(Integer,primary_key=True,autoincrement=True)
-    id_legal_entity = Column(Integer,nullable=False)
+    id_legal_entity = Column(Integer,nullable=False,index=True,comment="Id da tabela CmmLegalEntities")
     name            = Column(String(255),nullable=False)
     folder          = Column(String(50),nullable=False)
     content_type    = Column(String(100),nullable=False)
@@ -280,8 +280,8 @@ class CmmTranslateSizes(db.Model,SerializerMixin):
     date_updated = Column(DateTime,onupdate=func.now())
 
 class B2bBrand(db.Model,SerializerMixin):
-    id = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
-    name = Column(String(100),nullable=False)
+    id            = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
+    name          = Column(String(100),nullable=False)
     date_created  = Column(DateTime,nullable=False,server_default=func.now())
     date_updated  = Column(DateTime,onupdate=func.now())
     trash         = Column(Boolean,nullable=False,server_default='0',default=0)
@@ -310,7 +310,7 @@ class B2bCollectionPrice(db.Model,SerializerMixin):
     id_collection  = Column(Integer,primary_key=True,nullable=False)
     id_table_price = Column(Integer,primary_key=True,nullable=False)
 
-class B2bCustomerGroup(db.Model):
+class B2bCustomerGroup(db.Model,SerializerMixin):
     id                = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
     name              = Column(String(100),nullable=False)
     id_representative = Column(Integer,nullable=True,comment="Id da tabela CmmLegalEntities quando type=R")
@@ -325,18 +325,19 @@ class B2bCustomerGroupCustomers(db.Model,SerializerMixin):
 
 class B2bOrders(db.Model,SerializerMixin):
     id                   = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
-    id_customer          = Column(Integer,nullable=False)
-    id_payment_condition = Column(Integer,nullable=False)
+    id_customer          = Column(Integer,nullable=False,index=True,comment="Id da tabela CmmLegalEntities")
+    id_payment_condition = Column(Integer,nullable=False,index=True,comment="Id da tabela B2bPaymentConditions")
     total_value          = Column(DECIMAL(10,2),nullable=False)
     total_itens          = Column(Integer,nullable=False)
     installments         = Column(SmallInteger,nullable=False)
     installment_value    = Column(DECIMAL(10,2),nullable=False)
-    integrated           = Column(Boolean,nullable=False,default=True,comment="Indica se o pedido foi integrado com o ERP do cliente (se houver necessidade)")
+    status               = Column(SmallInteger,nullable=False,comment="0 - Enviado, 1 - Em processamento, 2 - Em transporte, 3 - Finalizado")
     integration_number   = Column(Integer,nullable=True,comment="Número do pedido no sistema de cliente")
     track_code           = Column(String(30),nullable=True,comment="Código de rastreamento")
     track_company        = Column(String(30),nullable=True,comment="Nome da empresa de transporte")
     invoice_number       = Column(Integer,nullable=True,comment="Número da nota fiscal")
     invoice_serie        = Column(Integer,nullable=True)
+    date                 = Column(Date,nullable=False,server_default=func.now())
     date_created         = Column(DateTime,nullable=False,server_default=func.now())
     date_updated         = Column(DateTime,onupdate=func.now())
     trash                = Column(Boolean,nullable=False,server_default='0',default=0)
@@ -417,20 +418,40 @@ class CrmImportation(db.Model,SerializerMixin):
     file         = Column(String(255),nullable=False)
     date_created = Column(DateTime,nullable=False,server_default=func.now())
 
-class FprReason(db.Model):
+class FprReason(db.Model,SerializerMixin):
     id           = Column(Integer,primary_key=True,autoincrement=True)
     description  = Column(String(255),nullable=False)
     date_created = Column(DateTime,nullable=False,server_default=func.now())
     date_updated = Column(DateTime,onupdate=func.now())
     trash        = Column(Boolean,nullable=False,server_default='0',default=0)
 
-class FprSteps(db.Model):
+# class FprSteps(db.Model):
+#     id           = Column(Integer,primary_key=True,autoincrement=True)
+#     name         = Column(String(255),nullable=False)
+#     date_created = Column(DateTime,nullable=False,server_default=func.now())
+#     date_updated = Column(DateTime,onupdate=func.now())
+#     trash        = Column(Boolean,nullable=False,server_default='0',default=0)
+
+class FprDevolution(db.Model,SerializerMixin):
     id           = Column(Integer,primary_key=True,autoincrement=True)
-    name         = Column(String(255),nullable=False)
+    date         = Column(Date,nullable=False,server_default=func.now())
+    id_order     = Column(Integer,index=True,comment="Id da tabela B2bOrders")
+    status       = Column(SmallInteger,nullable=False,server_default='0',comment="0 - Em análise, 1 - Em análise, 2 - Totalmente aprovado, 3 - Parcialmente aprovado, 4 - Reprovado")
     date_created = Column(DateTime,nullable=False,server_default=func.now())
     date_updated = Column(DateTime,onupdate=func.now())
     trash        = Column(Boolean,nullable=False,server_default='0',default=0)
 
+class FprDevolutionItem(db.Model,SerializerMixin):
+    id_devolution = Column(Integer,primary_key=True,comment="Id da tabela FprDevolution")
+    id_product    = Column(Integer,nullable=False,primary_key=True)
+    id_color      = Column(Integer,primary_key=True,nullable=False)
+    id_size       = Column(Integer,primary_key=True,nullable=False)
+    id_reason     = Column(Integer,primary_key=True,comment="Id da tabela FprReason")
+    status        = Column(Boolean,nullable=True,comment="Null - Não avaliado, 0 - Rejeitado, 1 - Aceito")
+    picture_1     = Column(String(255),nullable=True)
+    picture_2     = Column(String(255),nullable=True)
+    picture_3     = Column(String(255),nullable=True)
+    picture_4     = Column(String(255),nullable=True)
 
 class ScmCalendar(db.Model,SerializerMixin):
     time_id       = Column(Integer,primary_key=True,autoincrement=True)
@@ -440,7 +461,6 @@ class ScmCalendar(db.Model,SerializerMixin):
     month         = Column(Integer,nullable=False)
     week          = Column(Integer,nullable=False)
     day_of_week   = Column(Integer,nullable=False)
-
 
 class ScmEventType(db.Model,SerializerMixin):
     id             = Column(Integer,primary_key=True,autoincrement=True)
@@ -461,7 +481,7 @@ class ScmEvent(db.Model,SerializerMixin):
     year          = Column(SmallInteger,nullable=False)
     start_date    = Column(Date,nullable=False)
     end_date      = Column(Date,nullable=True)
-    id_event_type = Column(Integer,nullable=False)
+    id_event_type = Column(Integer,nullable=False,comment="Id da tabela ScmEventType")
     id_collection = Column(Integer,nullable=True)
     budget_value  = Column(DECIMAL(10,2),nullable=True)
     date_created  = Column(DateTime,nullable=False,server_default=func.now())

@@ -124,7 +124,7 @@ class OrdersList(Resource):
                 order.id_payment_condition = int(req['id_payment_condition'])
                 order.installment_value    = req['installment_value']
                 order.installments         = req['installments']
-                order.integrated           = False
+                order.status               = 0
                 order.total_value          = req['total_value']
                 order.total_itens          = req['total_itens']
                 order.trash                = False
@@ -176,7 +176,7 @@ class OrderApi(Resource):
                            B2bOrders.total_itens,
                            B2bOrders.installments,
                            B2bOrders.installment_value,
-                           B2bOrders.integrated,
+                           B2bOrders.status,
                            B2bOrders.integration_number,
                            B2bOrders.track_code,
                            B2bOrders.track_company,
@@ -220,7 +220,7 @@ class OrderApi(Resource):
                 "total_itens": str(order.total_itens),
                 "installments": str(order.installments),
                 "installment_value": str(order.installment_value),
-                "integrated": order.integrated,
+                "status": order.status,
                 "integration_number": str(order.integration_number),
                 "track_code": order.track_code,
                 "track_company": order.track_company,
@@ -229,6 +229,7 @@ class OrderApi(Resource):
                 "date_created": order.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                 "date_updated": None if order.date_updated is None else order.date_updated.strftime("%Y-%m-%d %H:%M:%S"),
                 "products": [{
+                    "id_order_product": str(m.id_product)+'_'+str(m.id_color)+'_'+str(m.id_size),
                     "id_product": m.id_product,
                     "name": m.name,
                     "id_color": m.id_color,
@@ -323,9 +324,10 @@ class HistoryOrderList(Resource):
         try:
 
             params = _get_params(query)
-            order_by  = "id" if hasattr(params,"order_by")==False else request.args.get("order_by")
+            order_by  = "id" if hasattr(params,"order_by")==False else params.order_by
             direction = asc if hasattr(params,"order_dir")==False else desc if str(params.order_by).upper()=='DESC' else asc
             list_all  = False if hasattr(params,"list_all")==False else True
+            status    = None if hasattr(params,"status")==False else params.status
 
             stmt = Select(
                           B2bOrders.id.label("id_order"),
@@ -334,7 +336,7 @@ class HistoryOrderList(Resource):
                           B2bOrders.installments,
                           B2bOrders.total_value,
                           B2bOrders.total_itens,
-                          B2bOrders.integrated,
+                          B2bOrders.status,
                           B2bOrders.integration_number,
                           B2bOrders.track_code,
                           B2bOrders.track_company,
@@ -351,6 +353,9 @@ class HistoryOrderList(Resource):
             
             if id!=0:
                 stmt = stmt.where(B2bOrders.id_customer==id)
+
+            if status is not None:
+                stmt = stmt.where(B2bOrders.status==status)
             
             if list_all==False:
                 pag = db.paginate(stmt,page=pag_num,per_page=pag_size)
@@ -375,7 +380,7 @@ class HistoryOrderList(Resource):
                         "total_itens": r.total_itens,
                         "installments": r.installments,
                         "installment_value": simplejson.dumps(Decimal(r.installment_value)),
-                        "integrated": r.integrated,
+                        "status": r.status,
                         "integration_number": r.integration_number,
                         "invoice_number": r.invoice_number,
                         "track": (None if Config.TRACK_ORDER.value==False else self.__getTrack(r.taxvat,r.invoice_number,r.invoice_serie,r.track_company,r.track_code) ),
@@ -394,7 +399,7 @@ class HistoryOrderList(Resource):
                         "total_itens": r.total_itens,
                         "installments": r.installments,
                         "installment_value": simplejson.dumps(Decimal(r.installment_value)),
-                        "integrated": r.integrated,
+                        "status": r.status,
                         "integration_number": r.integration_number,
                         "invoice_number": r.invoice_number,
                         "track": (None if Config.TRACK_ORDER.value==False else self.__getTrack(r.taxvat,r.invoice_number,r.invoice_serie,r.track_company,r.track_code) ),
