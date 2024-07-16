@@ -83,3 +83,18 @@ class CustomerAction(Enum):
 class ContactType(Enum):
     EMAIL = 'E'
     PHONE = 'P'
+
+class OrderStatus(Enum):
+    SENDED       = 1 # enviado
+    ANALIZING    = 0 # em analise
+    PROCESSING   = 2 # processando
+    TRANSPORTING = 3 # em transporte
+    FINISHED     = 4 # finalizado
+    REJECTED     = 5 # rejeitado
+
+class DevolutionStatus(Enum):
+    SAVED         = 0 # salvo
+    PENDING       = 1 # em andamento
+    APPROVED_ALL  = 2 # totalmente aprovada
+    APPROVED_PART = 3 # parcialmente aprovada
+    REJECTED      = 4 # rejeitada
