@@ -69,6 +69,7 @@ class CollectionList(Resource):
                             ScmEventType.has_budget,
                             ScmEventType.use_collection,
                             ScmEventType.is_milestone,
+                            ScmEventType.create_funnel,
                             ScmEventType.date_created,
                             ScmEventType.date_updated)\
                             .where(ScmEventType.trash==trash)\
@@ -104,6 +105,7 @@ class CollectionList(Resource):
                         "has_budget": m.has_budget,
                         "use_collection": m.use_collection,
                         "is_milestone": m.is_milestone,
+                        "create_funnel": m.create_funnel,
                         "children": [{
                             "id": c.id,
                             "name": c.name,
@@ -127,6 +129,7 @@ class CollectionList(Resource):
                         "has_budget": m.has_budget,
                         "use_collection": m.use_collection,
                         "is_milestone": m.is_milestone,
+                        "create_funnel": m.create_funnel,
                         "children": [{
                             "id": c.id,
                             "name": c.name,
@@ -156,6 +159,7 @@ class CollectionList(Resource):
                       ScmEventType.has_budget,
                       ScmEventType.use_collection,
                       ScmEventType.is_milestone,
+                      ScmEventType.create_funnel,
                       ScmEventType.date_created,
                       ScmEventType.date_updated).where(ScmEventType.id==id_parent)).first()
         if reg is not None:
@@ -166,6 +170,7 @@ class CollectionList(Resource):
                 "has_budget": reg.has_budget,
                 "use_collection": reg.use_collection,
                 "is_milestone": reg.is_milestone,
+                "create_funnel": reg.create_funnel,
                 "date_created": reg.date_created.strftime("%Y-%m-%d"),
                 "date_updated": reg.date_updated.strftime("%Y-%m-%d %H:%M:%S") if reg.date_updated!=None else None
             }
@@ -185,6 +190,7 @@ class CollectionList(Resource):
             reg.has_budget     = False if req["has_budget"]=='false' else True
             reg.use_collection = False if req["use_collection"]=='false' else True
             reg.is_milestone   = False if req["is_milestone"]=='false' else True
+            reg.create_funnel  = False if req["create_funnel"]=='false' else True
             reg.date_created   = datetime.now()
             db.session.add(reg)
             db.session.commit()
@@ -232,6 +238,7 @@ class CollectionApi(Resource):
                 "has_budget": qry.has_budget,
                 "is_milestone": qry.is_milestone,
                 "use_collection": qry.use_collection,
+                "create_funnel": qry.create_funnel,
                 "date_created": qry.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                 "date_updated": qry.date_updated.strftime("%Y-%m-%d %H:%M:%S") if qry.date_updated!=None else None
             }
@@ -255,6 +262,7 @@ class CollectionApi(Resource):
             reg.has_budget     = False if req["has_budget"]=='false' else True
             reg.use_collection = False if req["use_collection"]=='false' else True
             reg.is_milestone   = False if req["is_milestone"]=='false' else True
+            reg.create_funnel  = False if req["create_funnel"]=='false' else True
             reg.date_updated   = datetime.now()
             db.session.commit()
 

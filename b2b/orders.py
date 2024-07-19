@@ -1,11 +1,11 @@
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import CmmProducts, CmmTranslateColors, CmmTranslateSizes, _save_log, db,_get_params,B2bCartShopping, B2bOrders,B2bOrdersProducts, B2bPaymentConditions, CmmLegalEntities,ScmEvent,ScmEventType
+from models import CmmProducts, CmmTranslateColors, CmmTranslateSizes, FprDevolution, _save_log, _show_query, db,_get_params,B2bCartShopping, B2bOrders,B2bOrdersProducts, B2bPaymentConditions, CmmLegalEntities,ScmEvent,ScmEventType
 from sqlalchemy import exc,Select,Delete,asc,desc,func,between
 import simplejson
 from auth import auth
-from config import Config, CustomerAction
+from config import Config, CustomerAction,DevolutionStatus
 from decimal import Decimal
 from integrations.shipping import Shipping,ShippingCompany
 from datetime import datetime
@@ -118,6 +118,9 @@ class OrdersList(Resource):
             req = request.get_json()
 
             for customer in req['customers']:
+
+                # verificar pelo tipo do cliente se precisa ou nao aprovacao de pedidos
+
                 order = B2bOrders()
                 order.id_customer          = customer
                 #order.make_online         = req['make_online']
@@ -153,7 +156,7 @@ class OrdersList(Resource):
                 db.session.execute(stmt)
                 db.session.commit()
 
-                _save_log(customer,CustomerAction.ORDER_CREATED,'Novo pedido realizado ('+order.id+') - em '+datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
+                _save_log(customer,CustomerAction.ORDER_CREATED,'Novo pedido realizado ('+str(order.id)+') - em '+datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
 
             return True
         except exc.SQLAlchemyError as e:
@@ -328,6 +331,7 @@ class HistoryOrderList(Resource):
             direction = asc if hasattr(params,"order_dir")==False else desc if str(params.order_by).upper()=='DESC' else asc
             list_all  = False if hasattr(params,"list_all")==False else True
             status    = None if hasattr(params,"status")==False else params.status
+            no_devolution = False if hasattr(params,"no_devolution")==False else True
 
             stmt = Select(
                           B2bOrders.id.label("id_order"),
@@ -356,6 +360,13 @@ class HistoryOrderList(Resource):
 
             if status is not None:
                 stmt = stmt.where(B2bOrders.status==status)
+
+            if no_devolution is True:
+                stmt = stmt.where(B2bOrders.id.not_in(
+                    Select(FprDevolution.id_order).where(FprDevolution.status!=DevolutionStatus.REJECTED.value)
+                ))
+
+            # _show_query(stmt)
             
             if list_all==False:
                 pag = db.paginate(stmt,page=pag_num,per_page=pag_size)

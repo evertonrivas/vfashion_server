@@ -1,11 +1,11 @@
 from http import HTTPStatus
 from flask_restx import Resource,fields,Namespace
 from flask import request
-from models import CrmFunnel, CrmFunnelStageCustomer, _get_params,CrmFunnelStage,db,_save_log
+from models import CrmFunnel, CrmFunnelStageCustomer, _get_params,CrmFunnelStage, _show_query,db,_save_log
 import json
 from sqlalchemy import Select, desc, exc,and_,asc, or_
 from auth import auth
-from config import Config,CustomerAction
+from config import Config, CrmFunnelType,CustomerAction
 
 
 ns_fun_stg = Namespace("funnel-stages",description="Operações para manipular estágios dos funis de clientes")
@@ -31,6 +31,7 @@ class FunnelStagesApi(Resource):
 
             filter_search = None if hasattr(params,"search")==False or params.search=="" else params.search
             filter_funnel = None if hasattr(params,"funnel")==False else params.funnel
+            sale_funnel   = False if hasattr(params,"sales")==False else True
 
             rquery = Select(CrmFunnelStage.id,
                             CrmFunnelStage.id_funnel,
@@ -54,8 +55,11 @@ class FunnelStagesApi(Resource):
 
             if filter_funnel is not None:
                 rquery = rquery.where(CrmFunnelStage.id_funnel==filter_funnel)
-            
-            if list_all==False:
+
+            if sale_funnel is True:
+                rquery = rquery.where(CrmFunnel.type==CrmFunnelType.SALES.value)
+
+            if list_all is False:
                 pag    = db.paginate(rquery,page=pag_num,per_page=pag_size)
                 rquery = rquery.limit(pag_size).offset((pag_num - 1) * pag_size)
                 return {

@@ -98,3 +98,8 @@ class DevolutionStatus(Enum):
     APPROVED_ALL  = 2 # totalmente aprovada
     APPROVED_PART = 3 # parcialmente aprovada
     REJECTED      = 4 # rejeitada
+    FINISHED      = 5 # finalizada
+
+class CrmFunnelType(Enum):
+    SALES       = 'S'
+    PROSPECTION = 'P'

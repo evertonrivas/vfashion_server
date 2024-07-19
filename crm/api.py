@@ -2,6 +2,7 @@ from flask import Blueprint
 from flask_restx import Api
 from crm.funnel import ns_funil
 from crm.funnel_stage import ns_fun_stg
+from crm.config import ns_crm_cfg
 
 """ Módulo Customer Relationship Management (Gestão de Relacionamento com o Cliente). 
     Módulo para gestão de contatos com o cliente (qualificação)
@@ -9,7 +10,7 @@ from crm.funnel_stage import ns_fun_stg
 Keyword arguments: relacionamento, clientes, contatos, financeiro
 """
 
-nss = [ns_funil,ns_fun_stg]
+nss = [ns_funil,ns_fun_stg,ns_crm_cfg]
 
 blueprint = Blueprint("crm",__name__,url_prefix="/crm/api/")
 

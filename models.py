@@ -413,6 +413,11 @@ class CrmFunnelStageCustomer(db.Model,SerializerMixin):
     date_created    = Column(DateTime,nullable=False,server_default=func.now())
     date_updated    = Column(DateTime,onupdate=func.now())
 
+class CrmConfig(db.Model,SerializerMixin):
+    id        = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
+    cfg_name  = Column(String(100),nullable=False)
+    cfg_value = Column(String(255),nullable=False)
+
 class CrmImportation(db.Model,SerializerMixin):
     id           = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
     file         = Column(String(255),nullable=False)
@@ -471,6 +476,7 @@ class ScmEventType(db.Model,SerializerMixin):
     has_budget     = Column(Boolean,nullable=False,default=False)
     use_collection = Column(Boolean,nullable=False,default=False)
     is_milestone   = Column(Boolean,nullable=False,default=False)
+    create_funnel  = Column(Boolean,nullable=False,default=False)
     trash          = Column(Boolean,nullable=False,server_default='0',default=0)
     date_created   = Column(DateTime,nullable=False,server_default=func.now())
     date_updated   = Column(DateTime,onupdate=func.now())
