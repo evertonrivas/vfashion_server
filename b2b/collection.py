@@ -1,7 +1,7 @@
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import B2bBrand, B2bCollection,B2bCollectionPrice, _get_params,db
+from models import B2bBrand, B2bCollection, _get_params,db
 import json
 from sqlalchemy import Select, exc,and_,desc,asc
 from auth import auth
@@ -105,7 +105,6 @@ class CollectionList(Resource):
                             "id_brand": m.id_brand,
                             "name": m.brand
                         },
-                        "table_prices": self.get_table_prices(m.id),
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                         "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
                     } for m in db.session.execute(rquery)]
@@ -118,7 +117,6 @@ class CollectionList(Resource):
                             "id_brand": m.id_brand,
                             "name": m.brand
                         },
-                        "table_prices": self.get_table_prices(m.id),
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                         "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
                     } for m in db.session.execute(rquery)]
@@ -129,12 +127,6 @@ class CollectionList(Resource):
                 "error_details": e._message(),
                 "error_sql": e._sql_message()
             }
-
-    def get_table_prices(self,id:int):
-        rquery = B2bCollectionPrice.query.filter(B2bCollectionPrice.id_collection == id)
-        return [{
-            "id": m.id_table_price
-        } for m in rquery]
 
     @ns_collection.response(HTTPStatus.OK.value,"Cria uma nova coleção")
     @ns_collection.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar registro!")
@@ -180,7 +172,6 @@ class CollectionApi(Resource):
                             B2bBrand.name.label("brand"))\
                             .join(B2bBrand,B2bBrand.id==B2bCollection.id_brand)\
                             .where(B2bCollection.id==id)).first()
-            squery = B2bCollectionPrice.query.filter(B2bCollectionPrice.id_collection == id)
 
             return {
                 "id": cquery.id,
@@ -188,10 +179,7 @@ class CollectionApi(Resource):
                 "brand":{
                     "id": cquery.id_brand,
                     "name": cquery.brand
-                },
-                "table_prices": [{
-                    "id": m.id_table_price
-                }for m in squery]
+                }
             }
         except exc.SQLAlchemyError as e:
             return {
@@ -232,7 +220,6 @@ class CollectionApi(Resource):
 
 
             #apaga e recria os clientes dependentes
-            db.session.delete(B2bCollectionPrice).where(B2bCollectionPrice.id_collection==id)
             db.session.commit()
 
             return True
@@ -242,47 +229,3 @@ class CollectionApi(Resource):
                 "error_details": e._message(),
                 "error_sql": e._sql_message()
             }
-        
-
-class ColletionPriceApi(Resource):
-
-    @ns_collection.response(HTTPStatus.OK.value,"Adiciona uma tabela de preço em uma coleção")
-    @ns_collection.response(HTTPStatus.BAD_REQUEST.value,"Falha ao adicionar preço!")
-    @ns_collection.param("id_table_price","Código da tabela de preço","formData",required=True)
-    @ns_collection.param("id_collection","Código da coleção","formData",required=True)
-    @auth.login_required
-    def post(self):
-        try:
-            colp = B2bCollectionPrice()
-            colp.id_collection  = int(request.form.get("id_collection"))
-            colp.id_table_price = int(request.form.get("id_table_price"))
-            db.session.add(colp)
-            db.session.commit()
-            return True
-        except exc.DatabaseError as e:
-            return {
-                "error_code": e.code,
-                "error_details": e._message(),
-                "error_sql": e._sql_message()
-            }
-        pass
-
-    @ns_collection.response(HTTPStatus.OK.value,"Remove uma tabela de preço em uma coleção")
-    @ns_collection.response(HTTPStatus.BAD_REQUEST.value,"Falha ao adicionar preço!")
-    @ns_collection.param("id_table_price","Código da tabela de preço","formData",required=True)
-    @ns_collection.param("id_collection","Código da coleção","formData",required=True)
-    @auth.login_required
-    def delete(self):
-        try:
-            grp = B2bCollection.query.get(id)
-            db.session.delete(grp)
-            db.session.commit()
-            return True
-        except exc.SQLAlchemyError as e:
-            return {
-                "error_code": e.code,
-                "error_details": e._message(),
-                "error_sql": e._sql_message()
-            }
-
-ns_collection.add_resource(ColletionPriceApi,'/manage-price')

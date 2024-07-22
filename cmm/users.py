@@ -2,10 +2,11 @@ from datetime import datetime
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
+from backend.common import _send_email
 from models import CmmLegalEntities, CmmLegalEntityContact, CmmUserEntity, CmmUsers, _get_params, _show_query,db,_save_log
 from sqlalchemy import Delete, Select, desc, exc, and_, asc, Insert,Update, func, or_
 from auth import auth
-from config import Config, ContactType,CustomerAction
+from config import Config, ContactType,CustomerAction, MailTemplates
 
 ns_user = Namespace("users",description="Operações para manipular dados de usuários do sistema")
 
@@ -498,14 +499,15 @@ class UserNew(Resource):
             }
 ns_user.add_resource(UserNew,'/start')
 
-class UserPasswordNew(Resource):
+class UserPassword(Resource):
     @ns_user.response(HTTPStatus.OK.value,"Gera uma nova senha padrão para um usuário!")
-    @ns_user.response(HTTPStatus.BAD_REQUEST.value,"Falha ao atualizar!") 
+    @ns_user.response(HTTPStatus.BAD_REQUEST.value,"Falha ao atualizar!")
     @auth.login_required
-    def get(self,id:int):
+    def put(self):
         try:
+            req = request.get_json()
             pwd = str(Config.TOKEN_KEY.value).lower()+str(datetime.now().year)
-            usr:CmmUsers = db.session.execute(Select(CmmUsers).where(CmmUsers.id==id)).first()[0]
+            usr:CmmUsers = db.session.execute(Select(CmmUsers).where(CmmUsers.id==req["id"])).first()[0]
             usr.password = usr.hash_pwd(pwd)
             db.session.commit()
             return pwd
@@ -515,7 +517,43 @@ class UserPasswordNew(Resource):
                 "error_details": e._message(),
                 "error_sql": e._sql_message()
             }
-ns_user.add_resource(UserPasswordNew,"/set-new-password/<int:id>")
+    
+    @ns_user.response(HTTPStatus.OK.value,"Verifica se o e-mail existe no BD e envia mensagem para redefinição de senha!")
+    @ns_user.response(HTTPStatus.BAD_REQUEST.value,"Falha ao atualizar!")
+    def post(self):
+        try:
+            req = request.get_json()
+            sended = False
+            # so terah direito ao reset de senha se o usuario estiver ativo no sistema
+            # o usuario eh desativado quando a entidade legal vai para a lixeira
+            # porem o usuario tambem pode ser desativado diretamente no cadastro de 
+            # usuarios
+            exist = db.session.execute(
+                Select(CmmLegalEntityContact.value,CmmLegalEntities.fantasy_name)\
+                .join(CmmLegalEntities,CmmLegalEntities.id==CmmLegalEntityContact.id_legal_entity)\
+                .join(CmmUserEntity,CmmUserEntity.id_entity==CmmLegalEntities.id)\
+                .join(CmmUsers,CmmUsers.id==CmmUserEntity.id_user)\
+                .where(and_(
+                    CmmUsers.active==True,
+                    CmmLegalEntityContact.value==req["email"]
+                ))
+            ).first()
+            if exist is not None:
+                sended = _send_email(
+                    exist.value,
+                    [],
+                    "Fast2bee - Recuperação de Senha",
+                    exist.fantasy_name,
+                    MailTemplates.PWD_RECOVERY)
+                return sended
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
+
+ns_user.add_resource(UserPassword,"/password/")
 
 class UserCount(Resource):
     @ns_user.response(HTTPStatus.OK.value,"Retorna o total de Usuarios por tipo")

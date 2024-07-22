@@ -127,9 +127,10 @@ class CmmCategories(db.Model,SerializerMixin):
 
 class CmmProducts(db.Model,SerializerMixin):
     id           = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
-    id_type      = Column(Integer,nullable=False,index=True)
-    id_model     = Column(Integer,nullable=False,index=True)
-    id_grid      = Column(Integer,nullable=False,index=True)
+    id_type      = Column(Integer,nullable=False,index=True,comment="Campo Id da tabela CmmProductsTypes")
+    id_model     = Column(Integer,nullable=False,index=True,comment="Campo Id da tabela CmmProductsModels")
+    id_grid      = Column(Integer,nullable=False,index=True,comment="Campo Id da tabela CmmProductsGrid")
+    id_brand     = Column(Integer,nullable=False,index=True,comment="Campo Id da tabela B2bBrand")
     prodCode     = Column(String(50),nullable=False)
     barCode      = Column(String(128))
     refCode      = Column(String(50),nullable=False)
@@ -218,7 +219,7 @@ class CmmLegalEntities(db.Model,SerializerMixin):
     postal_code    = Column(String(30),nullable=False)
     neighborhood   = Column(String(150),nullable=False)
     address        = Column(String(255),nullable=False)
-    type           = Column(CHAR(1),nullable=False,default='C',server_default='C',comment="C = Customer(Cliente), R = Representative(Representante), S = Supplier(Fornecedor)")
+    type           = Column(CHAR(1),nullable=False,default='C',server_default='C',comment="C = Customer(Cliente), R = Representative(Representante), S = Supplier(Fornecedor), U = System User")
     trash          = Column(Boolean,nullable=False,server_default='0')
     id_import      = Column(Integer,nullable=True,comment="Id da importação realizada pelo CRM, garante que poderá apagar o registro")
     erp_integrated = Column(Boolean,nullable=False,server_default='0',default=0,comment="Flag de integração com ERP, isso irá garantir a não exclusão em caso de reversão da importação")
@@ -305,10 +306,6 @@ class B2bCollection(db.Model,SerializerMixin):
     date_created  = Column(DateTime,nullable=False,server_default=func.now())
     date_updated  = Column(DateTime,onupdate=func.now())
     trash         = Column(Boolean,nullable=False,server_default='0',default=0)
-
-class B2bCollectionPrice(db.Model,SerializerMixin):
-    id_collection  = Column(Integer,primary_key=True,nullable=False)
-    id_table_price = Column(Integer,primary_key=True,nullable=False)
 
 class B2bCustomerGroup(db.Model,SerializerMixin):
     id                = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
@@ -489,7 +486,7 @@ class ScmEvent(db.Model,SerializerMixin):
     start_date    = Column(Date,nullable=False)
     end_date      = Column(Date,nullable=True)
     id_event_type = Column(Integer,nullable=False,comment="Id da tabela ScmEventType")
-    id_collection = Column(Integer,nullable=True)
+    id_collection = Column(Integer,nullable=True,comment="Id da tabela B2bCollection")
     budget_value  = Column(DECIMAL(10,2),nullable=True)
     date_created  = Column(DateTime,nullable=False,server_default=func.now())
     date_updated  = Column(DateTime,onupdate=func.now())

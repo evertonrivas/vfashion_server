@@ -35,7 +35,7 @@ class EmailApi(Resource):
                         "type": mimetypes.guess_type(fpath+file),
                         "content": content
                     })
-            if _send_email(req['to'],req['subject'],req['content'],MailTemplates.DEFAULT,attachs)==True:
+            if _send_email(req['to'],None,req['subject'],req['content'],MailTemplates.DEFAULT,attachs) is True:
                 #limpa os arquivos do tmp
                 for file in req["attachments"]:
                     os.remove(fpath+file)

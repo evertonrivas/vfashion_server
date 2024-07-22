@@ -1,11 +1,11 @@
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import B2bCustomerGroup,B2bCustomerGroupCustomers, CmmLegalEntities, _get_params,db
+from models import B2bCustomerGroup,B2bCustomerGroupCustomers, B2bOrders, CmmLegalEntities, _get_params,db
 import json
-from sqlalchemy import Delete, Select, exc,and_,desc,asc
+from sqlalchemy import Delete, Select, exc,and_,desc,asc, func
 from auth import auth
-from config import Config
+from config import Config, OrderStatus
 
 ns_customer_g = Namespace("customer-group",description="Operações para manipular dados de grupos de clientes")
 
@@ -287,6 +287,90 @@ class CustomersApi(Resource):
             }
 
 ns_customer_g.add_resource(CustomersApi,'/customers/')
+
+
+class CustomerRepresentative(Resource):
+    @ns_customer_g.response(HTTPStatus.OK.value,"Obtem os clientes pertencentes a um representante")
+    @ns_customer_g.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @auth.login_required
+    def get(self,id:int):
+        try:
+            stmt = Select(func.count(B2bCustomerGroup.id).label("total")).select_from(B2bCustomerGroup)\
+            .join(B2bCustomerGroupCustomers,B2bCustomerGroupCustomers.id_customer_group==B2bCustomerGroup.id)\
+            .where(B2bCustomerGroup.id_representative==id)
+
+            total = db.session.execute(stmt).first().total
+
+            return 0 if total is None else total
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
+    
+    @ns_customer_g.response(HTTPStatus.OK.value,"Obtem o valor total em pedidos que os clientes do representante fizeram")
+    @ns_customer_g.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    def post(self,id:int):
+        try:
+            stmt = Select(func.sum(B2bOrders.total_value).label("total"))\
+            .join(B2bCustomerGroupCustomers,B2bCustomerGroupCustomers.id_customer==B2bOrders.id_customer)\
+            .join(B2bCustomerGroup,B2bCustomerGroup.id==B2bCustomerGroupCustomers.id_customer_group)\
+            .where(
+                and_(
+                    B2bCustomerGroup.id_representative==id,
+                    B2bOrders.status==OrderStatus.FINISHED
+                )
+            )
+
+            total = db.session.execute(stmt).first().total 
+
+            return 0 if total is None else total
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
+    
+    @ns_customer_g.response(HTTPStatus.OK.value,"Obtem o total de pedidos finalizados que os clientes do representante fizeram")
+    @ns_customer_g.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    def put(self,id:int):
+        try:
+            stmt = Select(func.count(B2bOrders.id).label("total"))\
+            .join(B2bCustomerGroupCustomers,B2bCustomerGroupCustomers.id_customer==B2bOrders.id_customer)\
+            .join(B2bCustomerGroup,B2bCustomerGroup.id==B2bCustomerGroupCustomers.id_customer_group)\
+            .where(
+                and_(
+                    B2bCustomerGroup.id_representative==id,
+                    B2bOrders.status==OrderStatus.FINISHED
+                )
+            )
+
+            total = db.session.execute(stmt).first().total 
+
+            return 0 if total is None else total
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
+    
+    @ns_customer_g.response(HTTPStatus.OK.value,"Obtem o valor da comissão que o representante tem a receber")
+    @ns_customer_g.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    def patch(self,id:int):
+        try:
+            return id
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
+    
+ns_customer_g.add_resource(CustomerRepresentative,'/representative-indicator/<int:id>')
+
 
 # class ColletionPriceApi(Resource):
 

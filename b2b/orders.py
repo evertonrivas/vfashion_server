@@ -1,11 +1,11 @@
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import CmmProducts, CmmTranslateColors, CmmTranslateSizes, FprDevolution, _save_log, _show_query, db,_get_params,B2bCartShopping, B2bOrders,B2bOrdersProducts, B2bPaymentConditions, CmmLegalEntities,ScmEvent,ScmEventType
-from sqlalchemy import exc,Select,Delete,asc,desc,func,between
+from models import B2bBrand, B2bCollection, B2bProductStock, CmmProducts, CmmProductsModels, CmmTranslateColors, CmmTranslateSizes, FprDevolution, _save_log, _show_query, db,_get_params,B2bCartShopping, B2bOrders,B2bOrdersProducts, B2bPaymentConditions, CmmLegalEntities,ScmEvent,ScmEventType
+from sqlalchemy import and_, exc,Select,Delete,asc,desc,func,between
 import simplejson
 from auth import auth
-from config import Config, CustomerAction,DevolutionStatus
+from config import Config, CustomerAction,DevolutionStatus, OrderStatus
 from decimal import Decimal
 from integrations.shipping import Shipping,ShippingCompany
 from datetime import datetime
@@ -187,6 +187,7 @@ class OrderApi(Resource):
                            B2bOrders.invoice_serie,
                            B2bOrders.date_created,
                            B2bOrders.date_updated,
+                           B2bOrders.date,
                            CmmLegalEntities.fantasy_name,
                            B2bOrders.id_customer,
                            B2bOrders.id_payment_condition,
@@ -197,17 +198,26 @@ class OrderApi(Resource):
                         .where(B2bOrders.id==id)).first()
             iquery = Select(B2bOrdersProducts.id_product,
                             CmmProducts.name,
+                            CmmProducts.refCode,
                             B2bOrdersProducts.id_color,
                             CmmTranslateColors.name.label("color"),
                             B2bOrdersProducts.id_size,
-                            CmmTranslateSizes.name.label("size"),
+                            CmmTranslateSizes.new_size.label("size"),
                             B2bOrdersProducts.quantity,
                             B2bOrdersProducts.price,
                             B2bOrdersProducts.discount,
-                            B2bOrdersProducts.discount_percentage)\
+                            B2bOrdersProducts.discount_percentage,
+                            B2bProductStock.in_order,
+                            B2bProductStock.quantity.label("stock"),
+                            B2bProductStock.ilimited)\
                         .join(CmmProducts,CmmProducts.id==B2bOrdersProducts.id_product)\
                         .join(CmmTranslateColors,CmmTranslateColors.id==B2bOrdersProducts.id_color)\
                         .join(CmmTranslateSizes,CmmTranslateSizes.id==B2bOrdersProducts.id_size)\
+                        .join(B2bProductStock,and_(
+                            B2bProductStock.id_product==CmmProducts.id,
+                            B2bProductStock.id_color==B2bOrdersProducts.id_color,
+                            B2bProductStock.id_size==B2bOrdersProducts.id_size
+                        ))\
                         .where(B2bOrdersProducts.id_order==id)
             return {
                 "id": id,
@@ -222,7 +232,8 @@ class OrderApi(Resource):
                 "total_value": str(order.total_value),
                 "total_itens": str(order.total_itens),
                 "installments": str(order.installments),
-                "installment_value": str(order.installment_value),
+                "installments_value": str(order.installment_value),
+                "date": order.date.strftime("%Y-%m-%d"),
                 "status": order.status,
                 "integration_number": str(order.integration_number),
                 "track_code": order.track_code,
@@ -234,6 +245,7 @@ class OrderApi(Resource):
                 "products": [{
                     "id_order_product": str(m.id_product)+'_'+str(m.id_color)+'_'+str(m.id_size),
                     "id_product": m.id_product,
+                    "refCode": m.refCode,
                     "name": m.name,
                     "id_color": m.id_color,
                     "color": m.color,
@@ -242,7 +254,8 @@ class OrderApi(Resource):
                     "quantity": str(m.quantity),
                     "price": str(m.price),
                     "discount": str(m.discount),
-                    "discount_percentage": str(m.discount_percentage)
+                    "discount_percentage": str(m.discount_percentage),
+                    "stock_quantity": 999 if m.ilimited==1 else (m.stock-m.in_order)
                 }for m in db.session.execute(iquery)]
             }
         except exc.SQLAlchemyError as e:
@@ -441,32 +454,54 @@ class HistoryOrderList(Resource):
         
 ns_order.add_resource(HistoryOrderList,'/history/<int:id>')
 
+
 class HistoryOrderApi(Resource):
+    @ns_order.response(HTTPStatus.OK.value,"Obtem o total de pedidos realizados na ultima colecao")
+    @ns_order.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
     @auth.login_required
     def get(self):
         try:
-            # dt_start = datetime.now()
-            # rquery = Select(func.count(B2bOrders.id).label('total'))\
-            #     .outerjoin(ScmEvent,ScmEvent.id_collection==B2bOrders.id_collection)\
-            #     .where(ScmEvent.start_date<=dt_start).order_by(desc(ScmEvent.start_date))
-            # total = db.session.execute(rquery).first()
-            return 1
+            last_collection = Select(B2bOrdersProducts.id_order)\
+                .join(CmmProducts,CmmProducts.id==B2bOrdersProducts.id_product)\
+                .join(B2bBrand,B2bBrand.id==CmmProducts.id_brand)\
+                .join(B2bCollection,B2bCollection.id_brand==B2bBrand.id)
+
+            stmt = Select(func.count(B2bOrders.id).label('total'))\
+                .where(
+                    and_(
+                        B2bOrders.status==OrderStatus.FINISHED,
+                        B2bOrders.id.in_(last_collection)
+                    )
+                )
+            
+            total = db.session.execute(stmt).first().total
+            return 0 if total is None else total
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
                 "error_details": e._message(),
                 "error_sql": e._sql_message()
             }
-        
-    #@auth.login_required
+    
+    @ns_order.response(HTTPStatus.OK.value,"Obtem o valor total de pedidos realizados na ultima colecao")
+    @ns_order.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
+    @auth.login_required
     def post(self):
         try:
-            # dt_start = datetime.now()
-            # rquery = Select(func.sum(B2bOrders.total_value).label('total'))\
-            #     .outerjoin(ScmEvent,ScmEvent.id_collection==B2bOrders.id_collection)\
-            #     .where(ScmEvent.start_date<=dt_start).order_by(desc(ScmEvent.start_date))
-            # total = db.session.execute(rquery).first()
-            return 0
+            last_collection = Select(B2bOrdersProducts.id_order)\
+                .join(CmmProducts,CmmProducts.id==B2bOrdersProducts.id_product)\
+                .join(B2bBrand,B2bBrand.id==CmmProducts.id_brand)\
+                .join(B2bCollection,B2bCollection.id_brand==B2bBrand.id)
+
+            stmt = Select(func.sum(B2bOrders.total_value).label('total'))\
+                .where(
+                    and_(
+                        B2bOrders.status==OrderStatus.FINISHED,
+                        B2bOrders.id.in_(last_collection)
+                    )
+                )
+            total = db.session.execute(stmt).first().total
+            return 0 if total is None else str(total)
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -474,4 +509,4 @@ class HistoryOrderApi(Resource):
                 "error_sql": e._sql_message()
             }
         
-ns_order.add_resource(HistoryOrderApi,'/total')
+ns_order.add_resource(HistoryOrderApi,'/total/')

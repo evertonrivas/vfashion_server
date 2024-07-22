@@ -4,7 +4,7 @@ from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
 import simplejson
-from models import B2bBrand, B2bCollection, B2bCollectionPrice, B2bProductStock, B2bTablePrice, B2bTablePriceProduct, CmmCategories, CmmMeasureUnit, CmmProducts, CmmProductsCategories, CmmProductsGrid, CmmProductsGridDistribution, CmmProductsImages, CmmProductsModels, CmmProductsTypes, CmmTranslateColors, CmmTranslateSizes, ScmEvent, _get_params, _show_query, db
+from models import B2bBrand, B2bCollection, B2bProductStock, B2bTablePrice, B2bTablePriceProduct, CmmCategories, CmmMeasureUnit, CmmProducts, CmmProductsCategories, CmmProductsGrid, CmmProductsGridDistribution, CmmProductsImages, CmmProductsModels, CmmProductsTypes, CmmTranslateColors, CmmTranslateSizes, ScmEvent, _get_params, _show_query, db
 from sqlalchemy import Select, and_, exc,or_,desc,asc
 from auth import auth
 from config import Config
@@ -303,11 +303,10 @@ class ProductsGallery(Resource):
                 .join(CmmProductsTypes,CmmProductsTypes.id==CmmProducts.id_type)\
                 .join(CmmProductsModels,CmmProductsModels.id==CmmProducts.id_model)\
                 .join(CmmMeasureUnit,CmmMeasureUnit.id==CmmProducts.id_measure_unit)\
+                .outerjoin(B2bBrand,B2bBrand.id==CmmProducts.id_brand)\
+                .outerjoin(B2bCollection,B2bCollection.id_brand==B2bBrand.id)\
                 .outerjoin(B2bTablePriceProduct,B2bTablePriceProduct.id_product==CmmProducts.id)\
                 .outerjoin(B2bTablePrice,B2bTablePrice.id==B2bTablePriceProduct.id_table_price)\
-                .outerjoin(B2bCollectionPrice,B2bCollectionPrice.id_table_price==B2bTablePrice.id)\
-                .outerjoin(B2bCollection,B2bCollection.id==B2bCollectionPrice.id_collection)\
-                .outerjoin(B2bBrand,B2bBrand.id==B2bCollection.id_brand)\
                 .outerjoin(CmmProductsCategories,CmmProductsCategories.id_product==CmmProducts.id)\
                 .outerjoin(CmmCategories,CmmCategories.id==CmmProductsCategories.id_category)\
                 .where(CmmProducts.trash==False)\
@@ -343,11 +342,10 @@ class ProductsGallery(Resource):
                 .join(CmmProductsTypes,CmmProductsTypes.id==CmmProducts.id_type)\
                 .join(CmmProductsModels,CmmProductsModels.id==CmmProducts.id_model)\
                 .join(CmmMeasureUnit,CmmMeasureUnit.id==CmmProducts.id_measure_unit)\
+                .outerjoin(B2bBrand,B2bBrand.id==CmmProducts.id_brand)\
+                .outerjoin(B2bCollection,B2bCollection.id_brand==B2bBrand.id)\
                 .outerjoin(B2bTablePriceProduct,B2bTablePriceProduct.id_product==CmmProducts.id)\
                 .outerjoin(B2bTablePrice,B2bTablePrice.id==B2bTablePriceProduct.id_table_price)\
-                .outerjoin(B2bCollectionPrice,B2bCollectionPrice.id_table_price==B2bTablePrice.id)\
-                .outerjoin(B2bCollection,B2bCollection.id==B2bCollectionPrice.id_collection)\
-                .outerjoin(B2bBrand,B2bBrand.id==B2bCollection.id_brand)\
                 .outerjoin(CmmProductsCategories,CmmProductsCategories.id_product==CmmProducts.id)\
                 .outerjoin(CmmCategories,CmmCategories.id==CmmProductsCategories.id_category)\
                 .where(CmmProducts.trash==False)\
@@ -434,6 +432,8 @@ class ProductsGallery(Resource):
                 ))
 
             rquery = rquery.union(iquery)
+
+            #_show_query(rquery)
 
             if order_by=='price':
                 rquery = rquery.order_by(direction(order_by))

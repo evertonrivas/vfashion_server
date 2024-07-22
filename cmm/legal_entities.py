@@ -1,8 +1,8 @@
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields,RestError
 from flask import request
-from models import  B2bCustomerGroup, CmmLegalEntityHistory, _show_query, db,_save_log,_get_params,B2bCustomerGroupCustomers, CmmCities, CmmCountries, CmmLegalEntityContact, CmmLegalEntityFile, CmmLegalEntityWeb, CmmStateRegions, CrmFunnelStageCustomer,CmmLegalEntities,CmmUserEntity
-from sqlalchemy import Delete, Select,and_,exc,asc,desc,func, or_
+from models import  B2bCustomerGroup, CmmLegalEntityHistory, CmmUsers, _show_query, db,_save_log,_get_params,B2bCustomerGroupCustomers, CmmCities, CmmCountries, CmmLegalEntityContact, CmmLegalEntityFile, CmmLegalEntityWeb, CmmStateRegions, CrmFunnelStageCustomer,CmmLegalEntities,CmmUserEntity
+from sqlalchemy import Delete, Select, Update,and_,exc,asc,desc,func, or_
 from auth import auth
 from config import Config,CustomerAction
 
@@ -252,10 +252,18 @@ class EntitysList(Resource):
         try:
             req = request.get_json()
             for id in req["ids"]:
+                # move a(s) entidade(s) para a lixeira
                 cst = CmmLegalEntities.query.get(id)
                 cst.trash = req["toTrash"]
                 db.session.commit()
-                _save_log(id,CustomerAction.DATA_DELETED,'Registro '+('movido para a' if req["toTrash"]==1 else 'removido da') +' Lixeira')
+
+                for usr in db.session.execute(Select(CmmUserEntity).where(CmmUserEntity.id_entity==id)):
+                    db.session.execute(
+                        Update(CmmUsers).values(active=(False if req["toTrash"]==1 else True)).where(CmmUsers.id==usr)
+                    )
+                    db.session.commit()
+
+                _save_log(id,CustomerAction.DATA_DELETED,'Registro e usuários '+('movido para a' if req["toTrash"]==1 else 'removido da') +' Lixeira')
             return True
         except exc.SQLAlchemyError as e:
             return {
