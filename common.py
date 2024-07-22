@@ -83,15 +83,16 @@ def _gen_pdf():
 
 def _send_email(p_to:[],p_cc:[],p_subject:str,p_content:str,p_tpl:MailTemplates,p_attach:[]=None)->bool: # type: ignore
     try:
-        tplLoader  = jinja2.FileSystemLoader(searchpath=Config.APP_PATH.value+'assets/layout/')
-        tplEnv     = jinja2.Environment(loader=tplLoader)
-        layoutFile = MailTemplates.DEFAULT.value
-        mailTemplate = tplEnv.get_template(layoutFile)
+        tplLoader     = jinja2.FileSystemLoader(searchpath=Config.APP_PATH.value+'assets/layout/')
+        tplEnv        = jinja2.Environment(loader=tplLoader)
+        layoutFile    = p_tpl.value
+        mailTemplate  = tplEnv.get_template(layoutFile)
         mail_template = mailTemplate.render(
-            content=p_content
+            content=p_content,
+            url=Config.APP_URL.value +('reset-password/' if p_tpl==MailTemplates.PWD_RECOVERY else None)
         )
 
-        if len(p_attach)>0:
+        if p_attach is not None:
             json_content= {
                 "sender": {
                     "name": Config.EMAIL_SEND_FROM.value,
