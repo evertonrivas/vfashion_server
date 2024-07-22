@@ -47,7 +47,7 @@ api = Api(blueprint,
     version="1.0",
     title="API Fast2Bee",
     description="Uma API REST para o sistema CLM - Módulo POS",
-    contact_email="evertonrivas@gmail.com",
+    contact_email="e.rivas@fast2bee.com",
     contact="Fast2Bee",
     contact_url="http://www.fast2bee.com")
 
