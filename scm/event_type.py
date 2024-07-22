@@ -6,7 +6,7 @@ from models import _get_params, _show_query, db,ScmEventType
 import json
 from sqlalchemy import Select, exc,and_,asc,desc
 from auth import auth
-from config import Config
+from os import environ
 
 ns_event = Namespace("event-type",description="Operações para manipular dados de tipos de eventos")
 
@@ -46,8 +46,8 @@ class CollectionList(Resource):
     @ns_event.param("query","Texto para busca","query")
     @auth.login_required
     def get(self):
-        pag_num  =  1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size = Config.PAGINATION_SIZE.value if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_num  = 1 if request.args.get("page") is None else int(request.args.get("page"))
+        pag_size = int(environ.get("F2B_PAGINATION_SIZE")) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
         query    = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
 
         try:

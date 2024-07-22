@@ -9,7 +9,7 @@ from models import CmmMeasureUnit, CmmProducts, CmmProductsCategories, CmmProduc
 from sqlalchemy import desc, exc, and_, asc,Select, func,or_
 from auth import auth
 from decimal import Decimal
-from config import Config
+from os import environ
 
 ns_prod  = Namespace("products",description="Operações para manipular dados de produtos")
 
@@ -73,7 +73,7 @@ class ProductsList(Resource):
     @auth.login_required
     def get(self):
         pag_num  = 1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size = Config.PAGINATION_SIZE.value if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_size = int(environ.get("F2B_PAGINATION_SIZE")) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
         query   = "" if request.args.get("query") is None else request.args.get("query")
 
         try:

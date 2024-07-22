@@ -12,14 +12,19 @@ from models import db
 from flask_migrate import Migrate
 from config import Config
 import locale
+from dotenv import load_dotenv
+from os import environ,path
+
+BASEDIR = path.abspath(path.dirname(__file__))
+load_dotenv(path.join(BASEDIR, '.env'))
 
 locale.setlocale(locale.LC_TIME,Config.LOCALE.value)
 
 app = Flask(__name__)
-app.config["SQLALCHEMY_DATABASE_URI"] = Config.DB_LIB.value+"://"+Config.DB_USER.value+":"+Config.DB_PASS.value+"@"+Config.DB_HOST.value+"/"+Config.DB_NAME.value
-
-
-# $env:FLASK_APP="main.py" no powerShell do windows
+app.config["SQLALCHEMY_DATABASE_URI"] = str(environ.get("DB_LIB"))+"://"+\
+str(environ.get("DB_USER"))+":"+\
+str(environ.get("DB_PASS"))+"@"+str(environ.get("DB_HOST"))+"/"+\
+environ.get("DB_NAME")
 
 migrate = Migrate()
 

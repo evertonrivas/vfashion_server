@@ -1,7 +1,8 @@
-from config import Config,ShippingCompany,ConfigBraspress,ConfigJadlog,ConfigJamef
+from config import Config,ShippingCompany
 import requests
 import urllib3
 from datetime import datetime
+from os import environ
 
 class Shipping():
     nav = None
@@ -24,9 +25,10 @@ class Shipping():
         #ignora a verificacao de certificado SSL
         self.nav.verify = False
         self.nav.headers = {
-            "Authorization": ConfigBraspress.TOKEN_TYPE.value+" "+ConfigBraspress.TOKEN_ACCESS.value
+            # "Authorization": ConfigBraspress.TOKEN_TYPE.value+" "+ConfigBraspress.TOKEN_ACCESS.value
+            "Authorization": environ.get("BRASPRESS_TOKEN_TYPE")+" "+environ.get("BRASPRESS_TOKEN_ACCESS")
         }
-        resp = self.nav.get('https://api.braspress.com/v'+ConfigBraspress.API_VERSION.value+'/tracking/byNf/'+_taxvat+'/'+_invoice+'/json')
+        resp = self.nav.get('https://api.braspress.com/v'+environ.get("BRASPRESS_API_VERSION")+'/tracking/byNf/'+_taxvat+'/'+_invoice+'/json')
         if resp.status_code==200:
             consulta = resp.json()
 
@@ -52,7 +54,8 @@ class Shipping():
     def __jadlog_tracking(self,_nf:str,_nf_serie:str,_cnpj:str):
         self.nav.verify = False
         self.nav.headers = {
-            "Authorization": ConfigJadlog.TOKEN_TYPE.value+" "+ConfigJadlog.TOKEN_ACCESS.value,
+            # "Authorization": ConfigJadlog.TOKEN_TYPE.value+" "+ConfigJadlog.TOKEN_ACCESS.value,
+            "Authorization": environ.get("JADLOG_TOKEN_TYPE")+" "+environ.get("JADLOG_TOKEN_ACCESS"),
             "Content-Type": "application/json"
         }
         resp = self.nav.get('https://jadlog.com.br/api/tracking/consultar',params={
@@ -90,8 +93,8 @@ class Shipping():
     def __jamef_login(self):
         resp = self.nav.post('https://developers.jamef.com.br/login',
                       data={
-                        "username": ConfigJamef.USERNAME.value,
-                        "password": ConfigJamef.PASSWORD.value
+                        "username": environ.get("JAMEF_USERNAME"), # ConfigJamef.USERNAME.value,
+                        "password": environ.get("JAMEF_PASSWORD") # ConfigJamef.PASSWORD.value
                       }
                       )
         if resp.status_code==200:

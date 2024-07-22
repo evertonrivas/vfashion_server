@@ -4,7 +4,8 @@ from flask import request
 from models import  B2bCustomerGroup, CmmLegalEntityHistory, CmmUsers, _show_query, db,_save_log,_get_params,B2bCustomerGroupCustomers, CmmCities, CmmCountries, CmmLegalEntityContact, CmmLegalEntityFile, CmmLegalEntityWeb, CmmStateRegions, CrmFunnelStageCustomer,CmmLegalEntities,CmmUserEntity
 from sqlalchemy import Delete, Select, Update,and_,exc,asc,desc,func, or_
 from auth import auth
-from config import Config,CustomerAction
+from config import CustomerAction
+from os import environ
 
 ns_legal = Namespace("legal-entities",description="Operações para manipular dados de clientes/representantes")
 
@@ -65,8 +66,8 @@ class EntitysList(Resource):
     @ns_legal.param("list_all","Se deve exportar","query",type=bool,default=False)
     @auth.login_required
     def get(self):
-        pag_num   =  1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size  = Config.PAGINATION_SIZE.value if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_num   = 1 if request.args.get("page") is None else int(request.args.get("page"))
+        pag_size  = int(environ.get("F2B_PAGINATION_SIZE")) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
         search    = "" if request.args.get("query") is None else request.args.get("query")
 
         try:
@@ -541,8 +542,8 @@ class EntityOfStage(Resource):
     @ns_legal.param("query","Número de registros por página","query",type=str)
     @auth.login_required
     def get(self,id:int):
-        pag_num   =  1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size  = Config.PAGINATION_SIZE.value if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_num   = 1 if request.args.get("page") is None else int(request.args.get("page"))
+        pag_size  = int(environ.get("F2B_PAGINATION_SIZE")) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
 
         try:
             params = _get_params(request.args.get("query"))
@@ -783,8 +784,8 @@ class EntityHistory(Resource):
     @ns_legal.param("query","Texto para busca","query")
     @auth.login_required
     def get(self,id:int):
-        pag_num   =  1 if request.args.get("page") is None or request.args.get("page")==0 else int(request.args.get("page"))
-        pag_size  = Config.PAGINATION_SIZE.value if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_num   = 1 if request.args.get("page") is None or request.args.get("page")==0 else int(request.args.get("page"))
+        pag_size  = int(environ.get("F2B_PAGINATION_SIZE")) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
         search    = "" if request.args.get("query") is None else request.args.get("query")
         try:
             params = _get_params(search)

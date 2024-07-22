@@ -6,7 +6,6 @@ from sqlalchemy import desc, exc, asc,between,Select,and_
 from auth import auth
 from datetime import datetime,date
 import simplejson as json
-from config import Config
 
 ns_calendar = Namespace("calendar",description="Operações para manipular dados de cidades")
 

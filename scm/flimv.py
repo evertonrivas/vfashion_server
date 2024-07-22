@@ -6,7 +6,6 @@ from models import _get_params, _show_query, db,ScmFlimv
 import json
 from sqlalchemy import Select, exc,and_,asc,desc
 from auth import auth
-from config import Config
 
 ns_flimv = Namespace("flimv",description="Operações para manipular dados da metodologia FLIMV")
 

@@ -4,7 +4,8 @@ from flask import request
 from models import CmmTranslateColors, CmmTranslateSizes, FprDevolution,FprDevolutionItem,B2bOrders,CmmProducts,CmmLegalEntities, FprReason, _get_params, _show_query,db
 from sqlalchemy import Delete, Select, Update, desc, distinct, exc, asc, func, text, tuple_
 from auth import auth
-from config import Config,DevolutionStatus
+from config import DevolutionStatus
+from os import environ
 
 ns_devolution = Namespace("devolution",description="Operações para manipular dados de devoluções")
 
@@ -42,8 +43,8 @@ class CategoryList(Resource):
     @ns_devolution.param("query","Texto para busca","query")
     @auth.login_required
     def get(self):
-        pag_num = 1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size  = Config.PAGINATION_SIZE.value if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_num  = 1 if request.args.get("page") is None else int(request.args.get("page"))
+        pag_size = int(environ.get("F2B_PAGINATION_SIZE")) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
 
         try:
             params    = _get_params(request.args.get("query"))

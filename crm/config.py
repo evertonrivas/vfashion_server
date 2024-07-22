@@ -6,7 +6,6 @@ from models import B2bBrand, CrmConfig, _get_params,db
 import json
 from sqlalchemy import Select, exc,and_,asc,desc
 from auth import auth
-from config import Config
 
 ns_crm_cfg = Namespace("config",description="Configurações do módulo de CRM")
 

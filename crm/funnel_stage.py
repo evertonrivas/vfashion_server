@@ -5,7 +5,8 @@ from models import CrmFunnel, CrmFunnelStageCustomer, _get_params,CrmFunnelStage
 import json
 from sqlalchemy import Select, desc, exc,and_,asc, or_
 from auth import auth
-from config import Config, CrmFunnelType,CustomerAction
+from config import CrmFunnelType, CustomerAction
+from os import environ
 
 
 ns_fun_stg = Namespace("funnel-stages",description="Operações para manipular estágios dos funis de clientes")
@@ -19,8 +20,8 @@ class FunnelStagesApi(Resource):
     @ns_fun_stg.param("query","Texto para busca","query")
     @auth.login_required
     def get(self):
-        pag_num  =  1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size = Config.PAGINATION_SIZE.value if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_num  = 1 if request.args.get("page") is None else int(request.args.get("page"))
+        pag_size = int(environ.get("F2B_PAGINATION_SIZE")) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
         query    = "" if request.args.get("query") is None else request.args.get("query")
         try:
             params    = _get_params(query)

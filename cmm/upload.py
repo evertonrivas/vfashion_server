@@ -4,7 +4,7 @@ from flask import request
 from sqlalchemy import Select, desc, exc, asc,Delete
 from werkzeug import exceptions
 from auth import auth
-from config import Config, CustomerAction
+from config import CustomerAction
 from datetime import datetime
 import filetype
 from werkzeug.datastructures import ImmutableMultiDict
@@ -25,7 +25,7 @@ class UploadApi(Resource):
             #obtem os arquivos para upload
             files = []
             fileCount = 1
-            fpath = Config.APP_PATH.value+'assets/'
+            fpath = os.environ.get("F2B_APP_PATH")+'assets/'
             data = ImmutableMultiDict(request.files)
             for file in data.getlist('files[]'):
                 parts = file.filename.split(".")
@@ -84,8 +84,8 @@ class UploadApi(Resource):
                                              CmmLegalEntityFile.date_created,
                                              CmmLegalEntityFile.date_updated).where(CmmLegalEntityFile.id==id)).first()
             if file is not None:
-                if os.path.exists(Config.APP_PATH.value+'assets/'+str(file.folder)+str(file.name)):
-                    os.remove(Config.APP_PATH.value+'assets/'+str(file.folder)+str(file.name))
+                if os.path.exists(os.environ.get("F2B_APP_PATH")+'assets/'+str(file.folder)+str(file.name)):
+                    os.remove(os.environ.get("F2B_APP_PATH")+'assets/'+str(file.folder)+str(file.name))
                     db.session.execute(Delete(CmmLegalEntityFile).where(CmmLegalEntityFile.id==id))
                     db.session.commit()
                     _save_log(file.id_legal_entity,CustomerAction.FD,'Removido o arquivo '+file.name)
@@ -101,7 +101,7 @@ class UploadTmp(Resource):
     def post(self):
         try:
             #obtem os arquivos para upload
-            fpath = Config.APP_PATH.value+'assets/tmp/'
+            fpath = os.environ.get("F2B_APP_PATH")+'assets/tmp/'
             data = ImmutableMultiDict(request.files)
             for file in data.getlist('files[]'):
                 file.save(fpath+file.filename)
@@ -121,7 +121,7 @@ class UploadReturn(Resource):
         try:
             files = []
             #obtem os arquivos para upload
-            fpath = Config.APP_PATH.value+'assets/tmp/'
+            fpath = os.environ.get("F2B_APP_PATH")+'assets/tmp/'
             data = ImmutableMultiDict(request.files)
             file_count = 1
             for file in data.getlist('files[]'):

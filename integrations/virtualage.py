@@ -1,10 +1,10 @@
 from requests import RequestException
-from config import ConfigVirtualAge
 from models import CmmMeasureUnit,CmmLegalEntities,CmmLegalEntityContact,CmmProducts,CmmProductsCategories,CmmCities,CmmStateRegions
 from sqlalchemy import Insert,Select, Update, and_,or_,exc
 from integrations.erp import ERP
 from time import sleep
 import json
+from os import environ
 
 class VirtualAge(ERP):
     token_type = ''
@@ -20,12 +20,12 @@ class VirtualAge(ERP):
         }
 
     def __get_token(self):
-        req = self.nav.post(ConfigVirtualAge.URL.value+'/api/totvsmoda/authorization/v2/token',data={
-            "grant_type"   : ConfigVirtualAge.grant_type.value,
-            "client_id"    : ConfigVirtualAge.client_id.value,
-            "client_secret": ConfigVirtualAge.client_secret.value,
-            "username"     : ConfigVirtualAge.username.value,
-            "password"     : ConfigVirtualAge.password.value
+        req = self.nav.post(environ.get("VIRTUALAGE_URL")+'/api/totvsmoda/authorization/v2/token',data={
+            "grant_type"   : environ.get("VIRTUALAGE_GRANT_TYPE"),
+            "client_id"    : environ.get("VIRTUALAGE_CLIENT_ID"),
+            "client_secret": environ.get("VIRTUALAGE_CLIENT_SECRET"),
+            "username"     : environ.get("VIRTUALAGE_USERNAME"),
+            "password"     : environ.get("VIRTUALAGE_PASSWORD")
         },headers={
             "Content-Type":"application/x-www-form-urlencoded"
         })
@@ -40,7 +40,7 @@ class VirtualAge(ERP):
         has_next = True
         act_page = 1
         while has_next:
-            req = self.nav.post(ConfigVirtualAge.URL.value+'/api/totvsmoda/product/v2/products/search',
+            req = self.nav.post(environ.get("VIRTUALAGE_URL")+'/api/totvsmoda/product/v2/products/search',
                                 data={
                                     "filter":{
                                         "change":{
@@ -49,7 +49,7 @@ class VirtualAge(ERP):
                                         }
                                     },
                                     "option":{
-                                        "branchInfoCode": ConfigVirtualAge.DEFAULT_COMPANY.value
+                                        "branchInfoCode": environ.get("VIRTUALAGE_DEFAULT_COMPANY")
                                     },
                                     "page": act_page,
                                     "pageSize": 30
@@ -88,7 +88,7 @@ class VirtualAge(ERP):
                 has_next = False
 
     def __save_product_images(self,id_product:int):
-        req = self.nav.post(ConfigVirtualAge.URL.value+'/api/totvsmoda/image/v2/product/search',
+        req = self.nav.post(environ.get("VIRTUALAGE_URL")+'/api/totvsmoda/image/v2/product/search',
                              data={
                                 "filter": {
                                     "productCodeList": [
@@ -111,7 +111,7 @@ class VirtualAge(ERP):
         act_page = 1
         #faz um looping infinito por causa da paginacao de resultados
         while has_next:
-            req = self.nav.get(ConfigVirtualAge.URL.value+'/api/totvsmoda/product/v2/category',
+            req = self.nav.get(environ.get("VIRTUALAGE_URL")+'/api/totvsmoda/product/v2/category',
                                data={
                                     "page": act_page,
                                     "pageSize": 100
@@ -149,10 +149,10 @@ class VirtualAge(ERP):
 
             while has_next:
                 #se nao preencheu a lista de REPS buscarah tudo o que existe na API
-                if ConfigVirtualAge.ACTIVE_REPS.value!="":
+                if environ.get("VIRTUALAGE_ACTIVE_REPS")!="":
                     filter = {
                         "filter":{
-                            "representativeCodeList": ConfigVirtualAge.ACTIVE_REPS.value
+                            "representativeCodeList": environ.get("VIRTUALAGE_ACTIVE_REPS")
                         },
                         "expand": "addresses,emails,phones,customers",
                         "page" : act_page
@@ -163,7 +163,7 @@ class VirtualAge(ERP):
                         "page" : act_page
                     }
 
-                req = self.nav.post(ConfigVirtualAge.URL.value+'/api/totvsmoda/person/v2/representatives/search',
+                req = self.nav.post(environ.get("VIRTUALAGE_URL")+'/api/totvsmoda/person/v2/representatives/search',
                                     data=json.dumps(filter),
                                     headers=self._get_header()
                                     )
@@ -292,7 +292,7 @@ class VirtualAge(ERP):
                         "pageSize": 500
                     }
 
-                req = self.nav.post(ConfigVirtualAge.URL.value+'/api/totvsmoda/person/v2/legal-entities/search',headers=self._get_header(),data=json.dumps(filter))
+                req = self.nav.post(environ.get("VIRTUALAGE_URL")+'/api/totvsmoda/person/v2/legal-entities/search',headers=self._get_header(),data=json.dumps(filter))
                 if req.status_code==200:
                     data = self._as_object(req)
                     for it in data.items:
@@ -375,10 +375,10 @@ class VirtualAge(ERP):
         pass
 
     def get_invoice(self,_taxvat:str):
-        req = self.nav.post(ConfigVirtualAge.URL.value+'/api/totvsmoda/fiscal/v2/invoices/search',
+        req = self.nav.post(environ.get("VIRTUALAGE_URL")+'/api/totvsmoda/fiscal/v2/invoices/search',
                       data={
                         "filter": {
-                            "branchCodeList": ConfigVirtualAge.ACTIVE_COMPANIES.value,
+                            "branchCodeList": environ.get("VIRTUALAGE_ACTIVE_COMPANIES"),
                             "operationType": "S",
                             "origin": "All",
                             "invoiceStatusList": ["Normal","Issued"],
@@ -400,7 +400,7 @@ class VirtualAge(ERP):
             has_next = True
             act_page = 1
             while has_next:
-                req = self.nav.get(ConfigVirtualAge.URL.value+'/api/totvsmoda/product/v2/measurement-unit',
+                req = self.nav.get(environ.get("VIRTUALAGE_URL")+'/api/totvsmoda/product/v2/measurement-unit',
                             headers=self._get_header())
                 if req.status_code==200:
                     data = self._as_object(req)
@@ -425,7 +425,7 @@ class VirtualAge(ERP):
         # .join(CmmLegalEntities,CmmLegalEntities.id==B2bOrders.id_customer)\
         # .where()
 
-        # resp = requests.post(ConfigVirtualAge.URL.value+'/api/totvsmoda/accounts-receivable/v2/invoices-print/search',
+        # resp = requests.post(environ.get("VIRTUALAGE_URL")+'/api/totvsmoda/accounts-receivable/v2/invoices-print/search',
         #                      data={
         #                         "filter":{
         #                             "branchCodeList": ConfigVirtualAge.company_number.value,

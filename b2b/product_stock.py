@@ -7,7 +7,7 @@ import simplejson
 from models import B2bBrand, B2bCollection, B2bProductStock, B2bTablePrice, B2bTablePriceProduct, CmmCategories, CmmMeasureUnit, CmmProducts, CmmProductsCategories, CmmProductsGrid, CmmProductsGridDistribution, CmmProductsImages, CmmProductsModels, CmmProductsTypes, CmmTranslateColors, CmmTranslateSizes, ScmEvent, _get_params, _show_query, db
 from sqlalchemy import Select, and_, exc,or_,desc,asc
 from auth import auth
-from config import Config
+from os import environ
 
 ns_stock = Namespace("product-stock",description="Operações para manipular dados de estoques de produtos")
 
@@ -84,8 +84,8 @@ class ProductStockList(Resource):
     @ns_stock.param("order_dir","Direção da ordenação","query",enum=['ASC','DESC'])
     @auth.login_required
     def get(self):
-        pag_num    =  1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size   = Config.PAGINATION_SIZE.value if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_num    = 1 if request.args.get("page") is None else int(request.args.get("page"))
+        pag_size   = int(environ.get("F2B_PAGINATION_SIZE")) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
         search     = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
         list_all   = False if request.args.get("list_all") is None else True
         order_by   = "id" if request.args.get("order_by") is None else request.args.get("order_by")
@@ -275,7 +275,7 @@ class ProductsGallery(Resource):
     @auth.login_required
     def get(self):
         pag_num    = 1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size   = Config.PAGINATION_SIZE.value if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_size   = int(environ.get("F2B_PAGINATION_SIZE")) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
         query      = "" if request.args.get("query") is None or request.args.get("query")=="" else request.args.get("query")
 
         try:

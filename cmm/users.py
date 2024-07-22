@@ -2,11 +2,12 @@ from datetime import datetime
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from backend.common import _send_email
+from common import _send_email
 from models import CmmLegalEntities, CmmLegalEntityContact, CmmUserEntity, CmmUsers, _get_params, _show_query,db,_save_log
 from sqlalchemy import Delete, Select, desc, exc, and_, asc, Insert,Update, func, or_
 from auth import auth
-from config import Config, ContactType,CustomerAction, MailTemplates
+from config import ContactType,CustomerAction, MailTemplates
+from os import environ
 
 ns_user = Namespace("users",description="Operações para manipular dados de usuários do sistema")
 
@@ -49,8 +50,8 @@ class UsersList(Resource):
     @ns_user.param("query","Texto para busca","query")
     @auth.login_required
     def get(self):
-        pag_num   =  1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size  = Config.PAGINATION_SIZE.value if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_num   = 1 if request.args.get("page") is None else int(request.args.get("page"))
+        pag_size  = int(environ.get("F2B_PAGINATION_SIZE")) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
         query     = "" if request.args.get("query") is None else request.args.get("query")
 
         try:
@@ -506,7 +507,7 @@ class UserPassword(Resource):
     def put(self):
         try:
             req = request.get_json()
-            pwd = str(Config.TOKEN_KEY.value).lower()+str(datetime.now().year)
+            pwd = str(environ.get("F2B_TOKEN_KEY")).lower()+str(datetime.now().year)
             usr:CmmUsers = db.session.execute(Select(CmmUsers).where(CmmUsers.id==req["id"])).first()[0]
             usr.password = usr.hash_pwd(pwd)
             db.session.commit()

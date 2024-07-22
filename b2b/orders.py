@@ -5,10 +5,11 @@ from models import B2bBrand, B2bCollection, B2bProductStock, CmmProducts, CmmPro
 from sqlalchemy import and_, exc,Select,Delete,asc,desc,func,between
 import simplejson
 from auth import auth
-from config import Config, CustomerAction,DevolutionStatus, OrderStatus
+from config import CustomerAction,DevolutionStatus, OrderStatus
 from decimal import Decimal
 from integrations.shipping import Shipping,ShippingCompany
 from datetime import datetime
+from os import environ
 
 ns_order = Namespace("orders",description="Operações para manipular dados de pedidos")
 
@@ -66,7 +67,7 @@ class OrdersList(Resource):
     @auth.login_required
     def get(self):
         pag_num  =  1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size = Config.PAGINATION_SIZE.value if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_size = int(environ.get("F2B_PAGINATION_SIZE")) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
         query   = "" if request.args.get("query") is None else request.args.get("query")
 
         try:
@@ -335,7 +336,7 @@ class HistoryOrderList(Resource):
     @auth.login_required
     def get(self,id:int):
         pag_num   = 1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size  = Config.PAGINATION_SIZE.value if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_size  = int(environ.get("F2B_PAGINATION_SIZE")) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
         query     = "" if request.args.get("query") is None else request.args.get("query")
         try:
 
@@ -407,7 +408,7 @@ class HistoryOrderList(Resource):
                         "status": r.status,
                         "integration_number": r.integration_number,
                         "invoice_number": r.invoice_number,
-                        "track": (None if Config.TRACK_ORDER.value==False else self.__getTrack(r.taxvat,r.invoice_number,r.invoice_serie,r.track_company,r.track_code) ),
+                        "track": (None if int(environ.get("F2B_TRACK_ORDER"))==0 else self.__getTrack(r.taxvat,r.invoice_number,r.invoice_serie,r.track_company,r.track_code) ),
                         "date_created": r.date_created.strftime("%d/%m/%Y %H:%M:%S")
                     }for r in db.session.execute(stmt)]
                 }
@@ -426,7 +427,7 @@ class HistoryOrderList(Resource):
                         "status": r.status,
                         "integration_number": r.integration_number,
                         "invoice_number": r.invoice_number,
-                        "track": (None if Config.TRACK_ORDER.value==False else self.__getTrack(r.taxvat,r.invoice_number,r.invoice_serie,r.track_company,r.track_code) ),
+                        "track": (None if int(environ.get("F2B_TRACK_ORDER"))==0 else self.__getTrack(r.taxvat,r.invoice_number,r.invoice_serie,r.track_company,r.track_code) ),
                         "date_created": r.date_created.strftime("%d/%m/%Y %H:%M:%S")
                     }for r in db.session.execute(stmt)]
         except exc.SQLAlchemyError as e:

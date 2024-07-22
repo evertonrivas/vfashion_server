@@ -1,8 +1,8 @@
-from config import Config
+from os import environ
 import importlib
 
-if Config.CONNECT_ERP.value==True:
-    ERP = getattr(importlib.import_module('integrations.'+Config.ERP_MODULE.value),Config.ERP_CLASS.value)
+if int(environ.get("F2B_CONNECT_ERP"))==1:
+    ERP = getattr(importlib.import_module('integrations.'+str(environ.get("F2B_ERP_MODULE"))),str(environ.get("F2B_ERP_CLASS")))
     erp = ERP()
 
     erp.get_representative()

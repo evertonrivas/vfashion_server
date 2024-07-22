@@ -4,7 +4,7 @@ from flask_restx import Resource,Namespace,fields
 from flask import request
 from werkzeug import exceptions
 from auth import auth
-from config import Config,MailTemplates
+from config import MailTemplates
 from common import _send_email
 import mimetypes
 import os
@@ -23,7 +23,7 @@ class EmailApi(Resource):
             attachs = []
 
             #verifica se os arquivos existem
-            fpath = Config.APP_PATH.value+'assets/tmp/'
+            fpath = os.environ.get("F2B_APP_PATH")+'assets/tmp/'
             for file in req['attachments']:
                 if os.path.exists(fpath+file)==False:
                     pass

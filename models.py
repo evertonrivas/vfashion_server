@@ -4,9 +4,10 @@ from sqlalchemy_serializer import SerializerMixin
 from datetime import datetime,timedelta
 import jwt
 import bcrypt
-from config import Config,CustomerAction
+from config import CustomerAction
 import json
 from types import SimpleNamespace
+from os import environ
 
 db = SQLAlchemy()
 
@@ -78,7 +79,7 @@ class CmmUsers(db.Model,SerializerMixin):
     def check_pwd(self,pwd:str):
         return bcrypt.checkpw(pwd,self.password.encode())
 
-    def get_token(self,expires_in:int=Config.EXPIRE_SESSION.value):
+    def get_token(self,expires_in:int=int(environ.get("F2B_EXPIRE_SESSION"))):
         now = datetime.now()
         expire_utc = now + timedelta(seconds=expires_in)
         complete_key = now.year + now.month + now.day
@@ -87,7 +88,7 @@ class CmmUsers(db.Model,SerializerMixin):
             return self.token
 
         #encode e decode por causa da diferenca de versoes do windows que pode retornar byte array ao inves de str
-        self.token = jwt.encode({"username":str(self.username) },Config.TOKEN_KEY.value+str(complete_key)).encode().decode()
+        self.token = jwt.encode({"username":str(self.username) },str(environ.get("F2B_TOKEN_KEY"))+str(complete_key)).encode().decode()
         self.token_expire = now + timedelta(seconds=expires_in)
         return self.token
     

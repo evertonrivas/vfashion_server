@@ -4,6 +4,7 @@ from requests import Response,Session
 import json
 from config import Config
 from sqlalchemy import create_engine
+from os import environ
 
 class ERP(ABC):
     nav = None
@@ -11,7 +12,7 @@ class ERP(ABC):
 
     def __init__(self) -> None:
         self.nav = Session()
-        self.dbconn = create_engine(Config.DB_LIB.value+"://"+Config.DB_USER.value+":"+Config.DB_PASS.value+"@"+Config.DB_HOST.value+"/"+Config.DB_NAME.value)
+        self.dbconn = create_engine(environ.get("DB_LIB")+"://"+environ.get("DB_USER")+":"+environ.get("DB_PASS")+"@"+environ.get("DB_HOST")+"/"+environ.get("DB_NAME"))
         super().__init__()
 
     

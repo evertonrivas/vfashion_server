@@ -5,7 +5,6 @@ from flask import request
 from models import B2bCartShopping, B2bCustomerGroupCustomers, B2bProductStock, CmmLegalEntities, CmmProducts, CmmProductsGrid, CmmProductsGridDistribution, CmmTranslateColors, CmmTranslateSizes,CmmProductsImages, _show_query, db
 from sqlalchemy import exc,Select,and_,func,tuple_,distinct,desc,asc,Delete, text
 from auth import auth
-from config import Config
 
 ns_cart = Namespace("cart",description="Operações para manipular dados do carrinho de compras")
 

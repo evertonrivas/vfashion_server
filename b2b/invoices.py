@@ -5,8 +5,7 @@ from models import db
 from sqlalchemy import exc,Select,and_,Delete,asc,desc
 import simplejson
 from auth import auth
-from config import Config
-from decimal import Decimal
+from os import environ
 
 ns_invoice = Namespace("invoices",description="Operações para manipular dados de notas fiscais")
 
@@ -45,7 +44,7 @@ class InvoiceList(Resource):
     @auth.login_required
     def get(self):
         pag_num  = 1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size = Config.PAGINATION_SIZE.value if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_size = int(environ.get("F2B_PAGINATION_SIZE")) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
         query    = "" if request.args.get("query") is None else request.args.get("query")
         pass
 

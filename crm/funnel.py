@@ -5,7 +5,7 @@ from models import _get_params,CrmFunnel,CrmFunnelStageCustomer,CrmFunnelStage,d
 import json
 from sqlalchemy import Update, desc, exc,and_,asc, Select
 from auth import auth
-from config import Config
+from os import environ
 
 ns_funil = Namespace("funnels",description="Operações para manipular funis de clientes")
 
@@ -57,8 +57,8 @@ class FunnelList(Resource):
     @ns_funil.param("query","Texto para busca","query")
     @auth.login_required
     def get(self):
-        pag_num  =  1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size = Config.PAGINATION_SIZE.value if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_num  = 1 if request.args.get("page") is None else int(request.args.get("page"))
+        pag_size = int(environ.get("F2B_PAGINATION_SIZE")) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
         query   = "" if request.args.get("query") is None else request.args.get("query")
     
         try:

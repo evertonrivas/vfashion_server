@@ -5,7 +5,8 @@ from models import B2bCustomerGroup,B2bCustomerGroupCustomers, B2bOrders, CmmLeg
 import json
 from sqlalchemy import Delete, Select, exc,and_,desc,asc, func
 from auth import auth
-from config import Config, OrderStatus
+from config import OrderStatus
+from os import environ
 
 ns_customer_g = Namespace("customer-group",description="Operações para manipular dados de grupos de clientes")
 
@@ -51,8 +52,8 @@ class CollectionList(Resource):
     @ns_customer_g.param("query","Texto para busca","query")
     @auth.login_required
     def get(self):
-        pag_num =  1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size = Config.PAGINATION_SIZE.value if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_num  = 1 if request.args.get("page") is None else int(request.args.get("page"))
+        pag_size = int(environ.get("F2B_PAGINATION_SIZE")) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
         query = "" if request.args.get("query") is None else request.args.get("query")
 
         try:
@@ -244,7 +245,7 @@ class CustomersApi(Resource):
     @ns_customer_g.param("query","Texto para busca","query")
     def get(self):
         pag_num =  1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size = Config.PAGINATION_SIZE.value if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_size = int(environ.get("F2B_PAGINATION_SIZE")) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
         query = "" if request.args.get("query") is None else request.args.get("query")
 
         try:
