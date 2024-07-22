@@ -7,7 +7,11 @@ import bcrypt
 from config import CustomerAction
 import json
 from types import SimpleNamespace
-from os import environ
+from os import environ,path
+from dotenv import load_dotenv
+
+BASEDIR = path.abspath(path.dirname(__file__))
+load_dotenv(path.join(BASEDIR, '.env'))
 
 db = SQLAlchemy()
 

@@ -1,4 +1,4 @@
-from config import Config,ShippingCompany
+from config import ShippingCompany
 import requests
 import urllib3
 from datetime import datetime
@@ -110,7 +110,7 @@ class Shipping():
             }
             resp = self.nav.post('https://developers.jamef.com.br/rastreamento/ver',data={
                 {
-                    "documentoResponsavelPagamento" : Config.COMPANY_TAXVAT.value,
+                    "documentoResponsavelPagamento" : str(environ.get("F2B_COMPANY_TAXVAT")),
                     "documentoDestinatario": _cnpj,
                     "numeroNotaFiscal": _nf,
                     "numeroSerieNotaFiscal": _serie_nf

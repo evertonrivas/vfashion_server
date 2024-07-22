@@ -10,7 +10,6 @@ from scm.api import blueprint as scm
 from mpg.api import blueprint as mpg
 from models import db
 from flask_migrate import Migrate
-from config import Config
 import locale
 from dotenv import load_dotenv
 from os import environ,path
@@ -18,13 +17,11 @@ from os import environ,path
 BASEDIR = path.abspath(path.dirname(__file__))
 load_dotenv(path.join(BASEDIR, '.env'))
 
-locale.setlocale(locale.LC_TIME,Config.LOCALE.value)
+locale.setlocale(locale.LC_TIME,environ.get("F2B_LOCALE"))
 
 app = Flask(__name__)
-app.config["SQLALCHEMY_DATABASE_URI"] = str(environ.get("DB_LIB"))+"://"+\
-str(environ.get("DB_USER"))+":"+\
-str(environ.get("DB_PASS"))+"@"+str(environ.get("DB_HOST"))+"/"+\
-environ.get("DB_NAME")
+app.config["SQLALCHEMY_DATABASE_URI"] = environ.get("F2B_DB_LIB")+"://"+environ.get("F2B_DB_USER")+":"+\
+environ.get("F2B_DB_PASS")+"@"+environ.get("F2B_DB_HOST")+"/"+environ.get("F2B_DB_NAME")
 
 migrate = Migrate()
 

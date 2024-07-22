@@ -1,17 +1,18 @@
-from config import Config,MailTemplates
+from config import MailTemplates
 import jinja2
 import pdfkit
 import os
 import html.entities
 from datetime import date,datetime
 import requests
+from os import environ
 
 def _gen_pdf():
     try:
         #tabela de traducao dos acentos para codigos html
         table = {k: '&{};'.format(v) for k, v in html.entities.codepoint2name.items()}
 
-        tplLoader  = jinja2.FileSystemLoader(searchpath=Config.APP_PATH.value+'assets/layout/')
+        tplLoader  = jinja2.FileSystemLoader(searchpath=str(environ.get("F2B_APP_PATH"))+'assets/layout/')
         tplEnv     = jinja2.Environment(loader=tplLoader)
         layoutFile = "pdf_layout.html"
         bodyReport = tplEnv.get_template(layoutFile)
@@ -32,10 +33,10 @@ def _gen_pdf():
         )
         
         #apaga se o arquivo existir
-        if os.path.exists(Config.APP_PATH.value+'assets/layout/pdf_header_tmp.html')==True:
-            os.remove(Config.APP_PATH.value+'assets/layout/pdf_header_tmp.html')
+        if os.path.exists(str(environ.get("F2B_APP_PATH"))+'assets/layout/pdf_header_tmp.html')==True:
+            os.remove(str(environ.get("F2B_APP_PATH"))+'assets/layout/pdf_header_tmp.html')
 
-        with open(Config.APP_PATH.value+'assets/layout/pdf_header_tmp.html',"w") as file_header:
+        with open(str(environ.get("F2B_APP_PATH"))+'assets/layout/pdf_header_tmp.html',"w") as file_header:
             file_header.write(header_txt)
             file_header.close()
         #-----------------------------------------------------#
@@ -51,10 +52,10 @@ def _gen_pdf():
         )
 
         #apaga se o arquivo existir
-        if os.path.exists(Config.APP_PATH.value+'assets/layout/pdf_footer_tmp.html')==True:
-            os.remove(Config.APP_PATH.value+'assets/layout/footer_pdf_tmp.html')
+        if os.path.exists(str(environ.get("F2B_APP_PATH"))+'assets/layout/pdf_footer_tmp.html')==True:
+            os.remove(str(environ.get("F2B_APP_PATH"))+'assets/layout/footer_pdf_tmp.html')
 
-        with open(Config.APP_PATH.value+'assets/layout/pdf_footer_tmp.html',"w") as file_footer:
+        with open(str(environ.get("F2B_APP_PATH"))+'assets/layout/pdf_footer_tmp.html',"w") as file_footer:
             file_footer.write(footer_txt)
             file_footer.close()
         #-----------------------------------------------------#
@@ -67,14 +68,14 @@ def _gen_pdf():
             )
         
         fileName = ''
-        pdfkit.from_string(body_txt,Config.APP_PATH.value+'assets/pdf/'+fileName+'.pdf',options={
+        pdfkit.from_string(body_txt,str(environ.get("F2B_APP_PATH"))+'assets/pdf/'+fileName+'.pdf',options={
                 'encoding': "UTF-8",
                 'disable-smart-shrinking':'',
                 'header-spacing':10,
                 'margin-right': '0mm',
                 'margin-left': '0mm',
-                'header-html': Config.APP_PATH.value+'assets/layout/header_tmp.html',
-                'footer-html': Config.APP_PATH.value+'assets/layout/footer_tmp.html'
+                'header-html': str(environ.get("F2B_APP_PATH"))+'assets/layout/header_tmp.html',
+                'footer-html': str(environ.get("F2B_APP_PATH"))+'assets/layout/footer_tmp.html'
             })
         return True
     except Exception as e:
@@ -83,20 +84,20 @@ def _gen_pdf():
 
 def _send_email(p_to:[],p_cc:[],p_subject:str,p_content:str,p_tpl:MailTemplates,p_attach:[]=None)->bool: # type: ignore
     try:
-        tplLoader     = jinja2.FileSystemLoader(searchpath=Config.APP_PATH.value+'assets/layout/')
+        tplLoader     = jinja2.FileSystemLoader(searchpath=str(environ.get("F2B_APP_PATH"))+'assets/layout/')
         tplEnv        = jinja2.Environment(loader=tplLoader)
         layoutFile    = p_tpl.value
         mailTemplate  = tplEnv.get_template(layoutFile)
         mail_template = mailTemplate.render(
             content=p_content,
-            url=Config.APP_URL.value +('reset-password/' if p_tpl==MailTemplates.PWD_RECOVERY else None)
+            url=(str(environ.get("F2B_APP_URL"))) +('reset-password/' if p_tpl==MailTemplates.PWD_RECOVERY else None)
         )
 
         if p_attach is not None:
             json_content= {
                 "sender": {
-                    "name": Config.EMAIL_SEND_FROM.value,
-                    "email": "resultados@neugen.com.br"
+                    "name": str(environ.get("F2B_EMAIL_FROM_NAME")),
+                    "email": str(environ.get("F2B_EMAIL_FROM_VALUE"))
                 },
                 "to": [{
                     "email": one_to.split()
@@ -115,8 +116,8 @@ def _send_email(p_to:[],p_cc:[],p_subject:str,p_content:str,p_tpl:MailTemplates,
         else:
             json_content= {
                 "sender": {
-                    "name": Config.EMAIL_SEND_FROM.value,
-                    "email": "resultados@neugen.com.br"
+                    "name": str(environ.get("F2B_EMAIL_FROM_NAME")),
+                    "email": str(environ.get("F2B_EMAIL_FROM_VALUE"))
                 },
                 "to": [{
                     "email": one_to.split()
@@ -130,7 +131,7 @@ def _send_email(p_to:[],p_cc:[],p_subject:str,p_content:str,p_tpl:MailTemplates,
         resp = requests.post("https://api.brevo.com/v3/smtp/email",json=json_content,headers={
             'accept':'application/json',
             'content-type': 'application/json',
-            'api-key': Config.BREVO_API_KEY.value
+            'api-key': str(environ.get("F2B_BREVO_API_KEY"))
         })
         if resp.status_code==200:
             return True
