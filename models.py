@@ -224,7 +224,7 @@ class CmmLegalEntities(db.Model,SerializerMixin):
     postal_code    = Column(String(30),nullable=False)
     neighborhood   = Column(String(150),nullable=False)
     address        = Column(String(255),nullable=False)
-    type           = Column(CHAR(1),nullable=False,default='C',server_default='C',comment="C = Customer(Cliente), R = Representative(Representante), S = Supplier(Fornecedor), U = System User")
+    type           = Column(CHAR(1),nullable=False,default='C',server_default='C',comment="C = Customer(Cliente), R = Representative(Representante), S = Supplier(Fornecedor), P = Persona (Pessoa)")
     trash          = Column(Boolean,nullable=False,server_default='0')
     id_import      = Column(Integer,nullable=True,comment="Id da importação realizada pelo CRM, garante que poderá apagar o registro")
     erp_integrated = Column(Boolean,nullable=False,server_default='0',default=0,comment="Flag de integração com ERP, isso irá garantir a não exclusão em caso de reversão da importação")
