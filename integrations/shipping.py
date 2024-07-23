@@ -20,15 +20,17 @@ class Shipping():
             return self.__jadlog_tracking(_nf=options.invoice,_nf_serie=options.invoice_serie,_cnpj=options.taxvat)
         if _shp==ShippingCompany.JAMEF:
             return self.__jamef_tracking(_cnpj=options.taxvat,_nf=options.invoice,_serie_nf=options.invoice_serie)
+        if _shp==ShippingCompany.ECT:
+            return self.__ect_tracking()
 
     def __braspress_tracking(self,_taxvat:str,_invoice:str):
         #ignora a verificacao de certificado SSL
         self.nav.verify = False
         self.nav.headers = {
             # "Authorization": ConfigBraspress.TOKEN_TYPE.value+" "+ConfigBraspress.TOKEN_ACCESS.value
-            "Authorization": environ.get("BRASPRESS_TOKEN_TYPE")+" "+environ.get("BRASPRESS_TOKEN_ACCESS")
+            "Authorization": environ.get("F2B_BRASPRESS_TOKEN_TYPE")+" "+environ.get("F2B_BRASPRESS_TOKEN_ACCESS")
         }
-        resp = self.nav.get('https://api.braspress.com/v'+environ.get("BRASPRESS_API_VERSION")+'/tracking/byNf/'+_taxvat+'/'+_invoice+'/json')
+        resp = self.nav.get('https://api.braspress.com/v'+environ.get("F2B_BRASPRESS_API_VERSION")+'/tracking/byNf/'+_taxvat+'/'+_invoice+'/json')
         if resp.status_code==200:
             consulta = resp.json()
 
@@ -55,7 +57,7 @@ class Shipping():
         self.nav.verify = False
         self.nav.headers = {
             # "Authorization": ConfigJadlog.TOKEN_TYPE.value+" "+ConfigJadlog.TOKEN_ACCESS.value,
-            "Authorization": environ.get("JADLOG_TOKEN_TYPE")+" "+environ.get("JADLOG_TOKEN_ACCESS"),
+            "Authorization": environ.get("F2B_JADLOG_TOKEN_TYPE")+" "+environ.get("F2B_JADLOG_TOKEN_ACCESS"),
             "Content-Type": "application/json"
         }
         resp = self.nav.get('https://jadlog.com.br/api/tracking/consultar',params={
@@ -93,8 +95,8 @@ class Shipping():
     def __jamef_login(self):
         resp = self.nav.post('https://developers.jamef.com.br/login',
                       data={
-                        "username": environ.get("JAMEF_USERNAME"), # ConfigJamef.USERNAME.value,
-                        "password": environ.get("JAMEF_PASSWORD") # ConfigJamef.PASSWORD.value
+                        "username": environ.get("F2B_JAMEF_USERNAME"), # ConfigJamef.USERNAME.value,
+                        "password": environ.get("F2B_JAMEF_PASSWORD") # ConfigJamef.PASSWORD.value
                       }
                       )
         if resp.status_code==200:
@@ -136,3 +138,6 @@ class Shipping():
                     }for evt in cons['historico']]
                 }for cons in consulta['conhecimentos']]
         return False
+
+    def __ect_tracking(self):
+        pass

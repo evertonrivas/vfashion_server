@@ -2,7 +2,6 @@ from abc import abstractmethod,ABC
 from types import SimpleNamespace
 from requests import Response,Session
 import json
-from config import Config
 from sqlalchemy import create_engine
 from os import environ
 
@@ -12,7 +11,7 @@ class ERP(ABC):
 
     def __init__(self) -> None:
         self.nav = Session()
-        self.dbconn = create_engine(environ.get("DB_LIB")+"://"+environ.get("DB_USER")+":"+environ.get("DB_PASS")+"@"+environ.get("DB_HOST")+"/"+environ.get("DB_NAME"))
+        self.dbconn = create_engine(environ.get("F2B_DB_LIB")+"://"+environ.get("F2B_DB_USER")+":"+environ.get("F2B_DB_PASS")+"@"+environ.get("F2B_DB_HOST")+"/"+environ.get("F2B_DB_NAME"))
         super().__init__()
 
     
