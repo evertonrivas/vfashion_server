@@ -2,9 +2,8 @@ from datetime import datetime
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import _get_params, _show_query, db,ScmFlimv
-import json
-from sqlalchemy import Select, exc,and_,asc,desc
+from models import db,ScmFlimv
+from sqlalchemy import Select, exc, and_, asc, desc
 from auth import auth
 
 ns_flimv = Namespace("flimv",description="Operações para manipular dados da metodologia FLIMV")
@@ -86,16 +85,17 @@ class FlimvList(Resource):
     def post(self):
         req = request.get_json()
         try:
-            print(req)
+            # print(req)
             for rule in req["rules"]:
                 flimv = ScmFlimv.query.get(int(rule["id"]))
-                if flimv is not None:                    
+                if flimv is not None:
                     flimv.frequency = rule["frequency"]
                     flimv.liquidity = rule["liquidity"]
                     flimv.injury    = rule["injury"]
                     flimv.mix       = rule["mix"]
                     flimv.vol_min   = rule["volume"][0]
                     flimv.vol_max   = rule["volume"][1]
+                    flimv.date_updated = datetime.now()
                     db.session.commit()
                 else:
                     flimv = ScmFlimv()
