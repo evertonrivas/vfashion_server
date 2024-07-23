@@ -111,8 +111,9 @@ class CollectionList(Resource):
                             "name": c.name,
                             "hex_color": c.hex_color,
                             "has_budget": c.has_budget,
-                            "use_collection": c.use_collection,
                             "is_milestone": c.is_milestone,
+                            "use_collection": c.use_collection,
+                            "create_funnel": c.create_funnel,
                             "date_created": c.date_created.strftime("%Y-%m-%d"),
                             "date_updated": c.date_updated.strftime("%Y-%m-%d %H:%M:%S") if c.date_updated!=None else None
                         }for c in squery.filter(ScmEventType.id_parent==m.id).all()],
@@ -135,8 +136,9 @@ class CollectionList(Resource):
                             "name": c.name,
                             "hex_color": c.hex_color,
                             "has_budget": c.has_budget,
-                            "use_collection": c.use_collection,
                             "is_milestone": c.is_milestone,
+                            "use_collection": c.use_collection,
+                            "create_funnel": c.create_funnel,
                             "date_created": c.date_created.strftime("%Y-%m-%d"),
                             "date_updated": c.date_updated.strftime("%Y-%m-%d %H:%M:%S") if c.date_updated!=None else None
                         }for c in squery.filter(ScmEventType.id_parent==m.id).all()],
@@ -191,6 +193,8 @@ class CollectionList(Resource):
             reg.use_collection = False if req["use_collection"]=='false' else True
             reg.is_milestone   = False if req["is_milestone"]=='false' else True
             reg.create_funnel  = False if req["create_funnel"]=='false' else True
+            if reg.create_funnel is True:
+                reg.use_collection = True # forca o uso de colecao quando houver criacao de Funil
             reg.date_created   = datetime.now()
             db.session.add(reg)
             db.session.commit()
@@ -263,6 +267,8 @@ class CollectionApi(Resource):
             reg.use_collection = False if req["use_collection"]=='false' else True
             reg.is_milestone   = False if req["is_milestone"]=='false' else True
             reg.create_funnel  = False if req["create_funnel"]=='false' else True
+            if reg.create_funnel is True:
+                reg.use_collection = True # forca o uso de colecao quando houver criacao de Funil
             reg.date_updated   = datetime.now()
             db.session.commit()
 
