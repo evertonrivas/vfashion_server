@@ -3,7 +3,12 @@ from types import SimpleNamespace
 from requests import Response,Session
 import json
 from sqlalchemy import create_engine
-from os import environ
+from dotenv import load_dotenv
+from os import environ,path
+
+BASEDIR = path.abspath(path.dirname(__file__))
+load_dotenv(path.join(BASEDIR, '.env'))
+
 
 class ERP(ABC):
     nav = None

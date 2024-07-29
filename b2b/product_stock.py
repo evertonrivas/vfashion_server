@@ -303,8 +303,8 @@ class ProductsGallery(Resource):
                 .join(CmmProductsTypes,CmmProductsTypes.id==CmmProducts.id_type)\
                 .join(CmmProductsModels,CmmProductsModels.id==CmmProducts.id_model)\
                 .join(CmmMeasureUnit,CmmMeasureUnit.id==CmmProducts.id_measure_unit)\
-                .outerjoin(B2bBrand,B2bBrand.id==CmmProducts.id_brand)\
-                .outerjoin(B2bCollection,B2bCollection.id_brand==B2bBrand.id)\
+                .outerjoin(B2bCollection,B2bCollection.id==CmmProducts.id_collection)\
+                .outerjoin(B2bBrand,B2bBrand.id==B2bCollection.id_brand)\
                 .outerjoin(B2bTablePriceProduct,B2bTablePriceProduct.id_product==CmmProducts.id)\
                 .outerjoin(B2bTablePrice,B2bTablePrice.id==B2bTablePriceProduct.id_table_price)\
                 .outerjoin(CmmProductsCategories,CmmProductsCategories.id_product==CmmProducts.id)\
@@ -342,8 +342,8 @@ class ProductsGallery(Resource):
                 .join(CmmProductsTypes,CmmProductsTypes.id==CmmProducts.id_type)\
                 .join(CmmProductsModels,CmmProductsModels.id==CmmProducts.id_model)\
                 .join(CmmMeasureUnit,CmmMeasureUnit.id==CmmProducts.id_measure_unit)\
-                .outerjoin(B2bBrand,B2bBrand.id==CmmProducts.id_brand)\
-                .outerjoin(B2bCollection,B2bCollection.id_brand==B2bBrand.id)\
+                .outerjoin(B2bCollection,B2bCollection.id==CmmProducts.id_collection)\
+                .outerjoin(B2bBrand,B2bBrand.id==B2bCollection.id_brand)\
                 .outerjoin(B2bTablePriceProduct,B2bTablePriceProduct.id_product==CmmProducts.id)\
                 .outerjoin(B2bTablePrice,B2bTablePrice.id==B2bTablePriceProduct.id_table_price)\
                 .outerjoin(CmmProductsCategories,CmmProductsCategories.id_product==CmmProducts.id)\
@@ -374,7 +374,10 @@ class ProductsGallery(Resource):
             #color query
             cquery = Select(CmmTranslateColors.name,CmmTranslateColors.id,CmmTranslateColors.hexcode).distinct()\
                     .join(CmmProductsGridDistribution,CmmProductsGridDistribution.id_color==CmmTranslateColors.id)\
-                    .join(CmmProductsGrid,CmmProductsGrid.id==CmmProductsGridDistribution.id_grid)
+                    .join(CmmProductsGrid,CmmProductsGrid.id==CmmProductsGridDistribution.id_grid)\
+                    .join(B2bProductStock,B2bProductStock.id_color==CmmTranslateColors.id)
+            
+            # _show_query(cquery)
             
             if search is not None:
                 rquery = rquery.where(and_(CmmProducts.trash==False,or_(
@@ -417,10 +420,20 @@ class ProductsGallery(Resource):
                 iquery = iquery.where(CmmProductsTypes.id.in_(filter_type.split(",")))
             if filter_color is not None:
                 rquery = rquery.where(CmmProducts.id_grid.in_(
-                    Select(CmmProductsGridDistribution.id_color.in_(filter_color.split(",")))
+                    Select(CmmProductsGridDistribution.id_grid)\
+                    .join(B2bProductStock,and_(B2bProductStock.id_color==CmmProductsGridDistribution.id_color,B2bProductStock.id_size==CmmProductsGridDistribution.id_size))
+                    .where(and_(
+                        CmmProductsGridDistribution.id_color.in_(filter_color.split(",")),
+                        B2bProductStock.id_product==CmmProducts.id
+                    ))
                 ))
                 iquery = iquery.where(CmmProducts.id_grid.in_(
-                    Select(CmmProductsGridDistribution.id_color.in_(filter_color.split(",")))
+                    Select(CmmProductsGridDistribution.id_grid)\
+                    .join(B2bProductStock,and_(B2bProductStock.id_color==CmmProductsGridDistribution.id_color,B2bProductStock.id_size==CmmProductsGridDistribution.id_size))
+                    .where(and_(
+                        CmmProductsGridDistribution.id_color.in_(filter_color.split(",")),
+                        B2bProductStock.id_product==CmmProducts.id
+                    ))
                 ))
             
             if filter_size is not None:
@@ -433,7 +446,7 @@ class ProductsGallery(Resource):
 
             rquery = rquery.union(iquery)
 
-            #_show_query(rquery)
+            # _show_query(rquery)
 
             if order_by=='price':
                 rquery = rquery.order_by(direction(order_by))
@@ -481,7 +494,7 @@ class ProductsGallery(Resource):
                             "id": c.id,
                             "name": c.name,
                             "color": c.hexcode
-                        }for c in db.session.execute(cquery.where(CmmProductsGrid.id==m.id_grid))]
+                        }for c in db.session.execute(cquery.where(and_(CmmProductsGrid.id==m.id_grid,B2bProductStock.id_product==m.id)))]
                     } for m in db.session.execute(rquery)]
                 }
             else:
@@ -504,7 +517,7 @@ class ProductsGallery(Resource):
                             "id": c.id,
                             "name": c.name,
                             "color": c.hexcode
-                        }for c in db.session.execute(cquery.where(CmmProductsGrid.id==m.id_grid))]
+                        }for c in db.session.execute(cquery.where(and_(CmmProductsGrid.id==m.id_grid,B2bProductStock.id_product==m.id)))]
                     } for m in db.session.execute(rquery)]
         except exc.SQLAlchemyError as e:
             return {

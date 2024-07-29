@@ -1,10 +1,11 @@
+from datetime import datetime
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import CmmTranslateColors, CmmTranslateSizes, FprDevolution,FprDevolutionItem,B2bOrders,CmmProducts,CmmLegalEntities, FprReason, _get_params, _show_query,db
+from models import CmmTranslateColors, CmmTranslateSizes, FprDevolution,FprDevolutionItem,B2bOrders,CmmProducts,CmmLegalEntities, FprReason, _get_params, _save_log, _show_query,db
 from sqlalchemy import Delete, Select, Update, desc, distinct, exc, asc, func, text, tuple_
 from auth import auth
-from config import DevolutionStatus
+from config import CustomerAction, DevolutionStatus
 from os import environ
 
 ns_devolution = Namespace("devolution",description="Operações para manipular dados de devoluções")
@@ -136,6 +137,10 @@ class CategoryList(Resource):
                 dev_item.id_devolution = reg.id
                 db.session.add(dev_item)
             db.session.commit()
+
+            _save_log(B2bOrders.query.get(req["id_order"]).id_customer,
+                      CustomerAction.RETURN_CREATED,
+                      'Nova devolucao ('+str('{:010d}'.format(reg.id))+') realizada - em '+datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
 
             return reg.id
         except exc.SQLAlchemyError as e:
@@ -275,6 +280,16 @@ class CategoryApi(Resource):
             elif reproved == len(req["items"]):
                 reg.status = DevolutionStatus.REJECTED.value
             db.session.commit()
+
+            id_customer = db.session.execute(
+                Select(B2bOrders.id_customer)\
+                .join(FprDevolution,FprDevolution.id_order==B2bOrders.id)\
+                .where(FprDevolution.id==id)
+            ).first().id_customer
+
+            _save_log(id_customer,
+                      CustomerAction.RETURN_UPDATED,
+                      'Devolução ('+str('{:010d}'.format(reg.id))+') atualizada - em '+datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
 
             return True
         except exc.SQLAlchemyError as e:

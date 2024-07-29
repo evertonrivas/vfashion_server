@@ -1,7 +1,7 @@
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import B2bBrand, B2bCollection, B2bProductStock, CmmProducts, CmmProductsModels, CmmTranslateColors, CmmTranslateSizes, FprDevolution, _save_log, _show_query, db,_get_params,B2bCartShopping, B2bOrders,B2bOrdersProducts, B2bPaymentConditions, CmmLegalEntities,ScmEvent,ScmEventType
+from models import B2bBrand, B2bCollection, B2bCustomerGroup, B2bCustomerGroupCustomers, B2bProductStock, CmmProducts, CmmProductsModels, CmmTranslateColors, CmmTranslateSizes, CmmUserEntity, CmmUsers, FprDevolution, _save_log, _show_query, db,_get_params,B2bCartShopping, B2bOrders,B2bOrdersProducts, B2bPaymentConditions, CmmLegalEntities,ScmEvent,ScmEventType
 from sqlalchemy import and_, exc,Select,Delete,asc,desc,func,between
 import simplejson
 from auth import auth
@@ -121,6 +121,19 @@ class OrdersList(Resource):
             for customer in req['customers']:
 
                 # verificar pelo tipo do cliente se precisa ou nao aprovacao de pedidos
+                cst = db.session.execute(
+                    Select(B2bCustomerGroup.need_approvement).select_from(B2bCustomerGroup)\
+                    .join(B2bCustomerGroupCustomers,B2bCustomerGroup.id==B2bCustomerGroupCustomers.id_customer_group)\
+                    .where(B2bCustomerGroupCustomers.id_customer==customer)
+                ).first()
+
+                # tira-se por base que a necessidade de aprovacao eh usada
+                # quando o cliente estiver associado a um representante e 
+                # indicado no cadastro dos grupos de clientes, caso contrario
+                # nao precisarah de aprovacao
+                need_approvement = False
+                if cst is not None:
+                    need_approvement = cst.need_approvement
 
                 order = B2bOrders()
                 order.id_customer          = customer
@@ -128,7 +141,13 @@ class OrdersList(Resource):
                 order.id_payment_condition = int(req['id_payment_condition'])
                 order.installment_value    = req['installment_value']
                 order.installments         = req['installments']
-                order.status               = 0
+
+                # se o usuario for lojista faz o status conforme a necessidade de aprovacao
+                # caso contrario o pedido entra como processando
+                if req["user_type"]=='L' or req["user_type"]=='I':
+                    order.status = OrderStatus.ANALIZING.value if need_approvement == 1 else OrderStatus.PROCESSING.value
+                else:
+                    order.status = OrderStatus.PROCESSING.value
                 order.total_value          = req['total_value']
                 order.total_itens          = req['total_itens']
                 order.trash                = False
@@ -151,13 +170,12 @@ class OrdersList(Resource):
                 
                 db.session.commit()
 
-
                 #apaga o conteudo do carrinho de compras que nao se faz mais necessario
                 stmt = Delete(B2bCartShopping).where(B2bCartShopping.id_customer==customer)
                 db.session.execute(stmt)
                 db.session.commit()
 
-                _save_log(customer,CustomerAction.ORDER_CREATED,'Novo pedido realizado ('+str(order.id)+') - em '+datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
+                _save_log(customer,CustomerAction.ORDER_CREATED,'Novo pedido realizado ('+str('{:010d}'.format(order.id))+') - em '+datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
 
             return True
         except exc.SQLAlchemyError as e:
@@ -370,7 +388,13 @@ class HistoryOrderList(Resource):
                 .order_by(direction(getattr(B2bOrders, order_by)))
             
             if id!=0:
-                stmt = stmt.where(B2bOrders.id_customer==id)
+                access = db.session.execute(
+                    Select(CmmUsers.type)\
+                    .join(CmmUserEntity,CmmUserEntity.id_user==CmmUsers.id)\
+                    .where(CmmUserEntity.id_entity==id)
+                ).first().type
+                if access!='A' and access!='L':
+                    stmt = stmt.where(B2bOrders.id_customer==id)
 
             if status is not None:
                 stmt = stmt.where(B2bOrders.status==status)
@@ -464,8 +488,8 @@ class HistoryOrderApi(Resource):
         try:
             last_collection = Select(B2bOrdersProducts.id_order)\
                 .join(CmmProducts,CmmProducts.id==B2bOrdersProducts.id_product)\
-                .join(B2bBrand,B2bBrand.id==CmmProducts.id_brand)\
-                .join(B2bCollection,B2bCollection.id_brand==B2bBrand.id)
+                .join(B2bCollection,B2bCollection.id==CmmProducts.id_collection)\
+                .join(B2bBrand,B2bBrand.id==B2bCollection.id_brand)\
 
             stmt = Select(func.count(B2bOrders.id).label('total'))\
                 .where(
@@ -491,8 +515,8 @@ class HistoryOrderApi(Resource):
         try:
             last_collection = Select(B2bOrdersProducts.id_order)\
                 .join(CmmProducts,CmmProducts.id==B2bOrdersProducts.id_product)\
-                .join(B2bBrand,B2bBrand.id==CmmProducts.id_brand)\
-                .join(B2bCollection,B2bCollection.id_brand==B2bBrand.id)
+                .join(B2bCollection,B2bCollection.id==CmmProducts.id_collection)\
+                .join(B2bBrand,B2bBrand.id==B2bCollection.id_brand)\
 
             stmt = Select(func.sum(B2bOrders.total_value).label('total'))\
                 .where(
