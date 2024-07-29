@@ -55,3 +55,9 @@ class DevolutionStatus(Enum):
 class CrmFunnelType(Enum):
     SALES       = 'S'
     PROSPECTION = 'P'
+
+class LegalEntityType(Enum):
+    CUSTOMER       = 'C'
+    REPRESENTATIVE = 'R'
+    SUPPLIER       = 'S'
+    PERSON         = 'P'
