@@ -1,5 +1,6 @@
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import Index, Insert, func,String,Integer,CHAR,DateTime,Boolean,Column,Text,DECIMAL,SmallInteger,Date
+from sqlalchemy import Insert, String, Integer, CHAR, DateTime, Boolean, Text, DECIMAL, SmallInteger, Date
+from sqlalchemy import ForeignKey, Index, event, func, Column
 from sqlalchemy_serializer import SerializerMixin
 from datetime import datetime,timedelta
 import jwt
@@ -131,25 +132,25 @@ class CmmCategories(db.Model,SerializerMixin):
 
 
 class CmmProducts(db.Model,SerializerMixin):
-    id           = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
-    id_type      = Column(Integer,nullable=False,index=True,comment="Campo Id da tabela CmmProductsTypes")
-    id_model     = Column(Integer,nullable=False,index=True,comment="Campo Id da tabela CmmProductsModels")
-    id_grid      = Column(Integer,nullable=False,index=True,comment="Campo Id da tabela CmmProductsGrid")
-    id_brand     = Column(Integer,nullable=False,index=True,comment="Campo Id da tabela B2bBrand")
-    prodCode     = Column(String(50),nullable=False)
-    barCode      = Column(String(128))
-    refCode      = Column(String(50),nullable=False)
-    name         = Column(String(255),nullable=False)
-    description  = Column(String(255))
-    observation  = Column(Text,nullable=True)
-    ncm          = Column(String(50),nullable=True)
-    price        = Column(DECIMAL(10,2),nullable=False)
-    price_pdv    = Column(DECIMAL(10,2),nullable=True)
+    id              = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
+    id_type         = Column(Integer,nullable=False,index=True,comment="Campo Id da tabela CmmProductsTypes")
+    id_model        = Column(Integer,nullable=False,index=True,comment="Campo Id da tabela CmmProductsModels")
+    id_grid         = Column(Integer,nullable=False,index=True,comment="Campo Id da tabela CmmProductsGrid")
+    id_collection   = Column(Integer,nullable=True,comment="Campo Id da tabela B2bCollection")
+    prodCode        = Column(String(50),nullable=False)
+    barCode         = Column(String(128))
+    refCode         = Column(String(50),nullable=False)
+    name            = Column(String(255),nullable=False)
+    description     = Column(String(255))
+    observation     = Column(Text,nullable=True)
+    ncm             = Column(String(50),nullable=True)
+    price           = Column(DECIMAL(10,2),nullable=False)
+    price_pdv       = Column(DECIMAL(10,2),nullable=True)
     id_measure_unit = Column(Integer,nullable=False,index=True,comment="Id da tabela cmm_measure_unit")
-    structure    = Column(CHAR(1),nullable=False,default='S',comment="S = Simples, C = Composto")
-    date_created = Column(DateTime,nullable=False,server_default=func.now())
-    date_updated = Column(DateTime,onupdate=func.now())
-    trash        = Column(Boolean,nullable=False,server_default='0',default=0)
+    structure       = Column(CHAR(1),nullable=False,default='S',comment="S = Simples, C = Composto")
+    date_created    = Column(DateTime,nullable=False,server_default=func.now())
+    date_updated    = Column(DateTime,onupdate=func.now())
+    trash           = Column(Boolean,nullable=False,server_default='0',default=0)
 
 class CmmProductsImages(db.Model,SerializerMixin):
     id          = Column(Integer,nullable=False,primary_key=True,autoincrement=True)
@@ -215,21 +216,23 @@ class CmmCities(db.Model,SerializerMixin):
     brazil_ibge_code= Column(String(10),nullable=True)
 
 class CmmLegalEntities(db.Model,SerializerMixin):
-    id             = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
-    origin_id      = Column(Integer,nullable=True,comment="Utilizado em caso de importacao")
-    name           = Column(String(255),nullable=False)
-    fantasy_name   = Column(String(255),nullable=False)
-    taxvat         = Column(String(30),nullable=False,comment="CPF ou CNPJ no Brasil")
-    id_city        = Column(Integer,nullable=False,index=True,comment="Id da tabela CmmCities")
-    postal_code    = Column(String(30),nullable=False)
-    neighborhood   = Column(String(150),nullable=False)
-    address        = Column(String(255),nullable=False)
-    type           = Column(CHAR(1),nullable=False,default='C',server_default='C',comment="C = Customer(Cliente), R = Representative(Representante), S = Supplier(Fornecedor), P = Persona (Pessoa)")
-    trash          = Column(Boolean,nullable=False,server_default='0')
-    id_import      = Column(Integer,nullable=True,comment="Id da importação realizada pelo CRM, garante que poderá apagar o registro")
-    erp_integrated = Column(Boolean,nullable=False,server_default='0',default=0,comment="Flag de integração com ERP, isso irá garantir a não exclusão em caso de reversão da importação")
-    date_created   = Column(DateTime,nullable=False,server_default=func.now())
-    date_updated   = Column(DateTime,onupdate=func.now())
+    id                = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
+    origin_id         = Column(Integer,nullable=True,comment="Utilizado em caso de importacao")
+    name              = Column(String(255),nullable=False)
+    fantasy_name      = Column(String(255),nullable=False)
+    taxvat            = Column(String(30),nullable=False,comment="CPF ou CNPJ no Brasil")
+    id_city           = Column(Integer,nullable=False,index=True,comment="Id da tabela CmmCities")
+    postal_code       = Column(String(30),nullable=False)
+    neighborhood      = Column(String(150),nullable=False)
+    address           = Column(String(255),nullable=False)
+    type              = Column(CHAR(1),nullable=False,default='C',server_default='C',comment="C = Customer(Cliente), R = Representative(Representante), S = Supplier(Fornecedor), P = Persona (Pessoa)")
+    trash             = Column(Boolean,nullable=False,server_default='0')
+    id_import         = Column(Integer,nullable=True,comment="Id da importação realizada pelo CRM, garante que poderá apagar o registro")
+    erp_integrated    = Column(Boolean,nullable=False,server_default='0',default=0,comment="Flag de integração com ERP, isso irá garantir a não exclusão em caso de reversão da importação")
+    activation_date   = Column(Date,nullable=False)
+    inactivation_date = Column(Date,nullable=True)
+    date_created      = Column(DateTime,nullable=False,server_default=func.now())
+    date_updated      = Column(DateTime,onupdate=func.now())
 
 class CmmLegalEntityContact(db.Model,SerializerMixin):
     id              = Column(Integer,primary_key=True,autoincrement=True)
@@ -266,6 +269,25 @@ class CmmLegalEntityFile(db.Model,SerializerMixin):
     content_type    = Column(String(100),nullable=False)
     date_created    = Column(DateTime,nullable=False,server_default=func.now())
     date_updated    = Column(DateTime,onupdate=func.now())
+
+class CmmLegalEntityImport(db.Model,SerializerMixin):
+    id               = Column(Integer,primary_key=True,autoincrement=True)
+    id_original      = Column(String(11),nullable=True)
+    taxvat           = Column(String(30),nullable=False)
+    name             = Column(String(255),nullable=False)
+    fantasy_name     = Column(String(255),nullable=False)
+    city             = Column(String(100),nullable=False)
+    cep              = Column(String(10),nullable=False)
+    neighborhood     = Column(String(100),nullable=False)
+    address          = Column(String(255),nullable=False)
+    type             = Column(CHAR(1),nullable=False)
+    phone_type       = Column(String(100),nullable=True)
+    phone_number     = Column(String(50),nullable=True)
+    is_whatsapp      = Column(Boolean,nullable=False,server_default='0',default=False)
+    phone_is_default = Column(Boolean,nullable=False,server_default='0',default=False)
+    email_type       = Column(String(100),nullable=True)
+    email_address    = Column(String(255),nullable=True)
+    email_is_default = Column(Boolean,nullable=False,server_default='0',default=False)
 
 class CmmTranslateColors(db.Model,SerializerMixin):
     id      = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
@@ -411,7 +433,7 @@ class CrmFunnelStage(db.Model,SerializerMixin):
 
 class CrmFunnelStageCustomer(db.Model,SerializerMixin):
     id_funnel_stage = Column(Integer,primary_key=True,nullable=False)
-    id_customer     = Column(Integer,primary_key=True,nullable=False)
+    id_customer     = Column(Integer,nullable=False,index=True,comment="Id da tabela CmmLegalEntities")
     date_created    = Column(DateTime,nullable=False,server_default=func.now())
     date_updated    = Column(DateTime,onupdate=func.now())
 
@@ -505,5 +527,61 @@ class ScmFlimv(db.Model,SerializerMixin):
     mix           = Column(SmallInteger,nullable=False)
     vol_min       = Column(SmallInteger,nullable=False)
     vol_max       = Column(SmallInteger,nullable=False)
+    date_created  = Column(DateTime,nullable=False,server_default=func.now())
+    date_updated  = Column(DateTime,onupdate=func.now(),server_default=func.now())
+    log_id        = db.relationship('ScmFlimvAudit', backref="scm_flimv_audit", lazy=True)
+
+# tabela serah usada em caso de reconstrucao
+# havendo atualizacao do flimv eh necessario gravar aqui
+class ScmFlimvAudit(db.Model,SerializerMixin):
+    __tablename__ = "scm_flimv_audit"
+    id            = Column(Integer,primary_key=True,autoincrement=True)
+    flimv_id      = Column(Integer, ForeignKey('scm_flimv.id'))
+    frequency     = Column(SmallInteger,nullable=False)
+    liquidity     = Column(SmallInteger,nullable=False)
+    injury        = Column(SmallInteger,nullable=False)
+    mix           = Column(SmallInteger,nullable=False)
+    vol_min       = Column(SmallInteger,nullable=False)
+    vol_max       = Column(SmallInteger,nullable=False)
+    date_changed  = Column(Date,nullable=False,server_default=func.now(),onupdate=func.now())
+    action        = Column(String(50))
+
+@event.listens_for(ScmFlimv,"after_insert")
+def insert_flimv_log(mapper,connection,target):
+    # esse insert eh para sistemas zerados
+    po = ScmFlimvAudit.__table__
+    connection.execute(po.insert().values(
+        flimv_id=target.id,
+        frequency=target.frequency,
+        liquidity=target.liquidity,
+        injury=target.injury,
+        mix=target.mix,
+        vol_min=target.vol_min,
+        vol_max=target.vol_max,
+        action='insert'))
+    
+@event.listens_for(ScmFlimv,"after_update")
+def update_flimv_log(mapper,connection,target):
+    po = ScmFlimvAudit.__table__
+    connection.execute(po.insert().values(
+        flimv_id=target.id,
+        frequency=target.frequency,
+        liquidity=target.liquidity,
+        injury=target.injury,
+        mix=target.mix,
+        vol_min=target.vol_min,
+        vol_max=target.vol_max,
+        action='update'))
+
+class ScmFlimvResult(db.Model,SerializerMixin):
+    id            = Column(Integer,primary_key=True,autoincrement=True)
+    id_customer   = Column(Integer,nullable=False,comment="Id da tabela CmmLegalEntities")
+    id_collection = Column(Integer,nullable=False,comment="Id da tabela B2bCollection")
+    frequency     = Column(Boolean,nullable=False)
+    liquidity     = Column(SmallInteger,nullable=False)
+    injury        = Column(SmallInteger,nullable=False)
+    mix           = Column(SmallInteger,nullable=False)
+    volume        = Column(SmallInteger,nullable=False)
+    date_ref      = Column(Date,nullable=False)
     date_created  = Column(DateTime,nullable=False,server_default=func.now())
     date_updated  = Column(DateTime,onupdate=func.now())
