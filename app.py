@@ -2,7 +2,6 @@ from flask import Flask
 from flask_cors import CORS
 from sqlalchemy import text
 from cmm.api import blueprint as cmm
-from pos.api import blueprint as pos
 from crm.api import blueprint as crm
 from b2b.api import blueprint as b2b
 from fpr.api import blueprint as fpr
@@ -22,6 +21,10 @@ locale.setlocale(locale.LC_TIME,environ.get("F2B_LOCALE"))
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = environ.get("F2B_DB_LIB")+"://"+environ.get("F2B_DB_USER")+":"+\
 environ.get("F2B_DB_PASS")+"@"+environ.get("F2B_DB_HOST")+"/"+environ.get("F2B_DB_NAME")
+SQLALCHEMY_ENGINE_OPTIONS = {
+    'pool_recycle': 280,
+    'pool_pre_ping': True
+}
 
 migrate = Migrate()
 
@@ -45,14 +48,13 @@ except Exception as e:
 migrate.init_app(app,db)
 
 app.register_blueprint(cmm)
-app.register_blueprint(pos)
 app.register_blueprint(crm)
 app.register_blueprint(b2b)
 app.register_blueprint(fpr)
 app.register_blueprint(scm)
 app.register_blueprint(mpg)
 
-CORS(app, resources={r"/*": {"origins": "*"}},supports_credentials=True)
+CORS(app, resources={r"/*": {"origins": "https://system.fast2bee.com"}},supports_credentials=True)
 
 @app.route("/")
 def index():
