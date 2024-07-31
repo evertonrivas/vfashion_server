@@ -54,7 +54,8 @@ app.register_blueprint(fpr)
 app.register_blueprint(scm)
 app.register_blueprint(mpg)
 
-CORS(app, resources={r"/*": {"origins": "https://system.fast2bee.com"}},supports_credentials=True)
+CORS(app, resources={r"/*": {"origins": "*"}},supports_credentials=True)
+# CORS(app, resources={r"/*": {"origins": "https://system.fast2bee.com"}},supports_credentials=True)
 
 @app.route("/")
 def index():

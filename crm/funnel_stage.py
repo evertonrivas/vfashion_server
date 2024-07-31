@@ -1,7 +1,8 @@
 from http import HTTPStatus
 from flask_restx import Resource,fields,Namespace
 from flask import request
-from models import CrmFunnel, CrmFunnelStageCustomer, _get_params,CrmFunnelStage, _show_query,db,_save_log
+from backend.config import LegalEntityType
+from models import CmmLegalEntities, CrmFunnel, CrmFunnelStageCustomer, _get_params,CrmFunnelStage, _show_query,db,_save_log
 import json
 from sqlalchemy import Select, desc, exc,and_,asc, or_
 from auth import auth
@@ -145,6 +146,64 @@ class FunnelStagesApi(Resource):
             return True
         except exc.SQLAlchemyError as e:
             return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
+
+    @ns_fun_stg.response(HTTPStatus.OK.value,"Lista os clientes que nao estao em nenhum funil")
+    @ns_fun_stg.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @auth.login_required
+    def patch(self):
+        try:
+            stmt = Select(CmmLegalEntities.id,
+                          CmmLegalEntities.origin_id,
+                          CmmLegalEntities.name,
+                          CmmLegalEntities.fantasy_name,
+                          CmmLegalEntities.taxvat,
+                          CmmLegalEntities.id_city,
+                          CmmLegalEntities.postal_code,
+                          CmmLegalEntities.neighborhood,
+                          CmmLegalEntities.type,
+                          CmmLegalEntities.address)\
+                .where(and_(
+                    CmmLegalEntities.type==LegalEntityType.CUSTOMER.value,
+                    CmmLegalEntities.trash==False,
+                    CmmLegalEntities.id.not_in(
+                        Select(CrmFunnelStageCustomer.id_customer).select_from(CrmFunnelStageCustomer)
+                    )
+                ))
+            return [{
+                "id":m.id,
+                "origin_id": m.origin_id,
+                "name":m.name,
+                "fantasy_name":m.fantasy_name,
+                "taxvat":m.taxvat,
+                "city": {
+                    "id": m.id_city,
+                    "state_region":{
+                        'id':0,
+                        "country":{
+                            "id":0,
+                            "name":""
+                        },
+                        "name":"",
+                        "acronym":""
+                    },
+                    "name":"",
+                    "brazil_ibge_code":None
+                },
+                "agent": None,
+                "contacts": [],
+                "web": [],
+                "files": [],
+                "postal_code":m.postal_code,
+                "neighborhood":m.neighborhood,
+                "address":m.address,
+                "type":m.type
+            }for m in db.session.execute(stmt).all()]
+        except exc.SQLAlchemyError as e:
+            return{
                 "error_code": e.code,
                 "error_details": e._message(),
                 "error_sql": e._sql_message()

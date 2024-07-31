@@ -150,24 +150,25 @@ class FunnelList(Resource):
             req = request.get_json()
 
             #so pode haver um default
-            if req["is_default"]==1:
+            if req["is_default"]==1 or req["is_default"]=="true":
                 db.session.execute(Update(CrmFunnel).values(is_default=0))
                 db.session.commit()
 
             fun:CrmFunnel  = CrmFunnel()
             fun.name       = req["name"]
-            fun.is_default = req["is_default"]
+            fun.is_default = False if req["is_default"]=='false' or req["is_default"]==0 else True
             fun.type       = req["type"]
             db.session.add(fun)
             db.session.commit()
 
-            for stg in fun.stages:
-                stage = CrmFunnelStage()
-                stage.name = stg.name
-                stage.id_funnel = fun.id
-                stage.order = stg.order
-                db.session.add(stage)
-                db.session.commit()
+            if "stages" in fun:
+                for stg in fun["stages"]:
+                    stage = CrmFunnelStage()
+                    stage.name = stg["name"]
+                    stage.id_funnel = fun.id
+                    stage.order = stg["order"]
+                    db.session.add(stage)
+                    db.session.commit()
             return fun.id
         except exc.SQLAlchemyError as e:
             return {

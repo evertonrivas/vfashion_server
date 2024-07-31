@@ -1,3 +1,4 @@
+from datetime import datetime
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields,RestError
 from flask import request
@@ -227,13 +228,44 @@ class EntitysList(Resource):
             cst = CmmLegalEntities()
             cst.name         = req["name"]
             cst.fantasy_name = req["fantasy_name"]
-            cst.id_city      = req["id_city"]
+            cst.id_city      = req["city"]["id"]
             cst.taxvat       = req["taxvat"]
             cst.address      = req["address"]
             cst.postal_code  = req["postal_code"]
             cst.neighborhood = req["neighborhood"]
             cst.type         = req["type"]
+            cst.trash        = False
+            cst.activation_date = datetime.now()
             db.session.add(cst)
+            db.session.commit()
+
+            if req["agent"] is not None:
+                grp = db.session.execute(Select(B2bCustomerGroup.id).where(B2bCustomerGroup.id_representative==req["agent"])).first()
+                if grp is not None:
+                    grpc = B2bCustomerGroupCustomers()
+                    grpc.id_customer_group = grp.id
+                    grpc.id_customer = cst.id
+                    db.session.add(grpc)
+                    db.session.commit()
+
+            for contact in req["contacts"]:
+                ct                 = CmmLegalEntityContact()
+                ct.id_legal_entity = cst.id
+                ct.name            = contact["name"]
+                ct.contact_type    = contact["contact_type"]
+                ct.value           = contact["value"]
+                ct.is_default      = contact["is_default"]
+                ct.is_whatsapp     = contact["is_whatsapp"]
+                db.session.add(ct)
+
+            for web in req["web"]:
+                wb = CmmLegalEntityWeb()
+                wb.id_legal_entity = cst.id
+                wb.name            = web["name"]
+                wb.web_type        = web["web_type"]
+                wb.value           = web["value"]
+                db.session.add(wb)
+
             db.session.commit()
 
             _save_log(cst.id,CustomerAction.DATA_REGISTERED,'Registro criado')
@@ -465,31 +497,68 @@ class EntityApi(Resource):
         try:
             req = request.get_json()
             cst:CmmLegalEntities = CmmLegalEntities.query.get(id)
-            cst.name         = cst.name if req["name"] is None else req["name"]
-            cst.fantasy_name = cst.fantasy_name if req["fantasy_name"] is None else req["fantasy_name"]
-            cst.taxvat       = cst.taxvat if req["taxvat"] is None else req["taxvat"]
-            cst.id_city      = cst.id_city if req["id_city"] is None else req["id_city"]
-            cst.postal_code  = cst.postal_code if req["postal_code"] is None else req["postal_code"]
-            cst.neighborhood = cst.neighborhood if req["neighborhood"] is None else req["neighborhood"]
-            cst.type         = cst.type if req["type"] is None else req["type"]
+            cst.name         = req["name"]
+            cst.fantasy_name = req["fantasy_name"]
+            cst.id_city      = req["city"]["id"]
+            cst.taxvat       = req["taxvat"]
+            cst.address      = req["address"]
+            cst.postal_code  = req["postal_code"]
+            cst.neighborhood = req["neighborhood"]
+            cst.type         = req["type"]
+            cst.date_updated = datetime.now()
             db.session.commit()
 
             #limpa o que existe no grupo para nao gerar duplicacao de chave
             db.session.execute(Delete(B2bCustomerGroupCustomers).where(B2bCustomerGroupCustomers.id_customer==id))
             db.session.commit()
 
-            if req["representative_id"]!=0:
-                #busca o grupo que possui o representante
-                grp = db.session.execute(Select(B2bCustomerGroup.id).where(B2bCustomerGroup.id_representative==req["representative_id"])).first()
-
+            if req["agent"] is not None:
+                grp = db.session.execute(Select(B2bCustomerGroup.id).where(B2bCustomerGroup.id_representative==req["agent"])).first()
                 if grp is not None:
-                    rep = B2bCustomerGroupCustomers()
-                    rep.id_customer       = cst.id
-                    rep.id_customer_group = grp.id
-                    db.session.add(rep)
+                    grpc = B2bCustomerGroupCustomers()
+                    grpc.id_customer_group = grp.id
+                    grpc.id_customer = cst.id
+                    db.session.add(grpc)
+                    db.session.commit()
+
+            for contact in req["contacts"]:
+                if contact["id"] == 0:
+                    ct                 = CmmLegalEntityContact()
+                    ct.id_legal_entity = cst.id
+                    ct.name            = contact["name"]
+                    ct.contact_type    = contact["contact_type"]
+                    ct.value           = contact["value"]
+                    ct.is_default      = contact["is_default"]
+                    ct.is_whatsapp     = contact["is_whatsapp"]
+                    db.session.add(ct)
+                    db.session.commit()
+                else:
+                    ct              = CmmLegalEntityContact.query.get(contact["id"])
+                    ct.name         = contact["name"]
+                    ct.contact_type = contact["contact_type"]
+                    ct.value        = contact["value"]
+                    ct.is_default   = contact["is_default"]
+                    ct.is_whatsapp  = contact["is_whatsapp"]
+                    db.session.commit()
+
+            for web in req["web"]:
+                if web["id"] == 0:
+                    wb = CmmLegalEntityWeb()
+                    wb.id_legal_entity = cst.id
+                    wb.name            = web["name"]
+                    wb.web_type        = web["web_type"]
+                    wb.value           = web["value"]
+                    db.session.add(wb)
+                    db.session.commit()
+                else:
+                    wb = CmmLegalEntityWeb.query.get(web["id"])
+                    wb.name            = web["name"]
+                    wb.web_type        = web["web_type"]
+                    wb.value           = web["value"]
                     db.session.commit()
             
             _save_log(id,CustomerAction.DATA_UPDATED,'Registro alterado')
+
             return id
         except exc.SQLAlchemyError as e:
             return {
@@ -531,7 +600,6 @@ class EntityCount(Resource):
                 "error_details": e._message(),
                 "error_sql": e._sql_message()
             }
-
 ns_legal.add_resource(EntityCount,'/count')
 
 class EntityOfStage(Resource):
@@ -686,8 +754,26 @@ class EntityOfStage(Resource):
             "content_type":c.content_type
         }for c in db.session.execute(stmt)]
 
+    @ns_legal.response(HTTPStatus.OK.value,"Adiciona um ou mais clientes em um estagio de um funil")
+    @ns_legal.response(HTTPStatus.BAD_REQUEST.value,"Falha ao adicionar cliente!")
+    @auth.login_required
+    def post(self,id:int):
+        try:
+            req = request.get_json()
+            for entity in req["entities"]:
+                crm = CrmFunnelStageCustomer()
+                crm.id_customer = entity["id"]
+                crm.id_funnel_stage = id
+                db.session.add(crm)
+            db.session.commit()
+            return True
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
 ns_legal.add_resource(EntityOfStage,'/by-crm-stage/<int:id>')
-
 
 class EntityContact(Resource):
     @ns_legal.response(HTTPStatus.OK.value,"Salva contato(s) de uma entidade")
@@ -732,7 +818,6 @@ class EntityContact(Resource):
                 "error_details": e._message(),
                 "error_sql": e._sql_message()
             }
-
 ns_legal.add_resource(EntityContact,'/save-contacts')
 
 class EntityWeb(Resource):
@@ -777,8 +862,9 @@ class EntityWeb(Resource):
             }
 ns_legal.add_resource(EntityWeb,'/save-webs')
 
-
 class EntityHistory(Resource):
+    @ns_legal.response(HTTPStatus.OK.value,"Obtem os dados históricos de uma entidade")
+    @ns_legal.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
     @ns_legal.param("page","Número da página de registros","query",type=int,required=True)
     @ns_legal.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_legal.param("query","Texto para busca","query")
@@ -828,3 +914,17 @@ class EntityHistory(Resource):
                 "error_sql": e._sql_message()
             }
 ns_legal.add_resource(EntityHistory,'/load-history/<int:id>')
+
+
+class EntityImport(Resource):
+    @ns_legal.response(HTTPStatus.OK.value,"Realiza o pocessamento dos registros do arquivo de importacao")
+    @ns_legal.response(HTTPStatus.BAD_REQUEST.value,"Falha ao processar registros")
+    def post(self):
+        try:
+            pass
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
