@@ -220,7 +220,7 @@ class CmmLegalEntities(db.Model,SerializerMixin):
     origin_id         = Column(Integer,nullable=True,comment="Utilizado em caso de importacao")
     name              = Column(String(255),nullable=False)
     fantasy_name      = Column(String(255),nullable=False)
-    taxvat            = Column(String(30),nullable=False,comment="CPF ou CNPJ no Brasil")
+    taxvat            = Column(String(30),nullable=True,comment="CPF ou CNPJ no Brasil, pode ser nullo por conta de prospeccao")
     id_city           = Column(Integer,nullable=False,index=True,comment="Id da tabela CmmCities")
     postal_code       = Column(String(30),nullable=False)
     neighborhood      = Column(String(150),nullable=False)
