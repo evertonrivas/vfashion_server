@@ -2,7 +2,7 @@ from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
 from models import B2bBrand, B2bCollection, B2bCustomerGroup, B2bCustomerGroupCustomers, B2bProductStock, CmmProducts, CmmProductsModels, CmmTranslateColors, CmmTranslateSizes, CmmUserEntity, CmmUsers, FprDevolution, _save_log, _show_query, db,_get_params,B2bCartShopping, B2bOrders,B2bOrdersProducts, B2bPaymentConditions, CmmLegalEntities,ScmEvent,ScmEventType
-from sqlalchemy import and_, exc,Select,Delete,asc,desc,func,between
+from sqlalchemy import Update, and_, exc,Select,Delete,asc,desc,func,between
 import simplejson
 from auth import auth
 from config import CustomerAction,DevolutionStatus, OrderStatus
@@ -254,11 +254,11 @@ class OrderApi(Resource):
                 "installments_value": str(order.installment_value),
                 "date": order.date.strftime("%Y-%m-%d"),
                 "status": order.status,
-                "integration_number": str(order.integration_number),
-                "track_code": order.track_code,
-                "track_company": order.track_company,
-                "invoice_number": str(order.invoice_number),
-                "invoice_serie": str(order.invoice_serie),
+                "integration_number": None if order.integration_number is None else str(order.integration_number),
+                "track_code": None if order.track_code is None else order.track_code,
+                "track_company": None if order.track_company is None else order.track_company,
+                "invoice_number": None if order.invoice_number is None else str(order.invoice_number),
+                "invoice_serie": None if order.invoice_serie is None else str(order.invoice_serie),
                 "date_created": order.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                 "date_updated": None if order.date_updated is None else order.date_updated.strftime("%Y-%m-%d %H:%M:%S"),
                 "products": [{
@@ -291,28 +291,66 @@ class OrderApi(Resource):
     @auth.login_required
     def post(self,id:int)->bool:
         try:
-            # req = request.get_json()
-            # order = B2bOrders.query.get(id)
-            # order.id_customer          = order.id_customer if req.id_customer is None else req.id_customer
-            # order.make_online          = order.make_online if req.make_online is None else req.make_online
-            # order.id_payment_condition = order.id_payment_condition if req.id_payment_condition is None else req.id_payment_condition
-            # db.session.commit()
+            req = request.get_json()
 
-            # #apaga e recria os produtos
-            # db.session.delete(B2bOrdersProducts()).where(B2bOrdersProducts().id_order==id)
-            # db.session.commit()
+            ord_prod = db.session.execute(
+                Select(
+                    B2bOrdersProducts.id_order,
+                    B2bOrdersProducts.id_product,
+                    B2bOrdersProducts.id_color,
+                    B2bOrdersProducts.id_size,
+                    B2bOrdersProducts.quantity,
+                    B2bOrdersProducts.price,
+                    B2bOrdersProducts.discount,
+                    B2bOrdersProducts.discount_percentage).where(B2bOrdersProducts.id_order==id)
+            )
 
-            # for it in order.products:
-            #     prd = B2bOrdersProducts()
-            #     prd.id_order = id
-            #     prd.id_product = it.id_product
-            #     prd.color = it.color
-            #     prd.size  = it.size
-            #     prd.quantity = it.quantity
-            #     db.session.add(prd)
-            # db.session.commit()
+            total_value = 0
+            total_itens = 0
+            for prod in req["products"]:
+                total_value += (float(prod["price"])*int(prod["quantity"]))
+                total_itens += int(prod["quantity"])
+                # exclui se a quantidade estiver zerada
+                if prod["quantity"]==0:
+                    db.session.execute(Delete(B2bOrdersProducts).where(
+                        and_(
+                            B2bOrdersProducts.id_order==id,
+                            B2bOrdersProducts.id_product==prod["id_product"],
+                            B2bOrdersProducts.id_color==prod["id_color"],
+                            B2bOrdersProducts.id_size==prod["id_size"]
+                        )
+                    ))
+                    db.session.commit()
+                else:
+                    for op in ord_prod:
+                        # se a quantidade mudou, entao atualiza a quantidade
+                        if op.id_order==id and\
+                            op.id_product==prod["id_product"] and\
+                            op.id_color==prod["id_color"] and\
+                            op.id_size==prod["id_size"] and op.quantity!=int(prod["quantity"]):
+                            db.session.execute(
+                                Update(B2bOrdersProducts).values(quantity=int(prod["quantity"]))\
+                                .where(and_(
+                                    B2bOrdersProducts.id_order==id,
+                                    B2bOrdersProducts.id_product==prod["id_product"],
+                                    B2bOrdersProducts.id_color==prod["id_color"],
+                                    B2bOrdersProducts.id_size==prod["id_size"]
+                                ))
+                            )
+                            db.session.commit()
+            
+            #atualiza as informacoes de cabecalho do produto
+            order:B2bOrders = B2bOrders.query.get(id)
+            order.total_itens = total_itens
+            order.total_value = total_value
+            order.installment_value = total_value/order.installments
+            order.status = req["status"]
+            db.session.commit()
 
-            # _save_log(req['id_customer'],CustomerAction.ORDER_CREATED,'Pedido atualizado ('+id+') - em '+datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
+            _save_log(
+                order.id_customer,
+                CustomerAction.ORDER_DELETED if req["status"]==OrderStatus.REJECTED else CustomerAction.ORDER_UPDATED,
+                'Pedido '+('excluído' if req["status"]==OrderStatus.REJECTED else 'atualizado')+' ('+str('{:010d}'.format(order.id))+') - em '+datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
 
             return True
         except exc.SQLAlchemyError as e:

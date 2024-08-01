@@ -357,11 +357,11 @@ class B2bOrders(db.Model,SerializerMixin):
     installment_value    = Column(DECIMAL(10,2),nullable=False)
     status               = Column(SmallInteger,nullable=False,comment="0 - Enviado, 1 - Em processamento, 2 - Em transporte, 3 - Finalizado")
     integration_number   = Column(Integer,nullable=True,comment="Número do pedido no sistema de cliente")
-    track_code           = Column(String(30),nullable=True,comment="Código de rastreamento")
+    track_code           = Column(String(30),nullable=True,comment="Código de rastreamento (apenas para correios)")
     track_company        = Column(String(30),nullable=True,comment="Nome da empresa de transporte")
     invoice_number       = Column(Integer,nullable=True,comment="Número da nota fiscal")
     invoice_serie        = Column(Integer,nullable=True)
-    date                 = Column(Date,nullable=False,server_default=func.now())
+    date                 = Column(Date,nullable=False)
     date_created         = Column(DateTime,nullable=False,server_default=func.now())
     date_updated         = Column(DateTime,onupdate=func.now())
     trash                = Column(Boolean,nullable=False,server_default='0',default=0)
@@ -463,7 +463,7 @@ class FprReason(db.Model,SerializerMixin):
 
 class FprDevolution(db.Model,SerializerMixin):
     id           = Column(Integer,primary_key=True,autoincrement=True)
-    date         = Column(Date,nullable=False,server_default=func.now())
+    date         = Column(Date,nullable=False)
     id_order     = Column(Integer,index=True,comment="Id da tabela B2bOrders")
     status       = Column(SmallInteger,nullable=False,server_default='0',comment="0 - Salvo, 1 - Em processamento, 2 - Totalmente aprovado, 3 - Parcialmente aprovado, 4 - Reprovado")
     date_created = Column(DateTime,nullable=False,server_default=func.now())
@@ -543,7 +543,7 @@ class ScmFlimvAudit(db.Model,SerializerMixin):
     mix           = Column(SmallInteger,nullable=False)
     vol_min       = Column(SmallInteger,nullable=False)
     vol_max       = Column(SmallInteger,nullable=False)
-    date_changed  = Column(Date,nullable=False,server_default=func.now(),onupdate=func.now())
+    date_changed  = Column(Date,nullable=False,onupdate=func.now())
     action        = Column(String(50))
 
 @event.listens_for(ScmFlimv,"after_insert")
