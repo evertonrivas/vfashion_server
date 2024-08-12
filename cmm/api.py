@@ -15,6 +15,7 @@ from cmm.state_regions import ns_state_region
 from cmm.upload import ns_upload
 from cmm.email import ns_email
 from cmm.measure_unit import ns_measure_unit
+from cmm.config import ns_config
 
 
 """ Módulo Common entre os sistemas
@@ -27,6 +28,7 @@ Keyword arguments: usuarios, produtos
 nss = [ns_cat,
        ns_city,
        ns_color,
+       ns_config,
        ns_country,
        ns_gprod,
        ns_legal,
