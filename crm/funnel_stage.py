@@ -1,10 +1,10 @@
 from http import HTTPStatus
 from flask_restx import Resource,fields,Namespace
 from flask import request
-from backend.config import LegalEntityType
+from config import LegalEntityType
 from models import CmmLegalEntities, CrmFunnel, CrmFunnelStageCustomer, _get_params,CrmFunnelStage, _show_query,db,_save_log
 import json
-from sqlalchemy import Select, desc, exc,and_,asc, or_
+from sqlalchemy import Select, Update, desc, exc,and_,asc, or_
 from auth import auth
 from config import CrmFunnelType, CustomerAction
 from os import environ
@@ -290,15 +290,19 @@ class FunnelStageCustomer(Resource):
                 "error_sql": e._sql_message()
             }
         
+    @ns_fun_stg.response(HTTPStatus.OK.value,"Move um ou mais clientes para um estagio de um funil")
+    @ns_fun_stg.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
     @auth.login_required
     def post(self):
         try:
             req = request.get_json()
             for customer in req['customers']:
-                customer_state = CrmFunnelStageCustomer.query.filter(CrmFunnelStageCustomer.id_customer==customer.id).one()
-                customer_state.id_funnel_stage = req['stage']
+                db.session.execute(
+                    Update(CrmFunnelStageCustomer).values(id_funnel_stage=req["stage"]).where(CrmFunnelStageCustomer.id_customer==customer)
+                )
+                db.session.commit()
                 stage = db.session.execute(Select(CrmFunnelStage.name).where(CrmFunnelStage.id==req['stage'])).first().name
-                _save_log(customer.id,CustomerAction.MOVE_CRM_FUNNEL,'Movido para o estágio '+stage)
+                _save_log(customer,CustomerAction.MOVE_CRM_FUNNEL,'Movido para o estágio '+stage)
                 db.session.commit()
             return True
         except exc.SQLAlchemyError as e:
