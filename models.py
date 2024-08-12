@@ -152,6 +152,23 @@ class CmmProducts(db.Model,SerializerMixin):
     date_updated    = Column(DateTime,onupdate=func.now())
     trash           = Column(Boolean,nullable=False,server_default='0',default=0)
 
+class CmmProductsImport(db.Model,SerializerMixin):
+    id              = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
+    refCode         = Column(String(50),nullable=False)
+    barCode         = Column(String(128))
+    type            = Column(String(255),nullable=False)
+    model           = Column(String(255),nullable=False)
+    brand           = Column(String(255),nullable=False)
+    name            = Column(String(255),nullable=False)
+    description     = Column(String(255),nullable=True)
+    observation     = Column(Text,nullable=True)
+    price           = Column(DECIMAL(10,2),nullable=False)
+    measure_unit    = Column(String(50),nullable=False)
+    color           = Column(String(255),nullable=False)
+    size            = Column(String(255),nullable=False)
+    quantity        = Column(Integer,nullable=False)
+    date_created    = Column(DateTime,nullable=False,server_default=func.now())
+
 class CmmProductsImages(db.Model,SerializerMixin):
     id          = Column(Integer,nullable=False,primary_key=True,autoincrement=True)
     id_product  = Column(Integer,nullable=False,index=True,comment="Id da tabela CmmProduct")
@@ -277,7 +294,7 @@ class CmmLegalEntityImport(db.Model,SerializerMixin):
     name             = Column(String(255),nullable=False)
     fantasy_name     = Column(String(255),nullable=False)
     city             = Column(String(100),nullable=False)
-    cep              = Column(String(10),nullable=False)
+    postal_code      = Column(String(10),nullable=False)
     neighborhood     = Column(String(100),nullable=False)
     address          = Column(String(255),nullable=False)
     type             = Column(CHAR(1),nullable=False)
@@ -288,6 +305,7 @@ class CmmLegalEntityImport(db.Model,SerializerMixin):
     email_type       = Column(String(100),nullable=True)
     email_address    = Column(String(255),nullable=True)
     email_is_default = Column(Boolean,nullable=False,server_default='0',default=False)
+    date_created     = Column(DateTime,nullable=False,server_default=func.now())
 
 class CmmTranslateColors(db.Model,SerializerMixin):
     id      = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
@@ -433,7 +451,7 @@ class CrmFunnelStage(db.Model,SerializerMixin):
 
 class CrmFunnelStageCustomer(db.Model,SerializerMixin):
     id_funnel_stage = Column(Integer,primary_key=True,nullable=False)
-    id_customer     = Column(Integer,nullable=False,index=True,comment="Id da tabela CmmLegalEntities")
+    id_customer     = Column(Integer,primary_key=True,nullable=False,comment="Id da tabela CmmLegalEntities")
     date_created    = Column(DateTime,nullable=False,server_default=func.now())
     date_updated    = Column(DateTime,onupdate=func.now())
 
