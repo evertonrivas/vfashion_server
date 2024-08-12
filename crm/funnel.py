@@ -161,8 +161,8 @@ class FunnelList(Resource):
             db.session.add(fun)
             db.session.commit()
 
-            if "stages" in fun:
-                for stg in fun["stages"]:
+            if "stages" in req:
+                for stg in req["stages"]:
                     stage = CrmFunnelStage()
                     stage.name = stg["name"]
                     stage.id_funnel = fun.id
