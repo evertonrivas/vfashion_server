@@ -127,7 +127,7 @@ class UploadDevolution(Resource):
             for file in data.getlist('files[]'):
                 parts = file.filename.split(".")
                 ext = parts[len(parts)-1]
-                newFileName = "return_"+str(id)+"_"+str(idprod)+"_"+str(idcolor)+"_"+str(idsize)+"_"+str(file_count)+"."+ext
+                newFileName = "devolution_"+str(id)+"_"+str(idprod)+"_"+str(idcolor)+"_"+str(idsize)+"_"+str(file_count)+"."+ext
                 file.save(fpath+newFileName)
                 file.close()
                 file_count += 1
@@ -136,9 +136,9 @@ class UploadDevolution(Resource):
         except exceptions.HTTPException as e:
             print(e)
             return False
-ns_upload.add_resource(UploadDevolution,'/return/<int:id>/<int:idprod>/<int:idcolor>/<int:idsize>')
+ns_upload.add_resource(UploadDevolution,'/devolution/<int:id>/<int:idprod>/<int:idcolor>/<int:idsize>')
 
-class UploadDevolution(Resource):
+class UploadImport(Resource):
     @ns_upload.response(HTTPStatus.OK.value,"Realiza envio de arquivo(s) para o servidor na pasta de importação")
     @ns_upload.response(HTTPStatus.BAD_REQUEST.value,"Falha ao enviar arquivo(s)!")
     @auth.login_required
@@ -152,7 +152,7 @@ class UploadDevolution(Resource):
             for file in data.getlist('files[]'):
                 parts = file.filename.split(".")
                 ext = parts[len(parts)-1]
-                newFileName = "import_"+str(type)+datetime.now().strftime("%Y%m%d-%H%M%S")+"."+ext
+                newFileName = "import_"+str(type)+"_"+datetime.now().strftime("%Y%m%d-%H%M%S")+"."+ext
                 file.save(fpath+newFileName)
                 file.close()
                 files.append(newFileName)
@@ -160,4 +160,4 @@ class UploadDevolution(Resource):
         except exceptions.HTTPException as e:
             print(e)
             return False
-ns_upload.add_resource(UploadDevolution,'/import/')
+ns_upload.add_resource(UploadImport,'/import/')
