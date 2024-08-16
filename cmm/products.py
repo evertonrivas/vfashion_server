@@ -207,6 +207,23 @@ class ProductsList(Resource):
             db.session.add(prod)
             db.session.commit()
 
+            for image in req["images"]:
+                # significa que so irah atualizar as imagens
+                if image["id"] > 0:
+                    if image["url"]!="":
+                        img = CmmProductsImages.query.get(image["id"])
+                        img.img_url = image["url"]
+                        img.img_default = image["default"]
+                        db.session.commit()
+                else:
+                    if image["url"]!="":
+                        img = CmmProductsImages()
+                        img.id_product  = id
+                        img.img_url     = image["url"]
+                        img.img_default = image["default"]
+                        db.session.add(img)
+                        db.session.commit()
+
             if req["id_category"] is not None:
                 cat = CmmProductsCategories()
                 cat.id_category = req["id_category"]
@@ -299,6 +316,23 @@ class ProductApi(Resource):
             prod.price           = float(req["price"])
             prod.id_measure_unit = req["id_measure_unit"]
             db.session.commit()
+
+            for image in req["images"]:
+                # significa que so irah atualizar as imagens
+                if image["id"] > 0:
+                    if image["url"]!="":
+                        img = CmmProductsImages.query.get(image["id"])
+                        img.img_url = image["url"]
+                        img.img_default = image["default"]
+                        db.session.commit()
+                else:
+                    if image["url"]!="":
+                        img = CmmProductsImages()
+                        img.id_product  = id
+                        img.img_url     = image["url"]
+                        img.img_default = image["default"]
+                        db.session.add(img)
+                        db.session.commit()
             
             return True
         except exc.SQLAlchemyError as e:

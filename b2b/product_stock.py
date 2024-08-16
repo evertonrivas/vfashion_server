@@ -5,7 +5,7 @@ from flask_restx import Resource,Namespace,fields
 from flask import request
 import simplejson
 from models import B2bBrand, B2bCollection, B2bProductStock, B2bTablePrice, B2bTablePriceProduct, CmmCategories, CmmMeasureUnit, CmmProducts, CmmProductsCategories, CmmProductsGrid, CmmProductsGridDistribution, CmmProductsImages, CmmProductsModels, CmmProductsTypes, CmmTranslateColors, CmmTranslateSizes, ScmEvent, _get_params, _show_query, db
-from sqlalchemy import Select, and_, exc,or_,desc,asc
+from sqlalchemy import Select, and_, distinct, exc,or_,desc,asc
 from auth import auth
 from os import environ
 
@@ -86,49 +86,96 @@ class ProductStockList(Resource):
     def get(self):
         pag_num    = 1 if request.args.get("page") is None else int(request.args.get("page"))
         pag_size   = int(environ.get("F2B_PAGINATION_SIZE")) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
-        search     = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
-        list_all   = False if request.args.get("list_all") is None else True
-        order_by   = "id" if request.args.get("order_by") is None else request.args.get("order_by")
-        direction  = desc if request.args.get("order_dir") == 'DESC' else asc
+        query      = "" if request.args.get("query") is None else request.args.get("query")
+
+        
+        # search     = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
+        # list_all   = False if request.args.get("list_all") is None else True
+        # order_by   = "id" if request.args.get("order_by") is None else request.args.get("order_by")
+        # direction  = desc if request.args.get("order_dir") == 'DESC' else asc
 
         try:
-            if search=="":
-                rquery = B2bProductStock\
-                    .query\
-                    .filter(or_(B2bProductStock.color.like(search),B2bProductStock.size.like(search)))\
-                    .order_by(direction(getattr(B2bProductStock, order_by)))
-            else:
-                rquery = B2bProductStock\
-                    .query\
-                    .order_by(direction(getattr(B2bProductStock, order_by)))
+            params    = _get_params(query)
+            trash     = False if hasattr(params,"trash")==False else True
+            order_by  = "id" if hasattr(params,"order_by")==False else params.order_by
+            direction = asc if hasattr(params,"order")==False else asc if str(params.order).lower()=="asc" else desc
+            search    = None if hasattr(params,"search")==False else params.search
+            list_all  = False if hasattr(params,"list_all")==False else True
+
+            pquery = Select(B2bProductStock.id_product,
+                        CmmProducts.name.label("product")
+                        ).distinct()\
+                .join(CmmProducts,CmmProducts.id==B2bProductStock.id_product)\
+                .join(CmmTranslateColors,CmmTranslateColors.id==B2bProductStock.id_color)\
+                .join(CmmTranslateSizes,CmmTranslateSizes.id==B2bProductStock.id_size)
+            
+            cquery = Select(B2bProductStock.id_color,
+                            CmmTranslateColors.name)\
+                .join(CmmTranslateColors,CmmTranslateColors.id==B2bProductStock.id_color)
+            
+            squery = Select(B2bProductStock.id_size,
+                            CmmTranslateSizes.new_size.label("name"),
+                            B2bProductStock.quantity,
+                            B2bProductStock.ilimited,
+                            B2bProductStock.in_order)\
+                .join(CmmTranslateSizes,CmmTranslateSizes.id==B2bProductStock.id_size)
+            
+            if search is not None:
+                pquery = pquery.where(
+                    or_(
+                        CmmProducts.name.like("%{}%".format(search)),
+                        CmmTranslateSizes.name.like("%{}%".format(search)),
+                        CmmTranslateColors.name.like("%{}%".format(search)),
+                        CmmTranslateColors.hexcode.like("%{}%".format(search))
+                    )
+                )
+            
+            # _show_query(rquery)
 
             if list_all==False:
-                rquery.paginate(page=pag_num,per_page=pag_size)
+                pag = db.paginate(pquery,page=pag_num,per_page=pag_size)
+                pquery = pquery.limit(pag_size).offset((pag_num -1) * pag_size)
 
                 retorno =  {
                     "pagination":{
-                        "registers": rquery.total,
+                        "registers": pag.total,
                         "page": pag_num,
                         "per_page": pag_size,
-                        "pages": rquery.pages,
-                        "has_next": rquery.has_next
+                        "pages": pag.pages,
+                        "has_next": pag.has_next
                     },
                     "data":[{
                         "id_product":m.id_product,
-                        "color": m.color,
-                        "size": m.size,
-                        "quantity": m.quantity,
-                        "limited": m.limited
-                    } for m in rquery.items]
+                        "product": m.product,
+                        "colors": [{
+                            "id": c.id_color,
+                            "name": c.name,
+                            "sizes":[{
+                                "id": s.id_size,
+                                "name": s.name,
+                                "quantity": s.quantity,
+                                "in_order": s.in_order,
+                                "ilimited": s.ilimited 
+                            }for s in db.session.execute(squery.where(and_(B2bProductStock.id_product==m.id_product,B2bProductStock.id_color==c.id_color)))]
+                        }for c in db.session.execute(cquery.where(B2bProductStock.id_product==m.id_product))]
+                    } for m in db.session.execute(pquery)]
                 }
             else:
                 retorno = [{
                         "id_product":m.id_product,
-                        "color": m.color,
-                        "size": m.size,
-                        "quantity": m.quantity,
-                        "limited": m.limited
-                    } for m in rquery]
+                        "product": m.product,
+                        "colors": [{
+                            "id": c.id_color,
+                            "name": c.name,
+                            "sizes":[{
+                                "id": s.id_size,
+                                "name": s.name,
+                                "quantity": s.quantity,
+                                "in_order": s.in_order,
+                                "ilimited": s.ilimited 
+                            }for s in db.session.execute(squery.where(and_(B2bProductStock.id_product==m.id_product,B2bProductStock.id_color==c.id_color)))]
+                        }for c in db.session.execute(cquery.where(B2bProductStock.id_product==m.id_product))]
+                    } for m in db.session.execute(pquery)]
                 
             return retorno
         except exc.SQLAlchemyError as e:
@@ -315,7 +362,10 @@ class ProductsGallery(Resource):
                         or_(
                             B2bProductStock.quantity > 0, #possui quantidade indiferente de tamanho e cor
                             and_( #produto ilimitado
-                                B2bProductStock.quantity==0,
+                                or_(
+                                    B2bProductStock.quantity==0,
+                                    B2bProductStock.quantity.is_(None)
+                                ),
                                 B2bProductStock.ilimited==True
                             )
                         )
@@ -354,7 +404,10 @@ class ProductsGallery(Resource):
                         or_(
                             B2bProductStock.quantity > 0, #possui quantidade indiferente de tamanho e cor
                             and_( #produto ilimitado
-                                B2bProductStock.quantity==0,
+                                or_(
+                                    B2bProductStock.quantity==0,
+                                    B2bProductStock.quantity.is_(None)
+                                ),
                                 B2bProductStock.ilimited==True
                             )
                         )

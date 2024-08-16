@@ -120,6 +120,7 @@ class CategoryList(Resource):
             reg = FprDevolution()
             reg.id_order = req["id_order"]
             reg.status   = req["status"]
+            reg.date = datetime.now()
             db.session.add(reg)
             db.session.commit()
 

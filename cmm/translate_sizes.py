@@ -116,12 +116,16 @@ class CategoryList(Resource):
     @auth.login_required
     def post(self):
         try:
-            cor = CmmTranslateSizes()
-            cor.new_size = request.form.get("size_name")
-            cor.size     = request.form.get("size")
-            db.session.add(type)
+            req = request.get_json()
+            for size in req:
+                sz = CmmTranslateSizes()
+                sz.name = size["name"]
+                sz.old_size = size["old_size"]
+                sz.new_size = size["new_size"]
+                sz.trash    = False
+                db.session.add(sz)
             db.session.commit()
-            return type.id
+            return True
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -172,6 +176,31 @@ class CategoryApi(Resource):
             cor.new_size = cor.hexcode if request.form.get("size_name") is None else request.form.get("size_name")
             cor.size     = cor.color if request.form.get("size") is None else request.form.get("size")
             db.session.commit() 
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
+        
+    def post(self,id:int):
+        try:
+            req = request.get_json()
+            if id==0:
+                sz          = CmmTranslateSizes()
+                sz.name     = req["name"]
+                sz.old_size = req["old_size"]
+                sz.new_size = req["new_size"]
+                db.session.add(sz)
+                db.session.commit()
+                return sz.id
+            else:
+                sz = CmmTranslateSizes.query.get(id)
+                sz.name     = req["name"]
+                sz.old_size = req["old_size"]
+                sz.new_size = req["new_size"]
+                db.session.commit()
+                return True
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,

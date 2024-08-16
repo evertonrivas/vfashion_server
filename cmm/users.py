@@ -308,7 +308,7 @@ class UserAuth(Resource):
             entity = db.session.execute(Select(CmmLegalEntities.id).distinct()\
                 .join(CmmLegalEntityContact,CmmLegalEntityContact.id_legal_entity==CmmLegalEntities.id)\
                 .where(or_(
-                CmmLegalEntities.taxvat==request.form.get("username"),
+                CmmLegalEntities.taxvat==request.form.get("username").replace(".","").replace("-","").replace("/",""),
                 CmmLegalEntityContact.value==request.form.get("username")
                 )
             )).first()

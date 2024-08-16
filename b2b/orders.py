@@ -141,6 +141,7 @@ class OrdersList(Resource):
                 order.id_payment_condition = int(req['id_payment_condition'])
                 order.installment_value    = req['installment_value']
                 order.installments         = req['installments']
+                order.date   = datetime.now()
 
                 # se o usuario for lojista faz o status conforme a necessidade de aprovacao
                 # caso contrario o pedido entra como processando

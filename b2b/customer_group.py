@@ -132,7 +132,7 @@ class CollectionList(Resource):
             req = request.get_json()
             grp = B2bCustomerGroup()
             grp.name = req["name"]
-            grp.id_representative = None if req["id_representative"]=="null" or req["id_representative"]=="undefined" else int(req["id_representative"])
+            grp.id_representative = None if req["id_representative"]=="null" or req["id_representative"]=="undefined" or req["id_representative"] is None else int(req["id_representative"])
             grp.need_approvement = int(req["need_approvement"])
             db.session.add(grp)
             db.session.commit()
@@ -196,7 +196,7 @@ class CollectionApi(Resource):
             req = request.get_json()
             grp:B2bCustomerGroup = B2bCustomerGroup.query.get(id)
             grp.name = req["name"]
-            grp.id_representative = None if req["id_representative"]=="null" or req["id_representative"]=="undefined" else int(req["id_representative"])
+            grp.id_representative = None if req["id_representative"]=="null" or req["id_representative"]=="undefined" or req["id_representative"] is None else int(req["id_representative"])
             grp.need_approvement = int(req["need_approvement"])
             db.session.add(grp)
             db.session.commit()

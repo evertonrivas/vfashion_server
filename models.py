@@ -255,7 +255,7 @@ class CmmLegalEntityContact(db.Model,SerializerMixin):
     id              = Column(Integer,primary_key=True,autoincrement=True)
     id_legal_entity = Column(Integer,nullable=False,index=True,comment="Id da tabela CmmLegalEntities")
     name            = Column(String(150),nullable=False)
-    contact_type    = Column(CHAR(1),nullable=False,server_default='E',default='E',comment='E = E-mail, P = Phone')
+    contact_type    = Column(CHAR(1),nullable=False,server_default='E',default='E',comment='E = E-mail, P = Phone, L = Linkedin, I = Instagram')
     value           = Column(String(200),nullable=False)
     is_whatsapp     = Column(Boolean,nullable=False,default=False)
     is_default      = Column(Boolean,default=False,nullable=False)
@@ -309,7 +309,7 @@ class CmmLegalEntityImport(db.Model,SerializerMixin):
 
 class CmmTranslateColors(db.Model,SerializerMixin):
     id      = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
-    hexcode = Column(String(8),nullable=False)
+    hexcode = Column(String(8),nullable=True)
     name    = Column(String(100),nullable=False)
     color   = Column(String(10),nullable=False,comment="Original color name")
     trash        = Column(Boolean,nullable=False,server_default='0',default=0)

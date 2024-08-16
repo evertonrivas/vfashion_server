@@ -37,7 +37,12 @@ class CategoryList(Resource):
                 "company_linkedin": environ.get("F2B_COMPANY_LINKEDIN"),
                 "company_max_up_files": int(environ.get("F2B_COMPANY_MAX_UP_FILES")),
                 "company_max_up_images": int(environ.get("F2B_COMPANY_MAX_UP_IMAGES")),
-                "company_use_url_images": True if environ.get("F2B_COMPANY_USE_URL_IMAGES")=="1" else False
+                "company_use_url_images": True if environ.get("F2B_COMPANY_USE_URL_IMAGES")=="1" else False,
+                "max_admin_licenses": environ.get("F2B_MAX_ADM_LICENSE"),
+                "max_adm_licenses": environ.get("F2B_MAX_ADM_LICENSE"),
+                "max_rep_licenses": environ.get("F2B_MAX_REP_LICENSE"),
+                "max_str_licenses": environ.get("F2B_MAX_STR_LICENSE"),
+                "max_usr_licenses": environ.get("F2B_MAX_USR_LICENSE")
             }
         except Exception as e:
             return {

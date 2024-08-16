@@ -273,14 +273,18 @@ class GridDistribution(Resource):
     def post(self,id:int):
         try:
             req  = request.get_json()
-            dist = CmmProductsGridDistribution()
-            dist.id_grid = id
             for size in req["sizes"]:
-                dist.id_color = req["id_color"]
-                dist.id_size  = size["id_size"]
-                dist.value    = size["value"]
-                db.session.add(dist)
-            db.session.commit()
+                dist = CmmProductsGridDistribution.query.get((id,req["id_color"],size["id_size"]))
+                if dist is not None:
+                    dist.value = size["value"]
+                else:
+                    dist = CmmProductsGridDistribution()
+                    dist.id_grid  = id
+                    dist.id_color = req["id_color"]
+                    dist.id_size  = req["id_size"]
+                    dist.value    = req["value"]
+                    db.session.add(dist)
+                db.session.commit()
             return True
         except exc.SQLAlchemyError as e:
             return {

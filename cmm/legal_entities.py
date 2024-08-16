@@ -761,10 +761,21 @@ class EntityOfStage(Resource):
         try:
             req = request.get_json()
             for entity in req["entities"]:
-                crm = CrmFunnelStageCustomer()
-                crm.id_customer = entity["id"]
-                crm.id_funnel_stage = id
-                db.session.add(crm)
+                #verifica se ja ha registro
+                exist = db.session.execute(
+                    Select(func.count().label("total")).select_from(CrmFunnelStageCustomer).where(
+                        and_(
+                            CrmFunnelStageCustomer.id_customer==entity["id"],
+                            CrmFunnelStageCustomer.id_funnel_stage==id
+                        )
+                    )
+                ).first().total
+
+                if exist == 0:
+                    crm = CrmFunnelStageCustomer()
+                    crm.id_customer = entity["id"]
+                    crm.id_funnel_stage = id
+                    db.session.add(crm)
             db.session.commit()
             return True
         except exc.SQLAlchemyError as e:

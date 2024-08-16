@@ -160,9 +160,11 @@ class CategoryApi(Resource):
     @auth.login_required
     def post(self,id:int):
         try:
+            req = request.get_json()
             cat = CmmProductsModels.query.get(id)
-            cat.name = cat.name if request.form.get("name") is None else request.form.get("name")
-            db.session.commit() 
+            cat.name = req["name"]
+            db.session.commit()
+            return True
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
