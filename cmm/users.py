@@ -3,10 +3,10 @@ from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
 from common import _send_email
-from models import CmmLegalEntities, CmmLegalEntityContact, CmmUserEntity, CmmUsers, _get_params, _show_query,db,_save_log
-from sqlalchemy import Delete, Select, desc, exc, and_, asc, Insert,Update, func, or_
+from models import CmmLegalEntities, CmmLegalEntityContact, CmmUserEntity, CmmUsers, _get_params, _show_query, db, _save_log
+from sqlalchemy import Delete, Select, desc, exc, and_, asc, Insert, func, or_
 from auth import auth
-from config import ContactType,CustomerAction, MailTemplates
+from f2bconfig import ContactType,CustomerAction, MailTemplates
 from os import environ
 
 ns_user = Namespace("users",description="Operações para manipular dados de usuários do sistema")

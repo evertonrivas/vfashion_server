@@ -1,8 +1,8 @@
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import ScmFlimv, db,_get_params,B2bBrand, B2bCollection,ScmCalendar,ScmEvent,ScmEventType
-from sqlalchemy import desc, exc, asc,between,Select,and_
+from models import db,_get_params,B2bBrand, B2bCollection, ScmCalendar, ScmEvent, ScmEventType
+from sqlalchemy import exc, asc,between,Select,and_
 from auth import auth
 from datetime import datetime,date
 import simplejson as json

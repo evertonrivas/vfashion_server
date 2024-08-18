@@ -5,9 +5,9 @@ from models import B2bBrand, B2bCollection, B2bCustomerGroup, B2bCustomerGroupCu
 from sqlalchemy import Update, and_, exc,Select,Delete,asc,desc,func,between
 import simplejson
 from auth import auth
-from config import CustomerAction,DevolutionStatus, OrderStatus
+from f2bconfig import CustomerAction,DevolutionStatus, OrderStatus, ShippingCompany
 from decimal import Decimal
-from integrations.shipping import Shipping,ShippingCompany
+from integrations.shipping import Shipping
 from datetime import datetime
 from os import environ
 

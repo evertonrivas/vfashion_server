@@ -1,9 +1,9 @@
 from datetime import datetime
-from sqlalchemy import Insert, Select, Update, and_, asc, create_engine, distinct, func, tuple_
-from models import B2bBrand, B2bCollection, B2bOrdersProducts, CmmLegalEntities, CmmProducts, CmmProductsGrid, CmmProductsGridDistribution, FprDevolution, FprDevolutionItem, ScmEvent, ScmEventType, ScmFlimv, ScmFlimvAudit, B2bOrders, ScmFlimvResult
+from sqlalchemy import Insert, Select, Update, and_, create_engine, distinct, func, tuple_
+from models import B2bCollection, B2bOrdersProducts, CmmLegalEntities, CmmProducts, CmmProductsGrid, CmmProductsGridDistribution, FprDevolution, FprDevolutionItem, B2bOrders, ScmFlimvResult
 from dotenv import load_dotenv
 from os import environ,path
-from config import LegalEntityType, OrderStatus
+from sysconfig import LegalEntityType, OrderStatus
 
 BASEDIR = path.abspath(path.dirname(__file__))
 load_dotenv(path.join(BASEDIR, '.env'))

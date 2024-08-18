@@ -1,11 +1,11 @@
 from datetime import datetime
 from http import HTTPStatus
-from flask_restx import Resource,Namespace,fields,RestError
+from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import  B2bCustomerGroup, CmmLegalEntityHistory, CmmUsers, _show_query, db,_save_log,_get_params,B2bCustomerGroupCustomers, CmmCities, CmmCountries, CmmLegalEntityContact, CmmLegalEntityFile, CmmLegalEntityWeb, CmmStateRegions, CrmFunnelStageCustomer,CmmLegalEntities,CmmUserEntity
+from models import  B2bCustomerGroup, CmmLegalEntityHistory, CmmUsers, _show_query, db,_save_log,_get_params,B2bCustomerGroupCustomers, CmmCities, CmmCountries, CmmLegalEntityContact, CmmLegalEntityFile, CmmStateRegions, CrmFunnelStageCustomer,CmmLegalEntities,CmmUserEntity
 from sqlalchemy import Delete, Select, Update,and_,exc,asc,desc,func, or_
 from auth import auth
-from config import CustomerAction
+from f2bconfig import CustomerAction
 from os import environ
 
 ns_legal = Namespace("legal-entities",description="Operações para manipular dados de clientes/representantes")
@@ -258,14 +258,6 @@ class EntitysList(Resource):
                 ct.is_whatsapp     = contact["is_whatsapp"]
                 db.session.add(ct)
 
-            for web in req["web"]:
-                wb = CmmLegalEntityWeb()
-                wb.id_legal_entity = cst.id
-                wb.name            = web["name"]
-                wb.web_type        = web["web_type"]
-                wb.value           = web["value"]
-                db.session.add(wb)
-
             db.session.commit()
 
             _save_log(cst.id,CustomerAction.DATA_REGISTERED,'Registro criado')
@@ -364,7 +356,6 @@ class EntityApi(Resource):
                     },
                     "agent": self.__get_representative(m.id),
                     "contacts": self.__get_contacts(m.id),
-                    "web": self.__get_web(m.id),
                     "files": self.__get_file(m.id),
                     "postal_code": m.postal_code,
                     "neighborhood": m.neighborhood,
@@ -398,21 +389,6 @@ class EntityApi(Resource):
             "is_whatsapp": c.is_whatsapp, #E = E-mail, P = Phone
             "is_default": c.is_default
         } for c in db.session.execute(stmt)]
-    
-    def __get_web(self,id_customer:int):
-        stmt = Select(CmmLegalEntityWeb.id,
-                      CmmLegalEntityWeb.name,
-                      CmmLegalEntityWeb.web_type,
-                      CmmLegalEntityWeb.value,
-                      CmmLegalEntityWeb)\
-                .where(CmmLegalEntityWeb.id_legal_entity==id_customer)
-        return [{
-            "id":c.id,
-            "id_legal_entity": id_customer,
-            "name": c.name,
-            "web_type":c.web_type,
-            "value":c.value
-        }for c in db.session.execute(stmt)]
     
     def __get_file(self,id_customer:int):
         stmt = Select(CmmLegalEntityFile.id,
@@ -540,22 +516,6 @@ class EntityApi(Resource):
                     ct.is_default   = contact["is_default"]
                     ct.is_whatsapp  = contact["is_whatsapp"]
                     db.session.commit()
-
-            for web in req["web"]:
-                if web["id"] == 0:
-                    wb = CmmLegalEntityWeb()
-                    wb.id_legal_entity = cst.id
-                    wb.name            = web["name"]
-                    wb.web_type        = web["web_type"]
-                    wb.value           = web["value"]
-                    db.session.add(wb)
-                    db.session.commit()
-                else:
-                    wb = CmmLegalEntityWeb.query.get(web["id"])
-                    wb.name            = web["name"]
-                    wb.web_type        = web["web_type"]
-                    wb.value           = web["value"]
-                    db.session.commit()
             
             _save_log(id,CustomerAction.DATA_UPDATED,'Registro alterado')
 
@@ -576,7 +536,7 @@ class EntityApi(Resource):
             cst = CmmLegalEntities.query.get(id)
             cst.trash = True
             db.session.commit()
-            _save_log(id,CustomerAction.DATA_DELETED,'Registro movido para a Lixeira')
+            _save_log(id,CustomerAction.DATA_DELETED,'Registro arquivado')
             return True
         except exc.SQLAlchemyError as e:
             return {
@@ -690,7 +650,6 @@ class EntityOfStage(Resource):
                             }
                         },
                         "contacts": self.__get_contacts(m.id),
-                        "web": self.__get_web(m.id),
                         "files": self.__get_file(m.id),
                         "postal_code": m.postal_code,
                         "address": m.address,
@@ -725,21 +684,6 @@ class EntityOfStage(Resource):
             "is_whatsapp": c.is_whatsapp, #E = E-mail, P = Phone
             "is_default": c.is_default
         } for c in db.session.execute(stmt)]
-    
-    def __get_web(self,id_customer:int):
-        stmt = Select(CmmLegalEntityWeb.id,
-                      CmmLegalEntityWeb.name,
-                      CmmLegalEntityWeb.web_type,
-                      CmmLegalEntityWeb.value,
-                      CmmLegalEntityWeb)\
-                .where(CmmLegalEntityWeb.id_legal_entity==id_customer)
-        return [{
-            "id":c.id,
-            "id_legal_entity": id_customer,
-            "name": c.name,
-            "web_type":c.web_type,
-            "value":c.value
-        }for c in db.session.execute(stmt)]
     
     def __get_file(self,id_customer:int):
         stmt = Select(CmmLegalEntityFile.id,
@@ -830,48 +774,6 @@ class EntityContact(Resource):
                 "error_sql": e._sql_message()
             }
 ns_legal.add_resource(EntityContact,'/save-contacts')
-
-class EntityWeb(Resource):
-    @ns_legal.response(HTTPStatus.OK.value,"Salva endereço(s) web de uma entidade")
-    @ns_legal.response(HTTPStatus.BAD_REQUEST.value,"Falha ao salvar o(s) registro(s)!")
-    @auth.login_required
-    def post(self):
-        try:
-            req = request.get_json()
-            #print(req)
-            for r in req:
-                wb = CmmLegalEntityWeb()
-                wb.id              = r['id']
-                wb.id_legal_entity = r['id_legal_entity']
-                wb.name            = r['name']
-                wb.web_type        = r['web_type']
-                wb.value           = r['value']
-                if wb.id == 0:
-                    _save_log(r['id_legal_entity'],CustomerAction.DATA_REGISTERED,'Adicionado web '+r['name'])
-                    db.session.add(wb)
-                else:
-                    _save_log(r['id_legal_entity'],CustomerAction.DATA_UPDATED,'Atualizado web '+r['name'])
-                db.session.commit()
-                return True
-        except exc.SQLAlchemyError as e:
-            return {
-                "error_code": e.code,
-                "error_details": e._message(),
-                "error_sql": e._sql_message()
-            }
-    
-    @ns_legal.response(HTTPStatus.OK.value,"Exclui endereço(s) web de uma entidade")
-    @ns_legal.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
-    def delete(self):
-        try:
-            pass
-        except exc.SQLAlchemyError as e:
-            return {
-                "error_code": e.code,
-                "error_details": e._message(),
-                "error_sql": e._sql_message()
-            }
-ns_legal.add_resource(EntityWeb,'/save-webs')
 
 class EntityHistory(Resource):
     @ns_legal.response(HTTPStatus.OK.value,"Obtem os dados históricos de uma entidade")

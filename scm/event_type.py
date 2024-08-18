@@ -1,10 +1,9 @@
 from datetime import datetime
 from http import HTTPStatus
-from flask_restx import Resource,Namespace,fields
+from flask_restx import Resource, Namespace, fields
 from flask import request
-from models import _get_params, _show_query, db,ScmEventType
-import json
-from sqlalchemy import Select, exc,and_,asc,desc
+from models import _get_params, _show_query, db, ScmEventType
+from sqlalchemy import Select, exc, asc, desc
 from auth import auth
 from os import environ
 

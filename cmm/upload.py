@@ -4,11 +4,11 @@ from flask import request
 from sqlalchemy import Select, desc, exc, asc,Delete
 from werkzeug import exceptions
 from auth import auth
-from config import CustomerAction
+from f2bconfig import CustomerAction
 from datetime import datetime
 import filetype
 from werkzeug.datastructures import ImmutableMultiDict
-from models import db,_save_log,CmmLegalEntities,CmmLegalEntityFile, CmmProducts, CmmProductsImages, B2bOrders
+from models import db, _save_log, CmmLegalEntities, CmmLegalEntityFile
 import os
 
 ns_upload = Namespace("upload",description="Operações para manipular upload de dados")

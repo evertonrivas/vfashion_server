@@ -1,9 +1,9 @@
 from datetime import datetime
 from http import HTTPStatus
-from flask_restx import Resource,Namespace,fields
+from flask_restx import Resource, Namespace, fields
 from flask import request
 from models import db,ScmFlimv
-from sqlalchemy import Select, exc, and_, asc, desc
+from sqlalchemy import Select, exc, desc
 from auth import auth
 
 ns_flimv = Namespace("flimv",description="Operações para manipular dados da metodologia FLIMV")

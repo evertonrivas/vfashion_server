@@ -5,7 +5,7 @@ from flask_restx import Resource,Namespace,fields
 from flask import request
 import simplejson
 from models import B2bBrand, B2bCollection, B2bProductStock, B2bTablePrice, B2bTablePriceProduct, CmmCategories, CmmMeasureUnit, CmmProducts, CmmProductsCategories, CmmProductsGrid, CmmProductsGridDistribution, CmmProductsImages, CmmProductsModels, CmmProductsTypes, CmmTranslateColors, CmmTranslateSizes, ScmEvent, _get_params, _show_query, db
-from sqlalchemy import Select, and_, distinct, exc,or_,desc,asc
+from sqlalchemy import Select, and_, exc, or_, desc, asc
 from auth import auth
 from os import environ
 

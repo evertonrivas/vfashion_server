@@ -2,7 +2,7 @@ from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
 from models import CmmTranslateSizes, _get_params, _show_query,db
-from sqlalchemy import Select, exc, and_,desc,asc
+from sqlalchemy import Select, exc, desc, asc
 from auth import auth
 from os import environ
 

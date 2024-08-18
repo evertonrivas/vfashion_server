@@ -1,9 +1,8 @@
-from config import MailTemplates
+from f2bconfig import MailTemplates
 import jinja2
 import pdfkit
 import os
 import html.entities
-from datetime import date,datetime
 import requests
 from os import environ
 

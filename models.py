@@ -5,7 +5,7 @@ from sqlalchemy_serializer import SerializerMixin
 from datetime import datetime,timedelta
 import jwt
 import bcrypt
-from config import CustomerAction
+from f2bconfig import CustomerAction
 import json
 from types import SimpleNamespace
 from os import environ,path
@@ -255,19 +255,10 @@ class CmmLegalEntityContact(db.Model,SerializerMixin):
     id              = Column(Integer,primary_key=True,autoincrement=True)
     id_legal_entity = Column(Integer,nullable=False,index=True,comment="Id da tabela CmmLegalEntities")
     name            = Column(String(150),nullable=False)
-    contact_type    = Column(CHAR(1),nullable=False,server_default='E',default='E',comment='E = E-mail, P = Phone, L = Linkedin, I = Instagram')
+    contact_type    = Column(CHAR(1),nullable=False,server_default='E',default='E',comment='E = E-mail, P = Phone, L = Linkedin, I = Instagram, W = Website, B = Blog, S = Social Media')
     value           = Column(String(200),nullable=False)
     is_whatsapp     = Column(Boolean,nullable=False,default=False)
     is_default      = Column(Boolean,default=False,nullable=False)
-    date_created    = Column(DateTime,nullable=False,server_default=func.now())
-    date_updated    = Column(DateTime,onupdate=func.now())
-
-class CmmLegalEntityWeb(db.Model,SerializerMixin):
-    id              = Column(Integer,primary_key=True,autoincrement=True)
-    id_legal_entity = Column(Integer,nullable=False,index=True,comment="Id da tabela CmmLegalEntities")
-    name            = Column(String(150),nullable=False)
-    web_type        = Column(CHAR(1),nullable=False,server_default='E',default='E',comment='W = Website, B = Blog, S = Social Media')
-    value           = Column(String(255),nullable=False)
     date_created    = Column(DateTime,nullable=False,server_default=func.now())
     date_updated    = Column(DateTime,onupdate=func.now())
 

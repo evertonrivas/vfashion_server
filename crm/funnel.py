@@ -1,9 +1,8 @@
 from http import HTTPStatus
-from flask_restx import Resource,fields,Namespace
+from flask_restx import Resource, fields, Namespace
 from flask import request
-from models import _get_params,CrmFunnel,CrmFunnelStageCustomer,CrmFunnelStage,db
-import json
-from sqlalchemy import Update, desc, exc,and_,asc, Select
+from models import _get_params,CrmFunnel, CrmFunnelStage, db
+from sqlalchemy import Update, desc, exc, and_, asc, Select
 from auth import auth
 from os import environ
 

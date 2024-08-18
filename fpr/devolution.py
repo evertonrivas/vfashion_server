@@ -2,10 +2,10 @@ from datetime import datetime
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import CmmTranslateColors, CmmTranslateSizes, FprDevolution,FprDevolutionItem,B2bOrders,CmmProducts,CmmLegalEntities, FprReason, _get_params, _save_log, _show_query,db
+from models import CmmTranslateColors, CmmTranslateSizes, FprDevolution, FprDevolutionItem, B2bOrders, CmmProducts, CmmLegalEntities, FprReason, _get_params, _save_log, _show_query, db
 from sqlalchemy import Delete, Select, Update, desc, distinct, exc, asc, func, text, tuple_
 from auth import auth
-from config import CustomerAction, DevolutionStatus
+from f2bconfig import CustomerAction, DevolutionStatus
 from os import environ
 
 ns_devolution = Namespace("devolution",description="Operações para manipular dados de devoluções")

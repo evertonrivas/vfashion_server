@@ -1,12 +1,11 @@
 from http import HTTPStatus
-from flask_restx import Resource,fields,Namespace
+from flask_restx import Resource,Namespace
 from flask import request
-from config import LegalEntityType
-from models import CmmLegalEntities, CrmFunnel, CrmFunnelStageCustomer, _get_params,CrmFunnelStage, _show_query,db,_save_log
+from models import CmmLegalEntities, CrmFunnel, CrmFunnelStageCustomer, _get_params, CrmFunnelStage, _show_query, db, _save_log
 import json
-from sqlalchemy import Select, Update, desc, exc,and_,asc, or_
+from sqlalchemy import Select, Update, desc, exc, and_, asc, or_
 from auth import auth
-from config import CrmFunnelType, CustomerAction
+from f2bconfig import CrmFunnelType, CustomerAction, LegalEntityType
 from os import environ
 
 

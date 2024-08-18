@@ -1,7 +1,16 @@
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
+from sqlalchemy import Select
 from auth import auth
+from flask import request
 from os import environ
+from requests import Session,RequestException
+from types import SimpleNamespace
+import json
+from os import environ
+from models import db
+
+from models import CmmCities
 
 ns_config = Namespace("config",description="Obtem as configuracoes do sistema")
 
@@ -18,6 +27,12 @@ cfg_model = ns_config.model(
         "company_max_up_images":fields.Integer,
         "company_use_url_images":fields.Boolean,
         "system_pagination_size":fields.Integer
+    }
+)
+
+cfg_cep_model = ns_config.model(
+    "Cep",{
+        "postal_code": fields.String
     }
 )
 
@@ -48,5 +63,36 @@ class CategoryList(Resource):
             return {
                 "error_code": e.args.count,
                 "error_details": e.args[0],
-                "error_sql": ''
+                "error_sql": None
             }
+    
+    @ns_config.response(HTTPStatus.OK.value,"Obtem as informações de CEP")
+    @ns_config.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
+    @ns_config.doc(body=cfg_cep_model,description="Dados necessários",name="content")
+    def post(self):
+        try:
+            req = request.get_json()
+            nav = Session()
+            nav.headers.update({
+                "Authorization": "Bearer "+environ.get("F2B_BRASIL_ABERTO_KEY"),
+                "Content-Type": "application/json"
+            })
+            resp = nav.get("https://api.brasilaberto.com/v1/zipcode/"+req["postal_code"])
+            if resp.status_code==200:
+                result = json.loads(resp.text,object_hook=lambda d: SimpleNamespace(**d))
+                id_city = db.session.execute(Select(CmmCities.id).where(CmmCities.brazil_ibge_code==result.result.ibgeId)).first().id
+                return {
+                    "address": result.result.street,
+                    "neighborhood": result.result.district,
+                    "id_city": id_city
+                }
+            else:
+                print(resp.status_code)
+            return False
+        except RequestException as e:
+            return{
+                "error_code": e.errno,
+                "error_details": e.strerror,
+                "error_sql": None
+            }
+        # https://h-apigateway.conectagov.estaleiro.serpro.gov.br/api-cep/v1/consulta/cep/60130240

@@ -2,10 +2,9 @@ from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
 from models import B2bCustomerGroup,B2bCustomerGroupCustomers, B2bOrders, CmmLegalEntities, _get_params,db
-import json
 from sqlalchemy import Delete, Select, exc,and_,desc,asc, func
 from auth import auth
-from config import OrderStatus
+from f2bconfig import OrderStatus
 from os import environ
 
 ns_customer_g = Namespace("customer-group",description="Operações para manipular dados de grupos de clientes")

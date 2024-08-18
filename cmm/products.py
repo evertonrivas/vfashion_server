@@ -1,4 +1,3 @@
-from datetime import datetime
 from http import HTTPStatus
 import simplejson
 from flask_restx import Resource,Namespace,fields
@@ -6,7 +5,7 @@ from flask import request
 from models import CmmMeasureUnit, CmmProducts, CmmProductsCategories, CmmProductsGrid, \
     CmmProductsImages, CmmProductsTypes, CmmProductsModels, \
     _get_params, db
-from sqlalchemy import desc, exc, and_, asc,Select, func,or_
+from sqlalchemy import desc, exc, asc,Select, or_
 from auth import auth
 from decimal import Decimal
 from os import environ

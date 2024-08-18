@@ -2,9 +2,9 @@ from datetime import datetime
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import B2bBrand, CrmConfig, _get_params,db
+from models import CrmConfig, db
 import json
-from sqlalchemy import Select, exc,and_,asc,desc
+from sqlalchemy import Select, exc
 from auth import auth
 
 ns_crm_cfg = Namespace("config",description="Configurações do módulo de CRM")

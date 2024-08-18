@@ -2,7 +2,7 @@ from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
 from models import B2bPaymentConditions, _get_params,db
-from sqlalchemy import Select, exc,and_,desc,asc
+from sqlalchemy import Select, exc, desc, asc
 from auth import auth
 from os import environ
 

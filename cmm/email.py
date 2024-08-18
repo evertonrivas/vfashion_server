@@ -1,10 +1,10 @@
 import base64
 from http import HTTPStatus
-from flask_restx import Resource,Namespace,fields
+from flask_restx import Resource,Namespace
 from flask import request
 from werkzeug import exceptions
 from auth import auth
-from config import MailTemplates
+from f2bconfig import MailTemplates
 from common import _send_email
 import mimetypes
 import os

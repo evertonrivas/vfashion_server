@@ -1,4 +1,4 @@
-from config import ShippingCompany
+from f2bconfig import ShippingCompany
 import requests
 import urllib3
 from datetime import datetime
