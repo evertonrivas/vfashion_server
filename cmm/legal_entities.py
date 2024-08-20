@@ -578,7 +578,7 @@ class EntityOfStage(Resource):
 
             direction = asc if hasattr(params,'order')==False else asc if params.order=='ASC' else desc
             order_by  = 'id' if hasattr(params,'order_by')==False else params.order_by
-            search = None if hasattr(params,"search")==False else params.search
+            search    = None if hasattr(params,"search")==False else params.search
 
             rquery = Select(
                 CmmLegalEntities.id,
@@ -610,12 +610,23 @@ class EntityOfStage(Resource):
 
             if search!=None:
                 rquery = rquery.where(
-                    CmmCountries.name.like(search) | 
-                    CmmStateRegions.name.like(search) |
-                    CmmCities.name.like(search) |
-                    CmmLegalEntities.name.like(search) |
-                    CmmLegalEntities.fantasy_name.like(search) | 
-                    CmmLegalEntities.neighborhood.like(search)
+                    or_(
+                        CmmCountries.name.like("%{}%".format(search)),
+                        CmmStateRegions.name.like("%{}%".format(search)),
+                        CmmCities.name.like("%{}%".format(search)),
+                        CmmLegalEntities.name.like("%{}%".format(search)),
+                        CmmLegalEntities.fantasy_name.like("%{}%".format(search)), 
+                        CmmLegalEntities.neighborhood.like("%{}%".format(search)),
+                        CmmLegalEntities.id.in_(
+                            Select(CmmLegalEntityContact.id_legal_entity)\
+                            .where(
+                                or_(
+                                    CmmLegalEntityContact.name.like("%{}%".format(search)),
+                                    CmmLegalEntityContact.value.like("%{}%".format(search))
+                                )
+                            )
+                        )
+                    )
                 )
                 
             pag = db.paginate(rquery,page=pag_num,per_page=pag_size)
@@ -739,15 +750,19 @@ class EntityContact(Resource):
             req = request.get_json()
             #print(req)
             for r in req:
-                ct = CmmLegalEntityContact()
-                ct.id              = r['id']
+                if r["id"]==0:
+                    ct = CmmLegalEntityContact()
+                    ct.id = 0
+                else:
+                    ct = CmmLegalEntityContact().query.get(r["id"])
+
                 ct.id_legal_entity = r['id_legal_entity']
                 ct.name            = r['name']
                 ct.contact_type    = r['contact_type']
                 ct.is_default      = r['is_default']
                 ct.is_whatsapp     = r['is_whatsapp']
                 ct.value           = r['value']
-                if ct.id == 0:
+                if r["id"] == 0:
                     _save_log(r['id_legal_entity'],CustomerAction.DATA_REGISTERED,'Adicionado contato '+r['name'])
                     db.session.add(ct)
                 else:
@@ -766,7 +781,11 @@ class EntityContact(Resource):
     @auth.login_required
     def delete(self):
         try:
-            pass
+            req = request.get_json()
+            for contact in req:
+                db.session.execute(Delete(CmmLegalEntityContact).where(CmmLegalEntityContact.id==contact["id"]))
+                db.session.commit()
+                return True
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -826,7 +845,28 @@ class EntityHistory(Resource):
                 "error_details": e._message(),
                 "error_sql": e._sql_message()
             }
-ns_legal.add_resource(EntityHistory,'/load-history/<int:id>')
+
+    @ns_legal.response(HTTPStatus.OK.value,"Adiciona um comentário no histórico de uma entidade")
+    @ns_legal.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
+    def post(self,id:int):
+        try:
+            req = request.get_json()
+            hist = CmmLegalEntityHistory()
+            hist.action = CustomerAction.COMMENT_ADDED.value
+            hist.id_legal_entity = id
+            hist.history         = req
+            hist.date_created    = datetime.now()
+            db.session.add(hist)
+            db.session.commit()
+            return True
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
+
+ns_legal.add_resource(EntityHistory,'/history/<int:id>')
 
 
 class EntityImport(Resource):

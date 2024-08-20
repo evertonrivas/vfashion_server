@@ -1,12 +1,12 @@
 from requests import RequestException
 from models import CmmMeasureUnit,CmmLegalEntities,CmmLegalEntityContact,CmmProducts,CmmProductsCategories,CmmCities,CmmStateRegions
 from sqlalchemy import Insert,Select, Update, and_,or_,exc
-from integrations.erp import ERP
+from integrations.erp import erp
 from time import sleep
 import json
 from os import environ
 
-class VirtualAge(ERP):
+class VirtualAge(erp.ERP):
     token_type = ''
     token_access = ''
     def __init__(self) -> None:

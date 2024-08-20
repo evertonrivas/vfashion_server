@@ -31,6 +31,7 @@ class CustomerAction(Enum):
     RETURN_UPDATED        = 'RU'
     FINANCIAL_BLOQUED     = 'FB'
     FINANCIAL_UNBLOQUED   = 'FU'
+    COMMENT_ADDED         = 'CA'
     
 class ContactType(Enum):
     EMAIL = 'E'

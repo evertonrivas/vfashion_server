@@ -21,7 +21,7 @@ if datetime.now().strftime("%M")=="00":
         module = environ.get("F2B_ERP_MODULE")
         class_name = environ.get("F2B_ERP_MODULE").replace("_"," ").title().replace(" ","")
         ERP = getattr(
-            importlib.import_module('integrations.'+module),
+            importlib.import_module('integrations.erp.'+module),
             class_name
         )
         erp = ERP()

@@ -1,4 +1,5 @@
 from http import HTTPStatus
+import importlib
 from flask_restx import Resource,Namespace,fields
 from sqlalchemy import Select
 from auth import auth
@@ -9,6 +10,7 @@ from types import SimpleNamespace
 import json
 from os import environ
 from models import db
+import logging
 
 from models import CmmCities
 
@@ -72,27 +74,13 @@ class CategoryList(Resource):
     def post(self):
         try:
             req = request.get_json()
-            nav = Session()
-            nav.headers.update({
-                "Authorization": "Bearer "+environ.get("F2B_BRASIL_ABERTO_KEY"),
-                "Content-Type": "application/json"
-            })
-            resp = nav.get("https://api.brasilaberto.com/v1/zipcode/"+req["postal_code"])
-            if resp.status_code==200:
-                result = json.loads(resp.text,object_hook=lambda d: SimpleNamespace(**d))
-                id_city = db.session.execute(Select(CmmCities.id).where(CmmCities.brazil_ibge_code==result.result.ibgeId)).first().id
-                return {
-                    "address": result.result.street,
-                    "neighborhood": result.result.district,
-                    "id_city": id_city
-                }
-            else:
-                print(resp.status_code)
+            module = environ.get("F2B_CEP_MODULE")
+            class_name = environ.get("F2B_CEP_MODULE").replace("_"," ").title().replace(" ","")
+            CEP_OBJ = getattr(
+            importlib.import_module('integrations.cep.'+module),
+            class_name
+            )
+            cep = CEP_OBJ()
+            return cep.get_postal_code(req["postal_code"])
+        except Exception as e:
             return False
-        except RequestException as e:
-            return{
-                "error_code": e.errno,
-                "error_details": e.strerror,
-                "error_sql": None
-            }
-        # https://h-apigateway.conectagov.estaleiro.serpro.gov.br/api-cep/v1/consulta/cep/60130240

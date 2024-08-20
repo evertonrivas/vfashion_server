@@ -110,7 +110,7 @@ class ProductStockList(Resource):
                 .join(CmmTranslateSizes,CmmTranslateSizes.id==B2bProductStock.id_size)
             
             cquery = Select(B2bProductStock.id_color,
-                            CmmTranslateColors.name)\
+                            CmmTranslateColors.name).distinct()\
                 .join(CmmTranslateColors,CmmTranslateColors.id==B2bProductStock.id_color)
             
             squery = Select(B2bProductStock.id_size,

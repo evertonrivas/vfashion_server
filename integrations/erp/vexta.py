@@ -1,7 +1,7 @@
-from integrations.erp import ERP
+from integrations.erp import erp
 from requests import RequestException
 
-class SisPlan(ERP):
+class Vexta(erp.ERP):
     def _get_header(self):
         return super()._get_header()
     

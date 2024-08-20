@@ -7,7 +7,7 @@ import simplejson
 from auth import auth
 from f2bconfig import CustomerAction,DevolutionStatus, OrderStatus, ShippingCompany
 from decimal import Decimal
-from integrations.shipping import Shipping
+from integrations.shipping import shipping
 from datetime import datetime
 from os import environ
 
@@ -508,11 +508,11 @@ class HistoryOrderList(Resource):
         }
 
         if _emp=="BRASPRESS":
-            return Shipping().tracking(ShippingCompany.BRASPRESS,opts)
+            return shipping.Shipping().tracking(ShippingCompany.BRASPRESS,opts)
         if _emp=="JAMEF":
-            return Shipping().tracking(ShippingCompany.JAMEF,opts)
+            return shipping.Shipping().tracking(ShippingCompany.JAMEF,opts)
         if _emp=="JADLOG":
-            return Shipping().tracking(ShippingCompany.JADLOG,opts)
+            return shipping.Shipping().tracking(ShippingCompany.JADLOG,opts)
 
         return _code
         
