@@ -1,7 +1,7 @@
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import CmmTranslateColors, _get_params,db
+from models import B2bProductStock, CmmTranslateColors, _get_params,db
 from sqlalchemy import Select, exc, desc, asc
 from auth import auth
 from os import environ
@@ -43,9 +43,6 @@ class CategoryList(Resource):
     @ns_color.param("page","Número da página de registros","query",type=int,required=True,default=1)
     @ns_color.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_color.param("query","Texto para busca","query")
-    @ns_color.param("list_all","Ignora as paginas e lista todos os registros",type=bool,default=False)
-    @ns_color.param("order_by","Campo de ordenacao","query")
-    @ns_color.param("order_dir","Direção da ordenação","query",enum=['ASC','DESC'])
     @auth.login_required
     def get(self):
         pag_num  = 1 if request.args.get("page") is None else int(request.args.get("page"))
@@ -60,6 +57,8 @@ class CategoryList(Resource):
             trash     = False if hasattr(params,'trash')==False else True
             list_all  = False if hasattr(params,'list_all')==False else True
 
+            filter_b2b = False if hasattr(params,"b2b")==False else True
+
             rquery = Select(CmmTranslateColors.id,
                             CmmTranslateColors.hexcode,
                             CmmTranslateColors.name,
@@ -68,6 +67,13 @@ class CategoryList(Resource):
                             CmmTranslateColors.date_updated)\
                             .where(CmmTranslateColors.trash==trash)\
                             .order_by(direction(getattr(CmmTranslateColors,order_by)))
+            
+            if filter_b2b is True:
+                rquery = rquery.where(
+                    CmmTranslateColors.id.in_(
+                        Select(B2bProductStock.id_color).distinct()
+                    )
+                )
             
             if search is not None:
                 rquery = rquery.where(CmmTranslateColors.name.like("%{}%".format(search)))

@@ -59,7 +59,8 @@ class CategoryList(Resource):
                 "max_adm_licenses": environ.get("F2B_MAX_ADM_LICENSE"),
                 "max_rep_licenses": environ.get("F2B_MAX_REP_LICENSE"),
                 "max_str_licenses": environ.get("F2B_MAX_STR_LICENSE"),
-                "max_usr_licenses": environ.get("F2B_MAX_USR_LICENSE")
+                "max_usr_licenses": environ.get("F2B_MAX_USR_LICENSE"),
+                "flimv_model": environ.get("F2B_FLIMV_MODEL")
             }
         except Exception as e:
             return {

@@ -2,7 +2,7 @@
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import B2bCartShopping, B2bCustomerGroupCustomers, B2bProductStock, CmmLegalEntities, CmmProducts, CmmProductsGrid, CmmProductsGridDistribution, CmmTranslateColors, CmmTranslateSizes,CmmProductsImages, _show_query, db
+from models import B2bCartShopping, B2bCustomerGroup, B2bCustomerGroupCustomers, B2bProductStock, CmmLegalEntities, CmmProducts, CmmProductsGrid, CmmProductsGridDistribution, CmmProductsGridSizes, CmmTranslateColors, CmmTranslateSizes,CmmProductsImages, _show_query, db
 from sqlalchemy import exc, Select, and_, func, tuple_, distinct, desc, asc, Delete, text
 from auth import auth
 
@@ -55,7 +55,9 @@ class CartApi(Resource):
                 pquery = pquery.where(B2bCartShopping.id_customer==id_profile).order_by(direction(getattr(B2bCartShopping,order_by)))
             elif user_type=='R':
                 pquery = pquery.where(B2bCartShopping.id_customer.in_(
-                    Select(B2bCustomerGroupCustomers.id_customer).where(B2bCustomerGroupCustomers.id_representative==id_profile)
+                    Select(B2bCustomerGroupCustomers.id_customer)
+                    .join(B2bCustomerGroup,B2bCustomerGroup.id==B2bCustomerGroupCustomers.id_customer_group)\
+                    .where(B2bCustomerGroup.id_representative==id_profile)
                 )).group_by(B2bCartShopping.id_customer).order_by(asc(B2bCartShopping.id_customer))
             elif user_type=='A':
                 pquery = pquery.group_by(B2bCartShopping.id_customer).order_by(asc(B2bCartShopping.id_customer))
@@ -79,7 +81,7 @@ class CartApi(Resource):
                     "code": c.color,
                     "sizes":[{
                         "id": s.size_code,
-                        "name": s.new_size,
+                        "name": s.name,
                         "quantity": int(0 if s.quantity is None else s.quantity)
                     } for s in self.get_sizes(m.id_customer,m.id_product,c.id_color)]
                 }for c in db.session.execute(cquery.where(and_(B2bCartShopping.id_customer==m.id_customer,B2bCartShopping.id_product==m.id_product)))]
@@ -92,14 +94,23 @@ class CartApi(Resource):
                 "error_sql": e._sql_message()
             }
 
-    def get_sizes(self,id_customer:int,id_product:int,color:str):
-        subquery = Select(
-            B2bCartShopping.id_size.label("size_code"),
-            B2bCartShopping.quantity)\
-            .where(and_(B2bCartShopping.id_customer==id_customer,B2bCartShopping.id_product==id_product,B2bCartShopping.id_color==color)).cte()
+    def get_sizes(self,id_customer:int,id_product:int,color:int):
+        query = Select(
+                CmmTranslateSizes.new_size.label("size_code"),
+                CmmTranslateSizes.id,
+                CmmTranslateSizes.name,
+                B2bCartShopping.quantity)\
+                .select_from(B2bCartShopping)\
+            .join(CmmProducts,CmmProducts.id==B2bCartShopping.id_product)\
+            .join(CmmTranslateSizes,CmmTranslateSizes.id==B2bCartShopping.id_size)\
+            .where(and_(
+                B2bCartShopping.id_product==id_product,
+                B2bCartShopping.id_color==color,
+                B2bCartShopping.id_customer==id_customer
+            ))
+        # _show_query(query)
 
-        return db.session.execute(Select(CmmTranslateSizes.new_size,subquery.c.size_code,subquery.c.quantity).distinct()\
-            .outerjoin(subquery,subquery.c.size_code==CmmTranslateSizes.id)).all()
+        return db.session.execute(query).all()
 
     @ns_cart.response(HTTPStatus.OK.value,"Retorna verdadeiro ou falso se conseguiu excluir o(s) registro(s)")
     @ns_cart.response(HTTPStatus.BAD_REQUEST.value,"Falha ao excluir")
@@ -171,96 +182,58 @@ class CartApi(Resource):
             req = request.get_json()
             
             for product in req['products']:
-                #busca primeiramente a grade padrao dos produtos na cor desejada
+                #busca primeiramente a grade padrao dos produtos
                 #se nao houver dados infelizmente nao restarah nada a ser feito
-                gquery = db.session.execute(Select(CmmProductsGridDistribution.id_size,
+                gquery = db.session.execute(
+                    Select(CmmProductsGridDistribution.id_size,
                                 CmmProductsGridDistribution.value,CmmProducts.price)\
                         .join(CmmProductsGrid,CmmProductsGrid.id==CmmProductsGridDistribution.id_grid)\
                         .join(CmmProducts,CmmProducts.id_grid==CmmProductsGrid.id)\
-                        .where(and_(
-                            CmmProductsGridDistribution.id_color==req['color'],
-                            CmmProducts.id==product,
-                            CmmProductsGrid.default==True
-                        )))
+                        .where(CmmProducts.id==product)
+                    )
 
                 if gquery is not None:
                     totalExecuted += 1
                     for size in gquery:
                         #realiza a busca da quantidade baseada nas informacoes da grade
-                        squery = db.session.execute(Select(B2bProductStock.quantity,B2bProductStock.ilimited,B2bProductStock.in_order).where(and_(
-                            B2bProductStock.id_product == product,
-                            B2bProductStock.id_color == req['color'],
-                            B2bProductStock.id_size == size.id_size
-                        ))).first()
+                        squery = db.session.execute(
+                            Select(B2bProductStock.quantity,B2bProductStock.id_color,B2bProductStock.ilimited,B2bProductStock.in_order)
+                            .where(
+                                and_(
+                                    B2bProductStock.id_product == product,
+                                    B2bProductStock.id_color.in_(req['colors']),
+                                    B2bProductStock.id_size == size.id_size
+                                )))
                         if squery is not None:
-                            if squery.ilimited==True:
-                                #faz uma verificacao se o produto ja nao esta no carrinho
-                                cquery = db.session.execute(Select(func.count().label("total")).select_from(B2bCartShopping).where(
+                            for stock in squery:
+                                car_query = db.session.execute(Select(func.count().label("total")).select_from(B2bCartShopping).where(
                                     and_(
                                         B2bCartShopping.id_product==product,
-                                        B2bCartShopping.id_color==req['color'],
+                                        B2bCartShopping.id_color.in_(req['colors']),
                                         B2bCartShopping.id_size==size.id_size,
                                         B2bCartShopping.id_customer==req['customer']
                                     )
                                 )).first()
-                                if cquery.total > 0:
-                                    bcs = B2bCartShopping.query.get((
-                                        req['customer'],
-                                        product,
-                                        req['color'],
-                                        size.id_size))
-                                    #incrementa a quantidade com o que tem na grade
-                                    if bcs is not None:
+                                if car_query.total == 0: # nao ha no carrinho
+                                    # se o estoque for ilimitado ou disponivel adiciona ao carrinho
+                                    if stock.ilimited is True or (stock.quantity-(0 if stock.in_order is  None else stock.in_order)) >= size.value:
+                                        bcs = B2bCartShopping()
+                                        bcs.id_product  = product
+                                        bcs.id_customer = req['customer']
+                                        bcs.id_color    = stock.id_color
+                                        bcs.id_size     = size.id_size
+                                        bcs.price       = size.price
+                                        bcs.quantity    = size.value
+                                        bcs.user_create = req['user']
+                                        db.session.add(bcs)
+                                        db.session.commit()
+                                else: # estah no carrinho
+                                    # se o estoque for ilimitado ou disponivel atualiza a informacao do carrinho
+                                    if stock.ilimited is True or (stock.quantity-(0 if stock.in_order is None else stock.in_order)) >= size.value:
+                                        bcs = B2bCartShopping.query.get((req['customer'],product,stock.id_color,size.id_size))
                                         bcs.quantity += size.value
                                         db.session.commit()
-                                    else:
-                                        bcs.quantity = size.value
-                                        db.session.commit()
-                                else:
-                                    bcs = B2bCartShopping()
-                                    bcs.id_product  = product
-                                    bcs.id_customer = req['customer']
-                                    bcs.id_color    = req['color']
-                                    bcs.id_size     = size.id_size
-                                    bcs.price       = size.price
-                                    bcs.quantity    = size.value
-                                    bcs.user_create = req['user']
-                                    db.session.add(bcs)
-                                    db.session.commit()
-                                
-                            elif (squery.quantity-squery.in_order) >= size.value: #se a quantidade for maior ou igual ao que estah disponivel
-                                #faz uma verificacao se o produto ja nao esta no carrinho
-                                cquery = db.session.execute(Select(func.count().label("total")).select_from(B2bCartShopping).where(
-                                    and_(
-                                        B2bCartShopping.id_product==product,
-                                        B2bCartShopping.id_color==req['color'],
-                                        B2bCartShopping.id_size==size.id_size,
-                                        B2bCartShopping.id_customer==req['customer']
-                                    )
-                                )).first()
-                                if cquery.total > 0:
-                                    bcs = B2bCartShopping.query.get((
-                                        req['customer'],
-                                        product['id'],
-                                        req['color'],
-                                        size.id_size))
-                                    
-                                    #incrementa a quantidade com o que tem na grade
-                                    bcs.quantity += size.value
-                                    bcs.user_update = req["user"]
-                                    db.session.commit()
-                                else:
-                                    bcs = B2bCartShopping()
-                                    bcs.id_product  = product
-                                    bcs.id_customer = req['customer']
-                                    bcs.id_color    = req['color']
-                                    bcs.id_size     = size.id_size
-                                    bcs.price       = size.price
-                                    bcs.quantity    = size.value
-                                    bcs.user_create = req["user"]
-                                    db.session.add(bcs)
-                                    db.session.commit()
-            return False if totalExecuted==False else True
+            return False if totalExecuted==0 else True
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,

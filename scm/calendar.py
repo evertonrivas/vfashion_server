@@ -1,8 +1,9 @@
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import db,_get_params,B2bBrand, B2bCollection, ScmCalendar, ScmEvent, ScmEventType
-from sqlalchemy import exc, asc,between,Select,and_
+from f2bconfig import CrmFunnelType
+from models import CrmConfig, CrmFunnel, CrmFunnelStage, db,_get_params,B2bBrand, B2bCollection, ScmCalendar, ScmEvent, ScmEventType
+from sqlalchemy import exc, asc,between,Select,and_, func
 from auth import auth
 from datetime import datetime,date
 import simplejson as json
@@ -89,10 +90,44 @@ class CalendarList(Resource):
             reg.end_date      = date_end
             reg.id_event_type = req["id_event_type"]
             reg.id_collection = None if req["id_collection"] is None or req["id_collection"]=="" else req["id_collection"]
-            reg.budget_value  = None if req["budget_value"] is None or req["budget_value"]=="" else req["budget_value"]
-            
+            reg.budget_value  = None if req["budget_value"] is None or req["budget_value"]=="" else req["budget_value"]         
             db.session.add(reg)
             db.session.commit()
+
+            # verificar e criar o funil no calendario
+            evtType:ScmEventType = ScmEventType.query.get(req["id_event_type"])
+            if evtType.create_funnel == True:
+                # verifica se foi indicada a colecao
+                if req["id_collection"] is not None:
+                    col:B2bCollection = B2bCollection.query.get(req["id_collection"])
+                    exist = db.session.execute(Select(func.count().label("total")).where(CrmFunnel.name=="SYS - "+col.name)).first()
+
+                    # verifica se jah existe um funil com esse nome
+                    if exist.total == 0:
+                        # busca a configuracao do CRM
+                        crm_cfg:CrmConfig = db.session.execute(
+                            Select(CrmConfig.cfg_value).where(CrmConfig.cfg_name=='DEFAULT_FUNNEL_STAGES')
+                        ).first()
+
+                        # cria o funil com o nome da colecao
+                        fun = CrmFunnel()
+                        fun.name = "SYS - "+col.name
+                        fun.is_default = False
+                        fun.type = CrmFunnelType.SALES.value
+                        db.session.add(fun)
+                        db.session.commit()
+
+                        for stg in str(crm_cfg.cfg_value).split(","):
+                            cfg_stg:CrmFunnelStage = CrmFunnelStage.query.get(stg)
+                            new_stg = CrmFunnelStage()
+                            new_stg.id_funnel  = fun.id
+                            new_stg.name       = cfg_stg.name
+                            new_stg.icon       = cfg_stg.icon
+                            new_stg.icon_color = cfg_stg.icon_color
+                            new_stg.color      = cfg_stg.color
+                            new_stg.order      = cfg_stg.order
+                            db.session.add(new_stg)
+                        db.session.commit()
 
             return reg.id
             
@@ -160,7 +195,7 @@ class CalendarEventApi(Resource):
             date_start = datetime.strptime(req["date_start"],"%Y-%m-%d")
             date_end   = datetime.strptime(req["date_end"],"%Y-%m-%d")
 
-            reg = ScmEvent.query.get(id)
+            reg:ScmEvent = ScmEvent.query.get(id)
             reg.name          = req["name"]
             reg.id_parent     = req["id_parent"]
             reg.year          = date_start.year
@@ -171,6 +206,40 @@ class CalendarEventApi(Resource):
             reg.budget_value  = None if req["budget_value"] is None else req["budget_value"]
             db.session.commit()
 
+            # verificar e criar o funil no calendario
+            evtType:ScmEventType = ScmEventType.query.get(req["id_event_type"])
+            if evtType.create_funnel == True:
+                # verifica se foi indicada a colecao
+                if req["id_collection"] is not None:
+                    col:B2bCollection = B2bCollection.query.get(req["id_collection"])
+                    exist = db.session.execute(Select(func.count().label("total")).where(CrmFunnel.name=="SYS - "+col.name)).first()
+
+                    # verifica se jah existe um funil com esse nome
+                    if exist.total == 0:
+                        # busca a configuracao do CRM
+                        crm_cfg:CrmConfig = db.session.execute(
+                            Select(CrmConfig.cfg_value).where(CrmConfig.cfg_name=='DEFAULT_FUNNEL_STAGES')
+                        ).first()
+
+                        # cria o funil com o nome da colecao
+                        fun = CrmFunnel()
+                        fun.name = "SYS - "+col.name
+                        fun.is_default = False
+                        fun.type = CrmFunnelType.SALES.value
+                        db.session.add(fun)
+                        db.session.commit()
+
+                        for stg in str(crm_cfg.cfg_value).split(","):
+                            cfg_stg:CrmFunnelStage = CrmFunnelStage.query.get(stg)
+                            new_stg = CrmFunnelStage()
+                            new_stg.id_funnel  = fun.id
+                            new_stg.name       = cfg_stg.name
+                            new_stg.icon       = cfg_stg.icon
+                            new_stg.icon_color = cfg_stg.icon_color
+                            new_stg.color      = cfg_stg.color
+                            new_stg.order      = cfg_stg.order
+                            db.session.add(new_stg)
+                        db.session.commit()
             return True
             
         except exc.SQLAlchemyError as e:

@@ -197,16 +197,19 @@ class CmmProductsCategories(db.Model,SerializerMixin):
 
 class CmmProductsGrid(db.Model,SerializerMixin):
     id           = Column(Integer,primary_key=True,autoincrement=True,nullable=False)
-    origin_id    = Column(Integer,nullable=True,comment="Utilizado em caso de importacao")
     name         = Column(String(128))
-    default      = Column(Boolean,nullable=False,server_default='0',default=0)
     date_created = Column(DateTime,nullable=False,server_default=func.now())
     date_updated = Column(DateTime,onupdate=func.now())
     trash        = Column(Boolean,nullable=False,server_default='0',default=0)
 
+# define quais serao os tamanhos utilizados na grade
+# serve para garantir a montagem da grade antes de preencher
+class CmmProductsGridSizes(db.Model,SerializerMixin):
+    id_grid = Column(Integer,primary_key=True)
+    id_size = Column(Integer,primary_key=True)
+
 class CmmProductsGridDistribution(db.Model,SerializerMixin):
     id_grid    = Column(Integer,primary_key=True,nullable=False)
-    id_color   = Column(Integer,primary_key=True,nullable=False)
     id_size    = Column(Integer,primary_key=True,nullable=False)
     value      = Column(Integer,nullable=False)
 
@@ -302,7 +305,7 @@ class CmmTranslateColors(db.Model,SerializerMixin):
     id      = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
     hexcode = Column(String(8),nullable=True)
     name    = Column(String(100),nullable=False)
-    color   = Column(String(10),nullable=False,comment="Original color name")
+    color   = Column(String(100),nullable=False,comment="Original color name")
     trash        = Column(Boolean,nullable=False,server_default='0',default=0)
     date_created = Column(DateTime,nullable=False,server_default=func.now())
     date_updated = Column(DateTime,onupdate=func.now())

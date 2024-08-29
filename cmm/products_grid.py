@@ -2,7 +2,7 @@ from http import HTTPStatus
 import json
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import CmmProductsGrid,CmmProductsGridDistribution, CmmTranslateColors, CmmTranslateSizes, _get_params, db
+from models import CmmProductsGrid,CmmProductsGridDistribution, CmmProductsGridSizes, CmmTranslateColors, CmmTranslateSizes, _get_params, db
 from sqlalchemy import Delete, Select, Update, asc, desc, exc, and_
 from auth import auth
 from os import environ
@@ -69,9 +69,7 @@ class GridList(Resource):
             filter_default  = None if hasattr(params,"default")==False else params.default
 
             rquery = Select(CmmProductsGrid.id,
-                            CmmProductsGrid.origin_id,
                             CmmProductsGrid.name,
-                            CmmProductsGrid.default,
                             CmmProductsGrid.date_created,
                             CmmProductsGrid.date_updated)\
                             .where(CmmProductsGrid.trash==trash)\
@@ -96,9 +94,7 @@ class GridList(Resource):
                     },
                     "data":[{
                         "id": m.id,
-                        "origin_id":m.origin_id,
                         "name": m.name,
-                        "default": m.default,
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                         "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
                     }for m in db.session.execute(rquery)]
@@ -106,9 +102,7 @@ class GridList(Resource):
             else:
                 return [{
                         "id": m.id,
-                        "origin_id": m.origin_id,
                         "name": m.name,
-                        "default": m.default,
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                         "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
                     }for m in db.session.execute(rquery)]
@@ -125,16 +119,18 @@ class GridList(Resource):
     @auth.login_required
     def post(self)->int:
         try:
+            req = request.get_json()
 
-            if req["default"]==1:
-                db.session.execute(Update(CmmProductsGrid).values(default=0))
-                db.session.commit()
-
-            req = json.dumps(request.get_json())
             grid = CmmProductsGrid()
-            grid.name    = req["name"]
-            grid.default = req["default"]
+            grid.name = req["name"]
             db.session.add(grid)
+            db.session.commit()
+
+            for size in str(req["sizes"]):
+                grids:CmmProductsGridSizes = CmmProductsGridSizes()
+                grids.id_size = size
+                grids.id_grid = grid.id
+                db.session.add(grids)
             db.session.commit()
 
             return grid.id
@@ -173,9 +169,13 @@ class GridApi(Resource):
     def get(self,id:int):
         try:
             grid = CmmProductsGrid.query.get(id)
+            ssmtm = Select(CmmProductsGridSizes.id_size).where(CmmProductsGridSizes.id_grid==id)
             return {
                 "id": id,
                 "name": grid.name,
+                "sizes":[{
+                    "id": s.id_size
+                }for s in db.session.execute(ssmtm)]
             }
         except exc.SQLAlchemyError as e:
             return {
@@ -189,11 +189,27 @@ class GridApi(Resource):
     @auth.login_required
     def post(self,id:int)->bool:
         try:
-            req = json.dumps(request.get_json())
+            req = request.get_json()
             grid:CmmProductsGrid = CmmProductsGrid.query.get(id)
             grid.name    = req["name"]
-            grid.default = req["default"] 
             db.session.commit()
+
+            # remove todos os tamanhos existentes para garantir a consistencia da atualizacao
+            db.session.execute(Delete(CmmProductsGridSizes).where(CmmProductsGridSizes.id_grid==id))
+            db.session.commit()
+
+            sizes = str(req["sizes"])
+            for size in sizes:
+                grids:CmmProductsGridSizes = CmmProductsGridSizes()
+                grids.id_size = size
+                grids.id_grid = grid.id
+                db.session.add(grids)
+            db.session.commit()
+
+            # faz a adequacao em relacao aos tamanhos da grade
+            db.session.execute(Delete(CmmProductsGridDistribution).where(CmmProductsGridDistribution.id_size.in_(sizes)))
+            db.session.commit()
+
             return True
         except exc.SQLAlchemyError as e:
             return {
@@ -207,59 +223,21 @@ class GridDistribution(Resource):
     @ns_gprod.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
     @auth.login_required
     def get(self,id:int):
-        pag_num  =  1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size = int(environ.get("F2B_PAGINATION_SIZE")) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
-        query    = None if request.args.get("query") is None else request.args.get("query")
-
         try:
-            params    = _get_params(query)
-            trash     = False if hasattr(params,'trash')==False else True
-            list_all  = False if hasattr(params,"list_all")==False else True
-            order_by  = "id" if hasattr(params,"order_by")==False else params.order_by
-            direction = desc if hasattr(params,"order_dir") == 'DESC' else asc
-
-            only_one = False if hasattr(params,"only_one")==False else True
-            filter_color = 0 if hasattr(params,"color")==False else params.color
-
-            cquery = Select(CmmProductsGridDistribution.id_color,
-                            CmmTranslateColors.name.label("color"))\
-                            .join(CmmTranslateColors,CmmTranslateColors.id==CmmProductsGridDistribution.id_color)\
-                            .group_by(CmmProductsGridDistribution.id_color)\
-                            .order_by(asc(CmmTranslateColors.name))
-            if only_one:
-                g = db.session.execute(cquery.where(
-                    and_(
-                        CmmProductsGridDistribution.id_grid==id,
-                        CmmProductsGridDistribution.id_color==filter_color
-                    )
-                )).first()
+            stmt = Select(CmmProductsGridSizes.id_size,
+                          CmmTranslateSizes.name,
+                          CmmTranslateSizes.new_size,
+                          CmmProductsGridDistribution.value)\
+                .join(CmmTranslateSizes,CmmTranslateSizes.id==CmmProductsGridSizes.id_size)\
+                .outerjoin(CmmProductsGridDistribution,CmmProductsGridDistribution.id_size==CmmTranslateSizes.id)\
+                .where(CmmProductsGridSizes.id_grid==id)
             
-            squery = Select(CmmProductsGridDistribution.id_size,
-                            CmmTranslateSizes.new_size.label("size"),
-                            CmmProductsGridDistribution.value)\
-                            .join(CmmTranslateSizes,CmmTranslateSizes.id==CmmProductsGridDistribution.id_size)\
-                            .order_by(asc(CmmTranslateSizes.id))
-            
-            if only_one==True:
-                    return {
-                    "id_color": g.id_color,
-                    "color": g.color,
-                    "sizes" : [{
-                        "id_size": s.id_size,
-                        "size": s.size,
-                        "value": s.value
-                    }for s in db.session.execute(squery.where(and_(CmmProductsGridDistribution.id_grid==id,CmmProductsGridDistribution.id_color==g.id_color)))],
-                }
-            else:
-                return [{
-                    "id_color": g.id_color,
-                    "color": g.color,
-                    "sizes" : [{
-                        "id_size": s.id_size,
-                        "size": s.size,
-                        "value": s.value
-                    }for s in db.session.execute(squery.where(and_(CmmProductsGridDistribution.id_grid==id,CmmProductsGridDistribution.id_color==g.id_color)))],
-                }for g in db.session.execute(cquery.where(CmmProductsGridDistribution.id_grid==id))]
+            return [{
+                "id": s.id_size,
+                "name": s.name,
+                "new_size": s.new_size,
+                "value": 0 if s.value is None else int(s.value),
+            }for s in db.session.execute(stmt)]
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -273,16 +251,15 @@ class GridDistribution(Resource):
     def post(self,id:int):
         try:
             req  = request.get_json()
-            for size in req["sizes"]:
-                dist = CmmProductsGridDistribution.query.get((id,req["id_color"],size["id_size"]))
+            for size in req:
+                dist = CmmProductsGridDistribution.query.get((id,size["id"]))
                 if dist is not None:
                     dist.value = size["value"]
                 else:
                     dist = CmmProductsGridDistribution()
                     dist.id_grid  = id
-                    dist.id_color = req["id_color"]
-                    dist.id_size  = req["id_size"]
-                    dist.value    = req["value"]
+                    dist.id_size  = int(size["id"])
+                    dist.value    = int(size["value"])
                     db.session.add(dist)
                 db.session.commit()
             return True

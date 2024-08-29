@@ -2,7 +2,7 @@ from http import HTTPStatus
 import simplejson
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import CmmMeasureUnit, CmmProducts, CmmProductsCategories, CmmProductsGrid, \
+from models import B2bCollection, CmmMeasureUnit, CmmProducts, CmmProductsCategories, CmmProductsGrid, \
     CmmProductsImages, CmmProductsTypes, CmmProductsModels, \
     _get_params, db
 from sqlalchemy import desc, exc, asc,Select, or_
@@ -81,10 +81,13 @@ class ProductsList(Resource):
             order_by  = "name" if hasattr(params,"order_by")==False else params.order_by
             direction = asc if hasattr(params,"order")==False else asc if str(params.order).lower()=="asc" else desc
         
-            filter_search = None if hasattr(params,"search")==False else params.name
-            filter_type   = None if hasattr(params,"type")==False else params.type
-            filter_model  = None if hasattr(params,"model")==False else params.model
-            filter_grid   = None if hasattr(params,"grid")==False else params.grid
+            filter_search     = None if hasattr(params,"search")==False else params.name
+            filter_brand      = None if hasattr(params,"brand")==False else params.brand
+            filter_collection = None if hasattr(params,"collection")==False else params.collection
+            filter_category   = None if hasattr(params,"category")==False else params.category
+            filter_type       = None if hasattr(params,"type")==False else params.type
+            filter_model      = None if hasattr(params,"model")==False else params.model
+            filter_grid       = None if hasattr(params,"grid")==False else params.grid
 
             rquery = Select(CmmProducts.id,
                             CmmProducts.prodCode,
@@ -126,6 +129,26 @@ class ProductsList(Resource):
 
             if filter_grid is not None:
                 rquery.where(CmmProducts.id_grid==filter_grid)
+
+            if filter_brand is not None:
+                rquery.where(CmmProducts.id_collection.in_(
+                    Select(B2bCollection.id).where(B2bCollection.id_brand.in_(
+                        str(filter_brand).split(",")
+                    ))
+                ))
+            
+            if filter_collection is not None:
+                rquery.where(CmmProducts.id_collection.in_(
+                    str(filter_collection).split(",")
+                ))
+
+            if filter_category is not None:
+                rquery.where(CmmProducts.id.in_(
+                    Select(CmmProductsCategories.id_product)
+                    .where(CmmProductsCategories.id_category.in_(
+                        str(filter_category).split(",")
+                    ))
+                ))
 
             if hasattr(params,'list_all')==False:
                 pag = db.paginate(rquery,page=pag_num,per_page=pag_size)

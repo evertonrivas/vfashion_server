@@ -4,8 +4,8 @@ from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
 import simplejson
-from models import B2bBrand, B2bCollection, B2bProductStock, B2bTablePrice, B2bTablePriceProduct, CmmCategories, CmmMeasureUnit, CmmProducts, CmmProductsCategories, CmmProductsGrid, CmmProductsGridDistribution, CmmProductsImages, CmmProductsModels, CmmProductsTypes, CmmTranslateColors, CmmTranslateSizes, ScmEvent, _get_params, _show_query, db
-from sqlalchemy import Select, and_, exc, or_, desc, asc
+from models import B2bBrand, B2bCartShopping, B2bCollection, B2bProductStock, B2bTablePrice, B2bTablePriceProduct, CmmCategories, CmmMeasureUnit, CmmProducts, CmmProductsCategories, CmmProductsGrid, CmmProductsGridDistribution, CmmProductsGridSizes, CmmProductsImages, CmmProductsModels, CmmProductsTypes, CmmTranslateColors, CmmTranslateSizes, ScmEvent, _get_params, _show_query, db
+from sqlalchemy import Delete, Select, and_, exc, or_, desc, asc
 from auth import auth
 from os import environ
 
@@ -102,12 +102,52 @@ class ProductStockList(Resource):
             search    = None if hasattr(params,"search")==False else params.search
             list_all  = False if hasattr(params,"list_all")==False else True
 
+            filter_brand    = None if hasattr(params,"brand")==False else params.brand
+            filter_collect  = None if hasattr(params,"collection")==False else params.collection
+            filter_category = None if hasattr(params,"category")==False else params.category
+            filter_model    = None if hasattr(params,"model")==False else params.model
+            filter_type     = None if hasattr(params,"type")==False else params.type
+            filter_color    = None if hasattr(params,"color")==False else params.color
+
             pquery = Select(B2bProductStock.id_product,
                         CmmProducts.name.label("product")
                         ).distinct()\
                 .join(CmmProducts,CmmProducts.id==B2bProductStock.id_product)\
                 .join(CmmTranslateColors,CmmTranslateColors.id==B2bProductStock.id_color)\
                 .join(CmmTranslateSizes,CmmTranslateSizes.id==B2bProductStock.id_size)
+            
+            if filter_brand is not None:
+                pquery = pquery.where(CmmProducts.id_collection.in_(
+                    Select(B2bCollection.id)
+                    .join(B2bBrand,B2bBrand.id==B2bCollection.id_brand)
+                    .where(B2bBrand.id.in_(str(filter_brand).split(',')))
+                ))
+
+            if filter_collect is not None:
+                pquery = pquery.where(CmmProducts.id_collection.in_(str(filter_collect).split(',')))
+
+            if filter_category is not None:
+                pquery = pquery.where(
+                    CmmProducts.id.in_(
+                        Select(CmmProductsCategories.id_product)
+                        .where(CmmProductsCategories.id_category.in_(str(filter_category).split(',')))
+                    )
+                )
+
+            if filter_model is not None:
+                pquery = pquery.where(
+                    CmmProducts.id_model.in_(str(filter_model).split(','))
+                )
+
+            if filter_type is not None:
+                pquery = pquery.where(
+                    CmmProducts.id_type.in_(str(filter_type).split(','))
+                )
+
+            if filter_color is not None:
+                pquery = pquery.where(
+                    CmmTranslateColors.id.in_(str(filter_color).split(','))
+                )
             
             cquery = Select(B2bProductStock.id_color,
                             CmmTranslateColors.name).distinct()\
@@ -120,6 +160,8 @@ class ProductStockList(Resource):
                             B2bProductStock.in_order)\
                 .join(CmmTranslateSizes,CmmTranslateSizes.id==B2bProductStock.id_size)
             
+            _show_query(pquery)
+
             if search is not None:
                 pquery = pquery.where(
                     or_(
@@ -209,6 +251,45 @@ class ProductStockList(Resource):
                 "error_sql": e._sql_message()
             }
 
+    def patch(self)->bool:
+        try:
+            req = request.get_json()
+            # varre cada um dos produtos
+            for id_product in req["ids"]:
+                for id_color in req["colors"]:
+                    for size in req["grid"]:
+                        stk = B2bProductStock.query.get((id_product,id_color,size["id"]))
+                        if stk is not None:
+                            stk.quantity = None if req["ilimited"]==True or req["ilimited"]=="true" else size["value"]
+                            stk.ilimited = True if req["ilimited"]==True or req["ilimited"]=="true" else False
+                            db.session.commit()
+                        else:
+                            stk = B2bProductStock()
+                            stk.id_product = id_product
+                            stk.id_color   = id_color
+                            stk.id_size    = size["id"]
+                            stk.quantity   = None if req["ilimited"]==True or req["ilimited"]=="true" else size["value"]
+                            stk.ilimited   = True if req["ilimited"]==True or req["ilimited"]=="true" else False
+                            db.session.add(stk)
+                            db.session.commit()
+
+                        if req["remove"]==True or req["remove"]=="true":
+                            db.session.execute(Delete(B2bProductStock).where(
+                                and_(
+                                    B2bProductStock.id_product==id_product,
+                                    B2bProductStock.id_color==id_color,
+                                    B2bProductStock.id_size==size["id"]
+                                )
+                            ))
+                            db.session.commit()
+            return True
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
+
 @ns_stock.route("/<int:id>")
 @ns_stock.param("id","Id do produto")
 @ns_stock.param("color","Cor do produto")
@@ -284,13 +365,34 @@ class ProductStockLoad(Resource):
         }for m in cquery]
     
     def get_sizes(self,id_product:int,color:int):
-        subquery = Select(B2bProductStock.quantity,B2bProductStock.ilimited,B2bProductStock.id_size.label("size_code"))\
-            .where(and_(B2bProductStock.id_product==id_product,B2bProductStock.id_color==color))\
-            .cte()
-        query = Select(CmmTranslateSizes.new_size.label("size_code"),CmmTranslateSizes.id,CmmTranslateSizes.name,subquery.c.quantity,subquery.c.ilimited)\
-            .outerjoin(subquery,subquery.c.size_code==CmmTranslateSizes.id)
+        # subquery = Select(B2bProductStock.quantity,B2bProductStock.ilimited,B2bProductStock.id_size.label("size_code"))\
+        #     .where(and_(B2bProductStock.id_product==id_product,B2bProductStock.id_color==color))\
+        #     .cte()
         
-        #_show_query(query)
+        query = Select(
+                CmmTranslateSizes.new_size.label("size_code"),
+                CmmTranslateSizes.id,
+                CmmTranslateSizes.name,
+                B2bProductStock.quantity,
+                B2bProductStock.ilimited,
+                B2bCartShopping.quantity.label("value"))\
+            .join(CmmProducts,CmmProducts.id==B2bProductStock.id_product)\
+            .join(CmmProductsGrid,CmmProductsGrid.id==CmmProducts.id_grid)\
+            .join(CmmProductsGridSizes,CmmProductsGridSizes.id_grid==CmmProductsGrid.id)\
+            .join(CmmTranslateSizes,CmmTranslateSizes.id==CmmProductsGridSizes.id_size)\
+            .outerjoin(B2bCartShopping,
+                       and_(
+                           B2bCartShopping.id_product==CmmProducts.id,
+                           B2bCartShopping.id_color==color,
+                           B2bCartShopping.id_size==B2bProductStock.id_size
+                       ))\
+            .where(and_(
+                B2bProductStock.id_product==id_product,
+                B2bProductStock.id_color==color,
+                CmmProductsGridSizes.id_size==B2bProductStock.id_size
+            ))
+        
+        # _show_query(query)
 
         query = db.session.execute(query)
 
@@ -299,12 +401,12 @@ class ProductStockLoad(Resource):
                 "size_code": s.size_code,
                 "size_name": s.name,
                 "size_value": self.formatQuantity(s.quantity,s.ilimited),
-                "size_saved": 0
+                "size_saved": 0 if s.value is None else s.value
             }for s in query]
     
     def formatQuantity(self,quantity:int,ilimited:bool):
         if (quantity is None or quantity == 0) and ilimited==True:
-            return 99999
+            return "999+"
         if (quantity is None or quantity == 0) and ilimited is None:
             return None
         return quantity
@@ -425,10 +527,14 @@ class ProductsGallery(Resource):
                 )
 
             #color query
-            cquery = Select(CmmTranslateColors.name,CmmTranslateColors.id,CmmTranslateColors.hexcode).distinct()\
-                    .join(CmmProductsGridDistribution,CmmProductsGridDistribution.id_color==CmmTranslateColors.id)\
-                    .join(CmmProductsGrid,CmmProductsGrid.id==CmmProductsGridDistribution.id_grid)\
-                    .join(B2bProductStock,B2bProductStock.id_color==CmmTranslateColors.id)
+            cquery = Select(CmmTranslateColors.name,CmmTranslateColors.id,CmmTranslateColors.hexcode)\
+                .select_from(CmmTranslateColors).distinct()\
+                .join(B2bProductStock,B2bProductStock.id_color==CmmTranslateColors.id)\
+                .join(CmmProducts,CmmProducts.id==B2bProductStock.id_product)\
+                .join(CmmProductsGrid,CmmProductsGrid.id==CmmProducts.id_grid)
+                    # .join(CmmProductsGridDistribution,CmmProductsGridDistribution.id_color==CmmTranslateColors.id)\
+                    # .join(CmmProductsGrid,CmmProductsGrid.id==CmmProductsGridDistribution.id_grid)\
+                    # .join(B2bProductStock,B2bProductStock.id_color==CmmTranslateColors.id)
             
             # _show_query(cquery)
             
