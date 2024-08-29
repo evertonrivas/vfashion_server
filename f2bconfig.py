@@ -62,3 +62,11 @@ class LegalEntityType(Enum):
     REPRESENTATIVE = 'R'
     SUPPLIER       = 'S'
     PERSON         = 'P'
+
+class FlimvModel(Enum):
+    FLIMVS = "FLIMVS" # seasonal
+    FLIMVC = "FLIMVC" # continuous
+
+class ComissionType(Enum):
+    FIXED      = 'F'
+    COLLECTION = 'C'
