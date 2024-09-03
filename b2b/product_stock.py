@@ -110,6 +110,7 @@ class ProductStockList(Resource):
             filter_color    = None if hasattr(params,"color")==False else params.color
 
             pquery = Select(B2bProductStock.id_product,
+                        CmmProducts.refCode,
                         CmmProducts.name.label("product")
                         ).distinct()\
                 .join(CmmProducts,CmmProducts.id==B2bProductStock.id_product)\
@@ -160,19 +161,23 @@ class ProductStockList(Resource):
                             B2bProductStock.in_order)\
                 .join(CmmTranslateSizes,CmmTranslateSizes.id==B2bProductStock.id_size)
             
-            _show_query(pquery)
+            # _show_query(pquery)
 
             if search is not None:
                 pquery = pquery.where(
                     or_(
                         CmmProducts.name.like("%{}%".format(search)),
+                        CmmProducts.refCode.like("%{}%".format(search)),
+                        CmmProducts.observation.like("%{}%".format(search)),
+                        CmmProducts.description.like("%{}%".format(search)),
+                        CmmProducts.barCode.like("%{}%".format(search)),
                         CmmTranslateSizes.name.like("%{}%".format(search)),
                         CmmTranslateColors.name.like("%{}%".format(search)),
                         CmmTranslateColors.hexcode.like("%{}%".format(search))
                     )
                 )
             
-            # _show_query(rquery)
+            # _show_query(pquery)
 
             if list_all==False:
                 pag = db.paginate(pquery,page=pag_num,per_page=pag_size)
@@ -188,6 +193,7 @@ class ProductStockList(Resource):
                     },
                     "data":[{
                         "id_product":m.id_product,
+                        "refCode": m.refCode,
                         "product": m.product,
                         "colors": [{
                             "id": c.id_color,
@@ -205,6 +211,7 @@ class ProductStockList(Resource):
             else:
                 retorno = [{
                         "id_product":m.id_product,
+                        "refCode": m.refCode,
                         "product": m.product,
                         "colors": [{
                             "id": c.id_color,

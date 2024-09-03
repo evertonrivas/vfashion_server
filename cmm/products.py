@@ -2,10 +2,11 @@ from http import HTTPStatus
 import simplejson
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import B2bCollection, CmmMeasureUnit, CmmProducts, CmmProductsCategories, CmmProductsGrid, \
+from f2bconfig import ProductMassiveAction
+from models import B2bCollection, CmmCategories, CmmMeasureUnit, CmmProducts, CmmProductsCategories, CmmProductsGrid, \
     CmmProductsImages, CmmProductsTypes, CmmProductsModels, \
-    _get_params, db
-from sqlalchemy import desc, exc, asc,Select, or_
+    _get_params, _show_query, db
+from sqlalchemy import Delete, Update, desc, exc, asc,Select, or_
 from auth import auth
 from decimal import Decimal
 from os import environ
@@ -105,12 +106,16 @@ class ProductsList(Resource):
                             CmmProductsTypes.name.label("type_description"),
                             CmmProductsModels.name.label("model_description"),
                             CmmProductsGrid.name.label("grid_description")
-                            ).join(CmmProductsTypes,CmmProductsTypes.id==CmmProducts.id_type)\
-                            .join(CmmProductsModels,CmmProductsModels.id==CmmProducts.id_model)\
-                            .join(CmmProductsGrid,CmmProductsGrid.id==CmmProducts.id_grid)\
-                            .join(CmmMeasureUnit,CmmMeasureUnit.id==CmmProducts.id_measure_unit)\
+                            ).outerjoin(CmmProductsTypes,CmmProductsTypes.id==CmmProducts.id_type)\
+                            .outerjoin(CmmProductsModels,CmmProductsModels.id==CmmProducts.id_model)\
+                            .outerjoin(CmmProductsGrid,CmmProductsGrid.id==CmmProducts.id_grid)\
+                            .outerjoin(CmmMeasureUnit,CmmMeasureUnit.id==CmmProducts.id_measure_unit)\
                             .where(CmmProducts.trash==trash)\
                             .order_by(direction(getattr(CmmProducts, order_by)))
+            
+            cat_query = Select(CmmCategories.name).join(CmmProductsCategories,CmmProductsCategories.id_category==CmmCategories.id)
+
+            # _show_query(rquery)
             
             if filter_search is not None:
                 rquery.where(or_(
@@ -177,6 +182,7 @@ class ProductsList(Resource):
                         "price": simplejson.dumps(Decimal(m.price)),
                         "measure_unit": m.measure_unit,
                         "structure": m.structure,
+                        "categories": [{"name": c.name } for c in db.session.execute(cat_query.where(CmmProductsCategories.id_product==m.id))],
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                         "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
                     } for m in db.session.execute(rquery)]
@@ -197,6 +203,7 @@ class ProductsList(Resource):
                         "price": simplejson.dumps(Decimal(m.price)),
                         "measure_unit": m.measure_unit,
                         "structure": m.structure,
+                        "categories": [{"name": c.name } for c in db.session.execute(cat_query.where(CmmProductsCategories.id_product==m.id))],
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                         "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
                     } for m in db.session.execute(rquery)]
@@ -277,6 +284,41 @@ class ProductsList(Resource):
                 "error_sql": e._sql_message()
             }
 
+    @ns_prod.response(HTTPStatus.OK.value,"Realiza ações massivas em produto(s)")
+    @ns_prod.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
+    def patch(self)->bool:
+        try:
+            req = request.get_json()
+            print(ProductMassiveAction.TYPE.value)
+            if req["action"]==ProductMassiveAction.CATEGORY.value:
+                db.session.execute(Delete(CmmProductsCategories).where(CmmProductsCategories.id_product.in_(req["products"])))
+                db.session.commit()
+                for id in req["ids"]:
+                    for prod in req["products"]:
+                        prod_cat = CmmProductsCategories()
+                        prod_cat.id_product  = prod
+                        prod_cat.id_category = id
+                        db.session.add(prod_cat)
+            elif req["action"]==ProductMassiveAction.GRID.value:
+                db.session.execute(Update(CmmProducts).values(id_grid=req["ids"]).where(CmmProducts.id.in_(req["products"])))
+            elif req["action"]==ProductMassiveAction.MODEL.value:
+                db.session.execute(Update(CmmProducts).values(id_model=req["ids"]).where(CmmProducts.id.in_(req["products"])))
+            elif req["action"]==ProductMassiveAction.PRICE.value:
+                db.session.execute(Update(CmmProducts).values(price=req["ids"]).where(CmmProducts.id.in_(req["products"])))
+            elif req["action"]==ProductMassiveAction.TYPE.value:
+                db.session.execute(Update(CmmProducts).values(id_type=req["ids"]).where(CmmProducts.id.in_(req["products"])))
+            else: #measure
+                db.session.execute(Update(CmmProducts).values(id_measure_unit=req["ids"]).where(CmmProducts.id.in_(req["products"])))
+            
+            db.session.commit()
+
+            return True
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
 
 @ns_prod.route("/<int:id>")
 @ns_prod.param("id","Id do registro")

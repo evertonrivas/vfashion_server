@@ -16,6 +16,7 @@ from cmm.upload import ns_upload
 from cmm.email import ns_email
 from cmm.measure_unit import ns_measure_unit
 from cmm.config import ns_config
+from cmm.reports import ns_report
 
 
 """ Módulo Common entre os sistemas
@@ -35,6 +36,7 @@ nss = [ns_cat,
        ns_measure_unit,
        ns_model,
        ns_prod,
+       ns_report,
        ns_size,
        ns_state_region,
        ns_type,

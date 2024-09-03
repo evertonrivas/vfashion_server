@@ -1,9 +1,9 @@
 from datetime import datetime
 from sqlalchemy import Insert, Select, Update, and_, create_engine, distinct, func, tuple_
-from models import B2bCollection, B2bOrdersProducts, CmmLegalEntities, CmmProducts, CmmProductsGrid, CmmProductsGridDistribution, FprDevolution, FprDevolutionItem, B2bOrders, ScmFlimvResult
+from models import B2bCollection, B2bOrdersProducts, CmmLegalEntities, CmmProducts, CmmProductsGrid, CmmProductsGridDistribution, FprDevolution, FprDevolutionItem, B2bOrders, ScmFlimvResult, _show_query
 from dotenv import load_dotenv
 from os import environ,path
-from sysconfig import LegalEntityType, OrderStatus
+from f2bconfig import DevolutionStatus, LegalEntityType, OrderStatus,FlimvModel
 
 BASEDIR = path.abspath(path.dirname(__file__))
 load_dotenv(path.join(BASEDIR, '.env'))
@@ -17,17 +17,21 @@ class Flimv():
         super().__init__()
 
     def process(self) -> None:
-        self.__make_data()
-        self.__get_mix()
-        self.__get_volume()
+        if(environ.get("F2B_FLIMV_MODEL")==FlimvModel.FLIMVS.value):
+            self.__make_data_seasonal()
+        else:
+            self.__make_data_continuos()
+        self.__save_flimv()
 
-    def __make_data(self) -> None:
+    def __make_data_seasonal(self) -> None:
         with self.dbconn.connect() as conn:
             # realiza a busca de todas as colecoes existentes
             for collection in conn.execute(Select(B2bCollection.id).where(B2bCollection.trash==False)):
 
                 # utilizado para calcular o volume do mix comprado
-                total_mix = conn.execute(Select(func.count(CmmProducts.id).label("total")).where(and_(CmmProducts.id_collection==collection.id,CmmProducts.trash==False))).first().total
+                total_mix = conn.execute(
+                    Select(func.count(CmmProducts.id).label("total")).where(and_(CmmProducts.id_collection==collection.id,CmmProducts.trash==False))
+                ).first().total
 
                 # busca todos os clientes existentes
                 for cst in conn.execute(Select(CmmLegalEntities.id).where(CmmLegalEntities.type==LegalEntityType.CUSTOMER.value)):
@@ -46,7 +50,7 @@ class Flimv():
                         )
                     ).where(and_(
                         B2bOrders.id_customer==cst.id,
-                        B2bOrders.status==OrderStatus.FINISHED
+                        B2bOrders.status==OrderStatus.FINISHED.value
                     ))).first().total
 
                     if customer_in_collection > 0:
@@ -60,23 +64,20 @@ class Flimv():
                             "volume": 0
                         })
 
-                    ###############################################################
-                    #                           INJURY                            #
-                    ###############################################################
-                    # monta o indicador de injury buscando o total de reclamacoes
+                    ##########################################################################
+                    #                                  INJURY                                #
+                    ##########################################################################
+                    # monta o indicador de injury buscando o total de reclamacoes da colecao
                     # isso indiferente se foi aprovada ou nao, o importante eh se o 
                     # cliente abriu devolucao
                     sql_reclamacao_cliente = Select(func.count(FprDevolutionItem.id_product).label("total")).select_from(FprDevolution)\
                     .join(B2bOrders,B2bOrders.id==FprDevolution.id_order)\
                     .join(FprDevolutionItem,FprDevolutionItem.id_devolution==FprDevolution.id)\
                     .join(CmmProducts,CmmProducts.id==FprDevolutionItem.id_product)\
-                    .join(CmmProductsGrid,CmmProductsGrid.id==CmmProducts.id_grid)\
-                    .join(CmmProductsGridDistribution,CmmProductsGridDistribution.id_grid==CmmProductsGrid.id)\
-                    .join(B2bCollection,B2bCollection.id_brand==CmmProducts.id_collection)\
+                    .join(B2bCollection,B2bCollection.id==CmmProducts.id_collection)\
                     .where(and_(
                         B2bCollection.id==collection.id,
                         B2bOrders.id_customer==cst.id,
-                        FprDevolutionItem.id_color==CmmProductsGridDistribution.id_color,
                         FprDevolutionItem.id_size==CmmProductsGridDistribution.id_size
                     ))
 
@@ -91,8 +92,30 @@ class Flimv():
                     ###############################################################
                     #                              MIX                            #
                     ###############################################################
-                    total_aquisition = conn.execute(Select(
+                    # total de produtos unicos adquiridos por colecao
+                    total_unique_aquisition = conn.execute(Select(
                         func.count(distinct(tuple_(B2bOrdersProducts.id_product))).label("total")
+                    ).select_from(B2bOrders)\
+                    .join(B2bOrdersProducts,B2bOrdersProducts.id_order==B2bOrders.id)\
+                    .join(CmmProducts,CmmProducts.id==B2bOrdersProducts.id_product)\
+                    .where(
+                        and_(
+                            B2bOrders.id_customer==cst.id,
+                            CmmProducts.id_collection==collection.id
+                        )
+                    )).first().total
+                    if total_unique_aquisition > 0:
+                        for flimv in self.internal_flimv:
+                            if flimv["id_customer"]==cst.id and flimv["id_collection"]==collection.id:
+                                flimv["mix"] = total_mix/total_unique_aquisition
+                    
+
+                    ###############################################################
+                    #                            VOLUME                           #
+                    ###############################################################
+                    # total adquirido
+                    total_aquisition = conn.execute(Select(
+                        func.sum(B2bOrdersProducts.quantity).label("total")
                     ).select_from(B2bOrders)\
                     .join(B2bOrdersProducts,B2bOrdersProducts.id_order==B2bOrders.id)\
                     .join(CmmProducts,CmmProducts.id==B2bOrdersProducts.id_product)\
@@ -105,15 +128,44 @@ class Flimv():
                     if total_aquisition > 0:
                         for flimv in self.internal_flimv:
                             if flimv["id_customer"]==cst.id and flimv["id_collection"]==collection.id:
-                                flimv["mix"] = total_mix/total_aquisition
+                                flimv["volume"] = total_aquisition/total_mix
+
                     
+    def __make_data_continuos(self) -> None:
+        with self.dbconn.connect() as conn:
+            # total de pedidos existentes finalizados
+            total_orders = conn.execute(Select(func.count(B2bOrders.id).label("total")).where(B2bOrders.status==OrderStatus.FINISHED.value)).first().total
+            # total adquirido em pedidos finalizados
+            volume_total = conn.execute(
+                Select(func.sum(B2bOrdersProducts.quantity))
+                .join(B2bOrders,B2bOrders.id==B2bOrdersProducts.id_order)
+                .where(B2bOrders.status==OrderStatus.FINISHED)
+            )
 
-                    ###############################################################
-                    #                            VOLUME                           #
-                    ###############################################################
 
-    def __get_volume(self) -> None:
-        pass
+            # busca todos os clientes existentes
+            for customer in conn.execute(Select(CmmLegalEntities.id).where(CmmLegalEntities.type==LegalEntityType.CUSTOMER.value)):
+                ##########################################################################
+                #                                 FREQUENCY                              #
+                ##########################################################################
+                # busca o total de pedidos existentes do cliente
+
+                ##########################################################################
+                #                                  INJURY                                #
+                ##########################################################################
+                # busca o total de devolucoes do cliente
+
+                ##########################################################################
+                #                                    MIX                                 #
+                ##########################################################################
+                # busca o total do mix adquirido pelo cliente
+
+                ##########################################################################
+                #                                   VOLUME                               #
+                ##########################################################################
+                # busca o volume total de compras do cliente
+
+                pass
 
     def __save_flimv(self) -> None:
         with self.dbconn.connect() as conn:

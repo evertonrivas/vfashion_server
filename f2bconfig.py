@@ -70,3 +70,37 @@ class FlimvModel(Enum):
 class ComissionType(Enum):
     FIXED      = 'F'
     COLLECTION = 'C'
+
+class ProductMassiveAction(Enum):
+    CATEGORY = 1
+    GRID     = 2
+    MODEL    = 3
+    PRICE    = 4
+    TYPE     = 5
+    MEASURE  = 6
+
+
+class Reports(Enum):
+    CUSTOMERS_ACTIVE             = "customers-active"
+    CUSTOMERS_INACTIVE           = "customers-inactive"
+    CUSTOMERS_HISTORY            = "customers-history"
+    CALENDAR_BUDGET              = "calendar-budget"
+    CALENDAR_EVENTS              = "calendar-events"
+    CRM_CUSTOMERS_PROSPECT       = "crm-customers-prospect"
+    CRM_CUSTOMERS_BY_FUNNEL      = "crm-customers-by-funnel"
+    DEVOLUTION_BY_CUSTOMER       = "devolution-by-customer"
+    DEVOLUTION_BY_MOMENT         = "devolution-by-moment"
+    DEVOLUTION_BY_PRODUCT        = "devolution-by-product"
+    DEVOLUTION_BY_TYPE           = "devolution-by-type"
+    DEVOLUTION_BY_MODEL          = "devolution-by-model"
+    DEVOLUTION_BY_CATEGORY       = "devolution-by-category"
+    DEVOLUTION_BY_REPRESENTATIVE = "devolution-by-representative"
+    DEVOLUTION_BY_STATUS         = "devolution-by-status"
+    ORDER_BY_CUSTOMER            = "order-by-customer"
+    ORDER_BY_MOMENT              = "order-by-moment"
+    ORDER_BY_REPRESENTATIVE      = "order-by-representative"
+    ORDER_BY_PRODUCT             = "order-by-product"
+    ORDER_BY_TYPE                = "order-by-type"
+    ORDER_BY_MODEL               = "order-by-model"
+    ORDER_BY_CATEGORY            = "order-by-category"
+    ORDER_BY_STATUS              = "order-by-status"

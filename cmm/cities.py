@@ -72,9 +72,10 @@ class CitiesList(Resource):
                 )
 
             if filter_state is not None:
-                rquery = rquery.where(
-                    CmmCities.id_state_region==filter_state
-                )
+                if str(filter_state).find(",")==-1:
+                    rquery = rquery.where(CmmCities.id_state_region==filter_state)
+                else:
+                    rquery = rquery.where(CmmCities.id_state_region.in_(filter_state))
 
             #print(rquery)
 

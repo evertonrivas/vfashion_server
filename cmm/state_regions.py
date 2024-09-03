@@ -51,6 +51,8 @@ class CategoryList(Resource):
             search    = None if hasattr(params,"search")==False else params.search
             list_all  = False if hasattr(params,"list_all")==False else params.list_all
 
+            filter_country = None if hasattr(params,"country")==False else params.country
+
             rquery = Select(CmmStateRegions.id,
                             CmmStateRegions.id_country,
                             CmmStateRegions.name,
@@ -63,6 +65,12 @@ class CategoryList(Resource):
                     CmmStateRegions.name.like("%{}%".format(search)),
                     CmmStateRegions.acronym.like("%{}%".format(search))
                 ))
+
+            if filter_country is not None:
+                if str(filter_country).find(",")==-1:
+                    rquery = rquery.where(CmmStateRegions.id_country==filter_country)
+                else:
+                    rquery = rquery.where(CmmStateRegions.id_country.in_(filter_country))
 
             if list_all==False:
                 pag = db.paginate(rquery,page=pag_num,per_page=pag_size)

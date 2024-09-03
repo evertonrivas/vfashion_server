@@ -1,4 +1,5 @@
 from http import HTTPStatus
+import importlib
 from flask_restx import Resource,Namespace,fields
 from flask import request
 from models import B2bBrand, B2bCollection, B2bCustomerGroup, B2bCustomerGroupCustomers, B2bProductStock, CmmProducts, CmmProductsModels, CmmTranslateColors, CmmTranslateSizes, CmmUserEntity, CmmUsers, FprDevolution, _save_log, _show_query, db,_get_params,B2bCartShopping, B2bOrders,B2bOrdersProducts, B2bPaymentConditions, CmmLegalEntities,ScmEvent,ScmEventType
@@ -275,7 +276,7 @@ class OrderApi(Resource):
                     "price": str(m.price),
                     "discount": str(m.discount),
                     "discount_percentage": str(m.discount_percentage),
-                    "stock_quantity": 999 if m.ilimited==1 else (m.stock-m.in_order)
+                    "stock_quantity": "999+" if m.ilimited==1 else (m.stock-m.in_order)
                 }for m in db.session.execute(iquery)]
             }
         except exc.SQLAlchemyError as e:
@@ -507,12 +508,22 @@ class HistoryOrderList(Resource):
             "invoice_serie": _nf_serie
         }
 
-        if _emp=="BRASPRESS":
-            return shipping.Shipping().tracking(ShippingCompany.BRASPRESS,opts)
-        if _emp=="JAMEF":
-            return shipping.Shipping().tracking(ShippingCompany.JAMEF,opts)
-        if _emp=="JADLOG":
-            return shipping.Shipping().tracking(ShippingCompany.JADLOG,opts)
+        class_name = str(_emp).lower().replace("_","").title().replace(" ","")
+        SHIPPING = getattr(
+            importlib.import_module('integrations.shipping.'+str(_emp).lower()),
+            class_name
+        )
+
+        track = SHIPPING()
+
+        return track.tracking(_cnpj,_nf,_nf_serie)
+
+        # if _emp=="BRASPRESS":
+        #     return shipping.Shipping().tracking(ShippingCompany.BRASPRESS,opts)
+        # if _emp=="JAMEF":
+        #     return shipping.Shipping().tracking(ShippingCompany.JAMEF,opts)
+        # if _emp=="JADLOG":
+        #     return shipping.Shipping().tracking(ShippingCompany.JADLOG,opts)
 
         return _code
         

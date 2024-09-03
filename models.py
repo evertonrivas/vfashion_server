@@ -319,6 +319,31 @@ class CmmTranslateSizes(db.Model,SerializerMixin):
     date_created = Column(DateTime,nullable=False,server_default=func.now())
     date_updated = Column(DateTime,onupdate=func.now())
 
+
+class CmmReport(db.Model,SerializerMixin):
+    id           = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
+    name         = Column(String(255),nullable=False,comment="Nome que aparece para selecionar o relatorio")
+    category     = Column(SmallInteger,nullable=False,comment="1 = Clientes, 2 = Calendario, 3 = CRM, 4 = Devoluções, 5 = Pedidos")
+    title        = Column(String(255),nullable=False,comment="Titulo quando o relatorio e aberto")
+    file_model   = Column(String(100),nullable=False,comment="Arquivo html para formatacao do relatorio")
+    filters      = Column(String(255),nullable=False,comment="Filtros que serão aplicados ao relatório")
+    master_query = Column(Text,nullable=False)
+    master_fields= Column(String(100),nullable=False,comment="Lista de campos que compoem a query master")
+    master_where = Column(String(255),nullable=False,comment="condicoes para filtros")
+
+    child_query  = Column(Text,nullable=True)
+    child_fileds = Column(String(100),nullable=True,comment="Lista de campos que compoem a query child")
+    child_where  = Column(String(255),nullable=True,comment="condicoes para filtros")
+
+    last_query   = Column(Text,nullable=True)
+    last_fileds  = Column(String(100),nullable=True,comment="Lista de campos que compoem a query last")
+    last_where   = Column(String(255),nullable=True,comment="condicoes para filtros")
+    
+    trash        = Column(Boolean,nullable=False,server_default='0',default=0)
+    date_created = Column(DateTime,nullable=False,server_default=func.now())
+    date_updated = Column(DateTime,onupdate=func.now())
+
+
 class B2bBrand(db.Model,SerializerMixin):
     id            = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
     name          = Column(String(100),nullable=False)
