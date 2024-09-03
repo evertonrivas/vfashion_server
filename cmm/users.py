@@ -123,6 +123,42 @@ class UsersList(Resource):
             req = request.get_json()
 
             for usr in req:
+
+                total = db.session.execute(
+                    Select(func.count(CmmUsers.id).label("total_lic")).where(CmmUsers.type==usr["type"])
+                ).first().total_lic
+                #A = Administrador, L = Lojista, I = Lojista (IA), R = Representante, V = Vendedor, C = Company User
+                if usr["type"]=="A" and total == int(environ.get("F2B_MAX_ADM_LICENSE")):
+                    return {
+                        "error_code": -1,
+                        "error_details": "Número máximo de licenças Adm. atingido!",
+                        "error_sql": ""
+                    }
+                elif usr["type"]=="R" and total == int(environ.get("F2B_MAX_REP_LICENSE")):
+                    return {
+                        "error_code": -1,
+                        "error_details": "Número máximo de licenças REP. atingido!",
+                        "error_sql": ""
+                    }
+                elif usr["type"]=="I" and total == int(environ.get("F2B_MAX_SIA_LICENSE")):
+                    return {
+                        "error_code": -1,
+                        "error_details": "Número máximo de licenças I.A atingido!",
+                        "error_sql": ""
+                    }
+                elif usr["type"]=="L" and total == int(environ.get("F2B_MAX_STR_LICENSE")):
+                    return {
+                        "error_code": -1,
+                        "error_details": "Número máximo de licenças Lojista atingido!",
+                        "error_sql": ""
+                    }
+                elif usr["type"]=="U" and total == int(environ.get("F2B_MAX_USR_LICENSE")):
+                    return {
+                        "error_code": -1,
+                        "error_details": "Número máximo de licenças Colaborador atingido!",
+                        "error_sql": ""
+                    }
+
                 if usr["id"]==0:
                     user = CmmUsers()
                     user.username = usr["username"]
