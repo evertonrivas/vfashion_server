@@ -9,6 +9,8 @@ from b2b.product_stock import ns_stock
 from b2b.cart import ns_cart
 from b2b.invoices import ns_invoice
 from b2b.customer_group import ns_customer_g
+from b2b.comission import ns_comission
+from b2b.target import ns_target
 
 """ Módulo Business to Business (Gestão de Vendas entre empresas)
     Módulo para realizar pedidos que realiza:
@@ -36,12 +38,14 @@ Keyword arguments: vendas, b2c, produtos, cliente, pedidos, condições de pagam
 nss = [ns_brand,
        ns_cart,
        ns_collection,
+       ns_comission,
        ns_customer_g,
        ns_invoice,
        ns_order,
        ns_payment,
        ns_price,   
-       ns_stock]
+       ns_stock,
+       ns_target]
 
 blueprint = Blueprint("b2b",__name__,url_prefix="/b2b/api/")
 
