@@ -12,6 +12,7 @@ target_model = ns_target.model(
         "id": fields.Integer,
         "type": fields.String,
         "year": fields.Integer,
+        "max_value": fields.Float,
         "value_year": fields.Float,
         "value_quarter1": fields.Float,
         "value_quarter2": fields.Float,
@@ -42,6 +43,7 @@ class CollectionList(Resource):
             target = db.session.execute(Select(B2bTarget.id,
                             B2bTarget.type,
                             B2bTarget.year,
+                            B2bTarget.max_value,
                             B2bTarget.value_year,
                             B2bTarget.value_quarter1,
                             B2bTarget.value_quarter2,
@@ -61,29 +63,31 @@ class CollectionList(Resource):
                             B2bTarget.value_dec)\
                             .where(B2bTarget.year==year)).first()
             
-
-            return {
-                "id": target.id,
-                "type": target.type,
-                "year": target.year,
-                "value_year": str(target.value_year),
-                "value_quarter1": str(target.value_quarter1),
-                "value_quarter2": str(target.value_quarter2),
-                "value_quarter3": str(target.value_quarter3),
-                "value_quarter4": str(target.value_quarter4),
-                "value_jan": str(target.value_jan),
-                "value_feb": str(target.value_feb),
-                "value_mar": str(target.value_mar),
-                "value_apr": str(target.value_apr),
-                "value_may": str(target.value_may),
-                "value_jun": str(target.value_jun),
-                "value_jul": str(target.value_jul),
-                "value_aug": str(target.value_aug),
-                "value_sep": str(target.value_sep),
-                "value_oct": str(target.value_oct),
-                "value_nov": str(target.value_nov),
-                "value_dec": str(target.value_dec)
-                }
+            if target is not None:
+                return {
+                    "id": target.id,
+                    "type": target.type,
+                    "year": target.year,
+                    "max_value": str(target.max_value),
+                    "value_year": str(target.value_year),
+                    "value_quarter1": str(target.value_quarter1),
+                    "value_quarter2": str(target.value_quarter2),
+                    "value_quarter3": str(target.value_quarter3),
+                    "value_quarter4": str(target.value_quarter4),
+                    "value_jan": str(target.value_jan),
+                    "value_feb": str(target.value_feb),
+                    "value_mar": str(target.value_mar),
+                    "value_apr": str(target.value_apr),
+                    "value_may": str(target.value_may),
+                    "value_jun": str(target.value_jun),
+                    "value_jul": str(target.value_jul),
+                    "value_aug": str(target.value_aug),
+                    "value_sep": str(target.value_sep),
+                    "value_oct": str(target.value_oct),
+                    "value_nov": str(target.value_nov),
+                    "value_dec": str(target.value_dec)
+                    }
+            return None
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -104,6 +108,7 @@ class CollectionList(Resource):
                 target = B2bTarget()
                 target.year = year
                 target.type           = req["type"]
+                target.max_value      = req["max_value"]
                 target.value_year     = req["value_year"]
                 target.value_quarter1 = req["value_quarter1"]
                 target.value_quarter2 = req["value_quarter2"]
@@ -126,6 +131,7 @@ class CollectionList(Resource):
                 db.session.execute(
                     Update(B2bTarget).values(
                         { "type": req["type"],
+                        "max_value": req["max_value"],
                         "value_year": req["value_year"],
                         "value_quarter1": req["value_quarter1"],
                         "value_quarter2": req["value_quarter2"],

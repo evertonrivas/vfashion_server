@@ -2,14 +2,16 @@ from http import HTTPStatus
 import importlib
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import B2bBrand, B2bCollection, B2bCustomerGroup, B2bCustomerGroupCustomers, B2bProductStock, CmmProducts, CmmProductsModels, CmmTranslateColors, CmmTranslateSizes, CmmUserEntity, CmmUsers, FprDevolution, _save_log, _show_query, db,_get_params,B2bCartShopping, B2bOrders,B2bOrdersProducts, B2bPaymentConditions, CmmLegalEntities,ScmEvent,ScmEventType
+from models import B2bComissionRepresentative, B2bCustomerGroup, B2bCustomerGroupCustomers, B2bProductStock, B2bTarget, CmmProducts, CmmTranslateColors
+from models import B2bCartShopping, B2bOrders,B2bOrdersProducts, B2bPaymentConditions, CmmLegalEntities
+from models import CmmTranslateSizes, CmmUserEntity, CmmUsers, FprDevolution, _save_log, _show_query, db,_get_params
 from sqlalchemy import Update, and_, exc,Select,Delete,asc,desc,func,between
 import simplejson
 from auth import auth
-from f2bconfig import CustomerAction,DevolutionStatus, OrderStatus, ShippingCompany
+from f2bconfig import CustomerAction,DevolutionStatus, OrderStatus
 from decimal import Decimal
-from integrations.shipping import shipping
 from datetime import datetime
+import calendar
 from os import environ
 
 ns_order = Namespace("orders",description="Operações para manipular dados de pedidos")
@@ -531,21 +533,37 @@ ns_order.add_resource(HistoryOrderList,'/history/<int:id>')
 
 
 class HistoryOrderApi(Resource):
-    @ns_order.response(HTTPStatus.OK.value,"Obtem o total de pedidos realizados na ultima colecao")
+    @ns_order.response(HTTPStatus.OK.value,"Obtem o total de pedidos realizados com base na meta")
     @ns_order.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
     @auth.login_required
     def get(self):
         try:
-            last_collection = Select(B2bOrdersProducts.id_order)\
-                .join(CmmProducts,CmmProducts.id==B2bOrdersProducts.id_product)\
-                .join(B2bCollection,B2bCollection.id==CmmProducts.id_collection)\
-                .join(B2bBrand,B2bBrand.id==B2bCollection.id_brand)\
+            date_start = str(datetime.now().year)+'-01-01'
+            date_end   = str(datetime.now().year)+'-12-31'
+
+            target_type = db.session.execute(Select(B2bTarget.type).where(B2bTarget.year==datetime.now().year)).one().type
+            if target_type=='Q':
+                if datetime.now().month>=1 and datetime.now().month<=3:
+                    date_start = str(datetime.now().year)+'-01-01'
+                    date_end   = str(datetime.now().year)+'-03-'+str(calendar.monthrange(datetime.now().year,3)[1])
+                elif datetime.now().month>=4 and datetime.now().month<=6:
+                    date_start = str(datetime.now().year)+'-04-01'
+                    date_end   = str(datetime.now().year)+'-06-'+str(calendar.monthrange(datetime.now().year,6)[1])
+                elif datetime.now().month>=7 and datetime.now().month<=9:
+                    date_start = str(datetime.now().year)+'-07-01'
+                    date_end   = str(datetime.now().year)+'-09-'+str(calendar.monthrange(datetime.now().year,9)[1])
+                else:
+                    date_start = str(datetime.now().year)+'-10-01'
+                    date_end   = str(datetime.now().year)+'-12-'+str(calendar.monthrange(datetime.now().year,12)[1])
+            else:
+                date_start = str(datetime.now().year)+'-'+str(datetime.now().month)+'-01'
+                date_end   = str(datetime.now().year)+'-'+str(datetime.now().month)+'-'+str(calendar.monthrange(datetime.now().year,datetime.now().month)[1])
 
             stmt = Select(func.count(B2bOrders.id).label('total'))\
                 .where(
                     and_(
-                        B2bOrders.status==OrderStatus.FINISHED,
-                        B2bOrders.id.in_(last_collection)
+                        B2bOrders.status==OrderStatus.FINISHED.value,
+                        B2bOrders.date.between(date_start,date_end)
                     )
                 )
             
@@ -558,21 +576,37 @@ class HistoryOrderApi(Resource):
                 "error_sql": e._sql_message()
             }
     
-    @ns_order.response(HTTPStatus.OK.value,"Obtem o valor total de pedidos realizados na ultima colecao")
+    @ns_order.response(HTTPStatus.OK.value,"Obtem o valor total de pedidos realizados com base na meta")
     @ns_order.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
     @auth.login_required
     def post(self):
         try:
-            last_collection = Select(B2bOrdersProducts.id_order)\
-                .join(CmmProducts,CmmProducts.id==B2bOrdersProducts.id_product)\
-                .join(B2bCollection,B2bCollection.id==CmmProducts.id_collection)\
-                .join(B2bBrand,B2bBrand.id==B2bCollection.id_brand)\
+            date_start = str(datetime.now().year)+'-01-01'
+            date_end   = str(datetime.now().year)+'-12-31'
+
+            target_type = db.session.execute(Select(B2bTarget.type).where(B2bTarget.year==datetime.now().year)).one().type
+            if target_type=='Q':
+                if datetime.now().month>=1 and datetime.now().month<=3:
+                    date_start = str(datetime.now().year)+'-01-01'
+                    date_end   = str(datetime.now().year)+'-03-'+str(calendar.monthrange(datetime.now().year,3)[1])
+                elif datetime.now().month>=4 and datetime.now().month<=6:
+                    date_start = str(datetime.now().year)+'-04-01'
+                    date_end   = str(datetime.now().year)+'-06-'+str(calendar.monthrange(datetime.now().year,6)[1])
+                elif datetime.now().month>=7 and datetime.now().month<=9:
+                    date_start = str(datetime.now().year)+'-07-01'
+                    date_end   = str(datetime.now().year)+'-09-'+str(calendar.monthrange(datetime.now().year,9)[1])
+                else:
+                    date_start = str(datetime.now().year)+'-10-01'
+                    date_end   = str(datetime.now().year)+'-12-'+str(calendar.monthrange(datetime.now().year,12)[1])
+            else:
+                date_start = str(datetime.now().year)+'-'+str(datetime.now().month)+'-01'
+                date_end   = str(datetime.now().year)+'-'+str(datetime.now().month)+'-'+str(calendar.monthrange(datetime.now().year,datetime.now().month)[1])
 
             stmt = Select(func.sum(B2bOrders.total_value).label('total'))\
                 .where(
                     and_(
-                        B2bOrders.status==OrderStatus.FINISHED,
-                        B2bOrders.id.in_(last_collection)
+                        B2bOrders.status==OrderStatus.FINISHED.value,
+                        B2bOrders.date.between(date_start,date_end)
                     )
                 )
             total = db.session.execute(stmt).first().total
@@ -583,5 +617,56 @@ class HistoryOrderApi(Resource):
                 "error_details": e._message(),
                 "error_sql": e._sql_message()
             }
+    
+    @ns_order.response(HTTPStatus.OK.value,"Obtem o valor por representante de pedidos realizados com base na meta")
+    @ns_order.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
+    def put(self):
+        try:
+            date_start = str(datetime.now().year)+'-01-01'
+            date_end   = str(datetime.now().year)+'-12-31'
+
+            target_type = db.session.execute(Select(B2bTarget.type).where(B2bTarget.year==datetime.now().year)).one().type
+            if target_type=='Q':
+                if datetime.now().month>=1 and datetime.now().month<=3:
+                    date_start = str(datetime.now().year)+'-01-01'
+                    date_end   = str(datetime.now().year)+'-03-'+str(calendar.monthrange(datetime.now().year,3)[1])
+                elif datetime.now().month>=4 and datetime.now().month<=6:
+                    date_start = str(datetime.now().year)+'-04-01'
+                    date_end   = str(datetime.now().year)+'-06-'+str(calendar.monthrange(datetime.now().year,6)[1])
+                elif datetime.now().month>=7 and datetime.now().month<=9:
+                    date_start = str(datetime.now().year)+'-07-01'
+                    date_end   = str(datetime.now().year)+'-09-'+str(calendar.monthrange(datetime.now().year,9)[1])
+                else:
+                    date_start = str(datetime.now().year)+'-10-01'
+                    date_end   = str(datetime.now().year)+'-12-'+str(calendar.monthrange(datetime.now().year,12)[1])
+            else:
+                date_start = str(datetime.now().year)+'-'+str(datetime.now().month)+'-01'
+                date_end   = str(datetime.now().year)+'-'+str(datetime.now().month)+'-'+str(calendar.monthrange(datetime.now().year,datetime.now().month)[1])
+            
+            stmt = Select(
+                func.coalesce(CmmLegalEntities.fantasy_name,'SEM REPRESENTACAO').label("fantasy_name"),
+                func.sum(B2bOrders.total_value).label("total")).select_from(B2bOrders)\
+                .outerjoin(B2bCustomerGroupCustomers,B2bCustomerGroupCustomers.id_customer==B2bOrders.id_customer)\
+                .outerjoin(B2bCustomerGroup,B2bCustomerGroup.id==B2bCustomerGroupCustomers.id_customer_group)\
+                .outerjoin(CmmLegalEntities,CmmLegalEntities.id==B2bCustomerGroup.id_representative)\
+                .where(
+                    and_(
+                        B2bOrders.status==OrderStatus.FINISHED.value,
+                        B2bOrders.date.between(date_start,date_end)
+                    )
+                )\
+                .group_by(CmmLegalEntities.fantasy_name)
+            return {
+                "representative":[r.fantasy_name for r in db.session.execute(stmt)],
+                "total": ["{:10.2f}".format(r.total) for r in db.session.execute(stmt)]
+                #"total": "{:10.2f}".format(r.total) if r.total is not None else 0,
+            }
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
+
         
 ns_order.add_resource(HistoryOrderApi,'/total/')
