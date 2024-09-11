@@ -122,3 +122,8 @@ class DashboardImageColor(Enum):
     SHOES  = "#85e6bf"
     PISTON = "#606161"
     PHARMA = "#e68585"
+
+
+class ContentType(Enum):
+    JSON   = "application/json"
+    STREAM = "application/octet-stream"

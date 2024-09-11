@@ -1,14 +1,15 @@
 from http import HTTPStatus
+import importlib
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from sqlalchemy import Select, desc, exc, asc,Delete
+from sqlalchemy import Select, desc, exc, asc,Delete, func
 from werkzeug import exceptions
 from auth import auth
 from f2bconfig import CustomerAction
 from datetime import datetime
 import filetype
 from werkzeug.datastructures import ImmutableMultiDict
-from models import db, _save_log, CmmLegalEntities, CmmLegalEntityFile
+from models import db, _save_log, CmmLegalEntities, CmmLegalEntityFile, CmmProductsImages
 import os
 
 ns_upload = Namespace("upload",description="Operações para manipular upload de dados")
@@ -64,7 +65,7 @@ class UploadApi(Resource):
                 fileCount += 1
 
             combinedFiles = ','.join(files)
-            _save_log(id,CustomerAction.FA,"Adicionado(s) o(s) arquivo(s) "+combinedFiles)
+            _save_log(id,CustomerAction.FILE_ATTACHED,"Adicionado(s) o(s) arquivo(s) "+combinedFiles)
 
             return True
         except exceptions.HTTPException as e:
@@ -88,7 +89,7 @@ class UploadApi(Resource):
                     os.remove(os.environ.get("F2B_APP_PATH")+'assets/'+str(file.folder)+str(file.name))
                     db.session.execute(Delete(CmmLegalEntityFile).where(CmmLegalEntityFile.id==id))
                     db.session.commit()
-                    _save_log(file.id_legal_entity,CustomerAction.FD,'Removido o arquivo '+file.name)
+                    _save_log(file.id_legal_entity,CustomerAction.FILE_DETTACHED,'Removido o arquivo '+file.name)
                 return True
         except exceptions.HTTPException as e:
             return False
@@ -161,3 +162,55 @@ class UploadImport(Resource):
             print(e)
             return False
 ns_upload.add_resource(UploadImport,'/import/')
+
+
+class UploadProduct(Resource):
+    @ns_upload.response(HTTPStatus.OK.value,"Realiza envio de arquivo(s) de produto(s) para o servidor")
+    @ns_upload.response(HTTPStatus.BAD_REQUEST.value,"Falha ao enviar arquivo(s)!")
+    @auth.login_required
+    def post(self,id:int):
+        try:
+            files = []
+            #obtem os arquivos para upload
+            fpath = os.environ.get("F2B_APP_PATH")+'assets/images/'
+            data = ImmutableMultiDict(request.files)
+            for file in data.getlist('files[]'):
+                if os.environ.get("F2B_COMPANY_UPLOAD_IMAGE")=="local":
+                    parts = file.filename.split(".")
+                    ext = parts[len(parts)-1]
+                    newFileName = "product_"+datetime.now().strftime("%Y%m%d-%H%M%S")+"."+ext
+                    file.save(fpath+newFileName)
+                    file.close()
+                    files.append(newFileName)
+                else:
+                    newFileName = "product_"+file.filename
+                    module = os.environ.get("F2B_COMPANY_UPLOAD_IMAGE")
+                    class_name = os.environ.get("F2B_COMPANY_UPLOAD_IMAGE").replace("_"," ").title().replace(" ","")
+                    FILE_OBJ = getattr(
+                    importlib.import_module('integrations.files.'+module),
+                    class_name
+                    )
+                    fl = FILE_OBJ()
+                    if fl.send(newFileName,"products",request.files[file.name].read()) is True:
+                        nNewFileName = fl.get(newFileName,"products")
+                    files.append(nNewFileName)
+
+            i =0 
+            for f in files:
+                fUrl = os.environ.get("F2B_APP_URL")+"assets/images/"+f if os.environ.get("F2B_COMPANY_UPLOAD_IMAGE")=="local" else ""+f
+                exist = db.session.execute(Select(func.count(CmmProductsImages.id).label("total")).where(CmmProductsImages.img_url==fUrl)).first().total
+                # so irah incluir se a imagem nao existir
+                if exist == 0:
+                    img = CmmProductsImages()
+                    img.img_default = True if i ==0 else False
+                    img.id_product = id
+                    img.img_url = fUrl
+                    db.session.add(img)
+                db.session.commit()
+                i += 1
+
+            return files
+        except exceptions.HTTPException as e:
+            print(e)
+            return False
+ns_upload.add_resource(UploadProduct,'/products/<int:id>')
