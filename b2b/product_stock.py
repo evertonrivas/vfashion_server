@@ -110,10 +110,12 @@ class ProductStockList(Resource):
             filter_color    = None if hasattr(params,"color")==False else params.color
 
             pquery = Select(B2bProductStock.id_product,
+                        CmmProductsGrid.id.label("id_grid"),
                         CmmProducts.refCode,
                         CmmProducts.name.label("product")
                         ).distinct()\
                 .join(CmmProducts,CmmProducts.id==B2bProductStock.id_product)\
+                .join(CmmProductsGrid,CmmProductsGrid.id==CmmProducts.id_grid)\
                 .join(CmmTranslateColors,CmmTranslateColors.id==B2bProductStock.id_color)\
                 .join(CmmTranslateSizes,CmmTranslateSizes.id==B2bProductStock.id_size)
             
@@ -193,6 +195,7 @@ class ProductStockList(Resource):
                     },
                     "data":[{
                         "id_product":m.id_product,
+                        "id_grid": m.id_grid,
                         "refCode": m.refCode,
                         "product": m.product,
                         "colors": [{
@@ -211,6 +214,7 @@ class ProductStockList(Resource):
             else:
                 retorno = [{
                         "id_product":m.id_product,
+                        "id_grid": m.id_grid,
                         "refCode": m.refCode,
                         "product": m.product,
                         "colors": [{
@@ -242,6 +246,8 @@ class ProductStockList(Resource):
     @auth.login_required
     def post(self)->int:
         try:
+            req = request.get_json()
+
             stock = B2bProductStock()
             stock.id_product = int(request.form.get("id_product"))
             stock.id_color      = request.form.get("id_color")

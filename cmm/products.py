@@ -3,9 +3,9 @@ import simplejson
 from flask_restx import Resource,Namespace,fields
 from flask import request
 from f2bconfig import ProductMassiveAction
-from models import B2bCollection, CmmCategories, CmmMeasureUnit, CmmProducts, CmmProductsCategories, CmmProductsGrid, \
-    CmmProductsImages, CmmProductsTypes, CmmProductsModels, \
-    _get_params, _show_query, db
+from models import B2bCollection, B2bProductStock, CmmCategories, CmmMeasureUnit, CmmProducts, CmmProductsCategories
+from models import CmmProductsGrid, CmmProductsImages, CmmProductsTypes, CmmProductsModels
+from models import _get_params, _show_query, db
 from sqlalchemy import Delete, Update, desc, exc, asc,Select, or_
 from auth import auth
 from decimal import Decimal
@@ -89,6 +89,7 @@ class ProductsList(Resource):
             filter_type       = None if hasattr(params,"type")==False else params.type
             filter_model      = None if hasattr(params,"model")==False else params.model
             filter_grid       = None if hasattr(params,"grid")==False else params.grid
+            filter_no_stock   = None if hasattr(params,"no_stock")==False else True
 
             rquery = Select(CmmProducts.id,
                             CmmProducts.prodCode,
@@ -118,7 +119,7 @@ class ProductsList(Resource):
             # _show_query(rquery)
             
             if filter_search is not None:
-                rquery.where(or_(
+                rquery = rquery.where(or_(
                     CmmProducts.name.like("%{}%".format(filter_search)),
                     CmmProducts.description.like("%{}%".format(filter_search)),
                     CmmProducts.observation.like("%{}%".format(filter_search)),
@@ -127,32 +128,37 @@ class ProductsList(Resource):
                 ))
 
             if filter_model is not None:
-                rquery.where(CmmProducts.id_model==filter_model)
+                rquery = rquery.where(CmmProducts.id_model==filter_model)
 
             if filter_type is not None:
-                rquery.where(CmmProducts.id_type==filter_type)
+                rquery = rquery.where(CmmProducts.id_type==filter_type)
 
             if filter_grid is not None:
-                rquery.where(CmmProducts.id_grid==filter_grid)
+                rquery = rquery.where(CmmProducts.id_grid==filter_grid)
 
             if filter_brand is not None:
-                rquery.where(CmmProducts.id_collection.in_(
+                rquery = rquery.where(CmmProducts.id_collection.in_(
                     Select(B2bCollection.id).where(B2bCollection.id_brand.in_(
                         str(filter_brand).split(",")
                     ))
                 ))
             
             if filter_collection is not None:
-                rquery.where(CmmProducts.id_collection.in_(
+                rquery = rquery.where(CmmProducts.id_collection.in_(
                     str(filter_collection).split(",")
                 ))
 
             if filter_category is not None:
-                rquery.where(CmmProducts.id.in_(
+                rquery = rquery.where(CmmProducts.id.in_(
                     Select(CmmProductsCategories.id_product)
                     .where(CmmProductsCategories.id_category.in_(
                         str(filter_category).split(",")
                     ))
+                ))
+
+            if filter_no_stock is True:
+                rquery = rquery.where(CmmProducts.id.not_in(
+                    Select(B2bProductStock.id_product.distinct())
                 ))
 
             if hasattr(params,'list_all')==False:
@@ -236,27 +242,29 @@ class ProductsList(Resource):
             db.session.add(prod)
             db.session.commit()
 
-            for image in req["images"]:
-                # significa que so irah atualizar as imagens
-                if image["id"] > 0:
-                    if image["url"]!="":
-                        img = CmmProductsImages.query.get(image["id"])
-                        img.img_url = image["url"]
-                        img.img_default = image["default"]
-                        db.session.commit()
-                else:
-                    if image["url"]!="":
-                        img = CmmProductsImages()
-                        img.id_product  = id
-                        img.img_url     = image["url"]
-                        img.img_default = image["default"]
-                        db.session.add(img)
-                        db.session.commit()
+            if "images" in req:
+                for image in req["images"]:
+                    # significa que so irah atualizar as imagens
+                    if image["id"] > 0:
+                        if image["url"]!="":
+                            img = CmmProductsImages.query.get(image["id"])
+                            img.img_url = image["url"]
+                            img.img_default = image["default"]
+                            db.session.commit()
+                    else:
+                        if image["url"]!="":
+                            img = CmmProductsImages()
+                            img.id_product  = id
+                            img.img_url     = image["url"]
+                            img.img_default = image["default"]
+                            db.session.add(img)
+                            db.session.commit()
 
-            if req["id_category"] is not None:
-                cat = CmmProductsCategories()
-                cat.id_category = req["id_category"]
-                cat.id_product  = prod.id
+            if "id_category" in req:
+                if req["id_category"] is not None:
+                    cat = CmmProductsCategories()
+                    cat.id_category = req["id_category"]
+                    cat.id_product  = prod.id
             
             return prod.id
         except exc.SQLAlchemyError as e:
@@ -381,22 +389,23 @@ class ProductApi(Resource):
             prod.id_measure_unit = req["id_measure_unit"]
             db.session.commit()
 
-            for image in req["images"]:
-                # significa que so irah atualizar as imagens
-                if image["id"] > 0:
-                    if image["url"]!="":
-                        img = CmmProductsImages.query.get(image["id"])
-                        img.img_url = image["url"]
-                        img.img_default = image["default"]
-                        db.session.commit()
-                else:
-                    if image["url"]!="":
-                        img = CmmProductsImages()
-                        img.id_product  = id
-                        img.img_url     = image["url"]
-                        img.img_default = image["default"]
-                        db.session.add(img)
-                        db.session.commit()
+            if "images" in req:
+                for image in req["images"]:
+                    # significa que so irah atualizar as imagens
+                    if image["id"] > 0:
+                        if image["url"]!="":
+                            img = CmmProductsImages.query.get(image["id"])
+                            img.img_url = image["url"]
+                            img.img_default = image["default"]
+                            db.session.commit()
+                    else:
+                        if image["url"]!="":
+                            img = CmmProductsImages()
+                            img.id_product  = id
+                            img.img_url     = image["url"]
+                            img.img_default = image["default"]
+                            db.session.add(img)
+                            db.session.commit()
             
             return True
         except exc.SQLAlchemyError as e:
