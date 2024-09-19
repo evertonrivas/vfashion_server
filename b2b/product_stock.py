@@ -458,7 +458,7 @@ class ProductsGallery(Resource):
             #realiza a busca das colecoes que tem restricao no calendario
             rquery = Select(CmmProducts.id,CmmProducts.id_grid,CmmProducts.prodCode,CmmProducts.barCode,
                             CmmProducts.refCode,CmmProducts.name,CmmProducts.description,CmmProducts.observation,
-                            CmmProducts.ncm,CmmProducts.price,CmmMeasureUnit.code.label("measure_unit"),CmmProducts.structure,
+                            CmmProducts.ncm,CmmProducts.price,CmmProducts.price_pos,CmmMeasureUnit.code.label("measure_unit"),CmmProducts.structure,
                             CmmProducts.date_created,CmmProducts.date_updated,CmmCategories.name.label("category_name"),
                             B2bCollection.name.label("collection_name"),B2bBrand.name.label("brand_name"),
                             CmmProductsTypes.name.label("product_type_name"),CmmProductsModels.name.label("product_model_name"))\
@@ -500,7 +500,7 @@ class ProductsGallery(Resource):
             #busca as colecoes que nao possuem restricao (irrestrict)
             iquery = Select(CmmProducts.id,CmmProducts.id_grid,CmmProducts.prodCode,CmmProducts.barCode,
                             CmmProducts.refCode,CmmProducts.name,CmmProducts.description,CmmProducts.observation,
-                            CmmProducts.ncm,CmmProducts.price,CmmMeasureUnit.code.label("measure_unit"),CmmProducts.structure,
+                            CmmProducts.ncm,CmmProducts.price,CmmProducts.price_pos,CmmMeasureUnit.code.label("measure_unit"),CmmProducts.structure,
                             CmmProducts.date_created,CmmProducts.date_updated,CmmCategories.name.label("category_name"),
                             B2bCollection.name.label("collection_name"),B2bBrand.name.label("brand_name"),
                             CmmProductsTypes.name.label("product_type_name"),CmmProductsModels.name.label("product_model_name"))\
@@ -656,7 +656,8 @@ class ProductsGallery(Resource):
                         "description": m.description,
                         "observation": m.observation,
                         "ncm": m.ncm,
-                        "price": float(str(m.price)),
+                        "price": simplejson.dumps(Decimal(m.price)),
+                        "price_pos": None if m.price_pos is None else simplejson.dumps(Decimal(m.price_pos)),
                         "measure_unit": m.measure_unit,
                         "structure": m.structure,
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
@@ -680,6 +681,7 @@ class ProductsGallery(Resource):
                         "observation": m.observation,
                         "ncm": m.ncm,
                         "price": simplejson.dumps(Decimal(m.price)),
+                        "price_pos": None if m.price_pos is None else simplejson.dumps(Decimal(m.price_pos)),
                         "measure_unit": m.measure_unit,
                         "structure": m.structure,
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
