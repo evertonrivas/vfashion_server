@@ -126,7 +126,7 @@ class GridList(Resource):
             db.session.add(grid)
             db.session.commit()
 
-            for size in str(req["sizes"]):
+            for size in req["sizes"]:
                 grids:CmmProductsGridSizes = CmmProductsGridSizes()
                 grids.id_size = size
                 grids.id_grid = grid.id
@@ -198,8 +198,7 @@ class GridApi(Resource):
             db.session.execute(Delete(CmmProductsGridSizes).where(CmmProductsGridSizes.id_grid==id))
             db.session.commit()
 
-            sizes = str(req["sizes"])
-            for size in sizes:
+            for size in req["sizes"]:
                 grids:CmmProductsGridSizes = CmmProductsGridSizes()
                 grids.id_size = size
                 grids.id_grid = grid.id
@@ -207,7 +206,7 @@ class GridApi(Resource):
             db.session.commit()
 
             # faz a adequacao em relacao aos tamanhos da grade
-            db.session.execute(Delete(CmmProductsGridDistribution).where(CmmProductsGridDistribution.id_size.in_(sizes)))
+            db.session.execute(Delete(CmmProductsGridDistribution).where(CmmProductsGridDistribution.id_size.in_(req["sizes"])))
             db.session.commit()
 
             return True

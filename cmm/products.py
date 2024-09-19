@@ -238,6 +238,7 @@ class ProductsList(Resource):
             prod.description   = req["description"]
             prod.observation   = None if req["observation"]=="undefined" else req["observation"]
             prod.price         = float(req["price"])
+            prod.price_pos     = float(req["price_pos"])
             prod.id_measure_unit = req["id_measure_unit"]
             db.session.add(prod)
             db.session.commit()
@@ -254,7 +255,7 @@ class ProductsList(Resource):
                     else:
                         if image["url"]!="":
                             img = CmmProductsImages()
-                            img.id_product  = id
+                            img.id_product  = prod.id
                             img.img_url     = image["url"]
                             img.img_default = image["default"]
                             db.session.add(img)
@@ -352,6 +353,7 @@ class ProductApi(Resource):
                 "observation": rquery.observation,
                 "ncm": rquery.ncm,
                 "price": simplejson.dumps(Decimal(rquery.price)),
+                "price_pos": simplejson.dumps(Decimal(rquery.price_pos)),
                 "id_measure_unit": rquery.id_measure_unit,
                 "structure": rquery.structure,
                 "date_created": rquery.date_created.strftime("%Y-%m-%d %H:%M:%S"),
@@ -386,6 +388,7 @@ class ProductApi(Resource):
             prod.description     = req["description"]
             prod.observation     = None if req["observation"]=="undefined" else req["observation"]
             prod.price           = float(req["price"])
+            prod.price_pos       = float(req["price_pos"])
             prod.id_measure_unit = req["id_measure_unit"]
             db.session.commit()
 

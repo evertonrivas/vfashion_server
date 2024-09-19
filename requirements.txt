@@ -23,6 +23,7 @@ decorator
 defusedxml
 Deprecated
 docopt
+dropbox
 executing
 ez-setup
 fastjsonschema
@@ -42,7 +43,6 @@ google-api-core
 google-api-python-client
 google-auth
 google-auth-httplib2
-google-auth-oauthlib
 googleapis-common-protos
 greenlet
 httplib2
@@ -54,6 +54,7 @@ itsdangerous
 jedi
 Jinja2
 jsonschema
+jsonschema-specifications
 jupyter_client
 jupyter_core
 jupyterlab_pygments
@@ -68,6 +69,7 @@ nbclient
 nbconvert
 nbformat
 nose
+oauth2client
 oauthlib
 ordered-set
 oscrypto
@@ -80,6 +82,7 @@ pillow
 pipreqs
 platformdirs
 pluggy
+ply
 prompt-toolkit
 proto-plus
 protobuf
@@ -88,6 +91,7 @@ pure-eval
 pyasn1
 pyasn1_modules
 pycparser
+PyDrive
 Pygments
 pyHanko
 pyhanko-certvalidator
@@ -125,6 +129,7 @@ SQLAlchemy
 SQLAlchemy-serializer
 stack-data
 starkbank-ecdsa
+stone
 tinycss2
 tornado
 traitlets
