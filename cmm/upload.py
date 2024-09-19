@@ -2,7 +2,7 @@ from http import HTTPStatus
 import importlib
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from sqlalchemy import Select, desc, exc, asc,Delete, func
+from sqlalchemy import Select, Update, desc, exc, asc,Delete, func
 from werkzeug import exceptions
 from auth import auth
 from f2bconfig import CustomerAction
@@ -27,8 +27,7 @@ class UploadApi(Resource):
             files = []
             fileCount = 1
             fpath = os.environ.get("F2B_APP_PATH")+'assets/'
-            data = ImmutableMultiDict(request.files)
-            for file in data.getlist('files[]'):
+            for file in request.files.getlist('files[]'):
                 parts = file.filename.split(".")
                 ext = parts[len(parts)-1]
                 if ext=='pdf':
@@ -103,8 +102,7 @@ class UploadTmp(Resource):
         try:
             #obtem os arquivos para upload
             fpath = os.environ.get("F2B_APP_PATH")+'assets/tmp/'
-            data = ImmutableMultiDict(request.files)
-            for file in data.getlist('files[]'):
+            for file in request.files.getlist('files[]'):
                 file.save(fpath+file.filename)
 
             return True
@@ -123,9 +121,8 @@ class UploadDevolution(Resource):
             files = []
             #obtem os arquivos para upload
             fpath = os.environ.get("F2B_APP_PATH")+'assets/tmp/'
-            data = ImmutableMultiDict(request.files)
             file_count = 1
-            for file in data.getlist('files[]'):
+            for file in request.files.getlist('files[]'):
                 parts = file.filename.split(".")
                 ext = parts[len(parts)-1]
                 newFileName = "devolution_"+str(id)+"_"+str(idprod)+"_"+str(idcolor)+"_"+str(idsize)+"_"+str(file_count)+"."+ext
@@ -149,8 +146,7 @@ class UploadImport(Resource):
             files = []
             #obtem os arquivos para upload
             fpath = os.environ.get("F2B_APP_PATH")+'assets/import/'
-            data = ImmutableMultiDict(request.files)
-            for file in data.getlist('files[]'):
+            for file in request.files.getlist('files[]'):
                 parts = file.filename.split(".")
                 ext = parts[len(parts)-1]
                 newFileName = "import_"+str(type)+"_"+datetime.now().strftime("%Y%m%d-%H%M%S")+"."+ext
@@ -172,10 +168,9 @@ class UploadProduct(Resource):
         try:
             files = []
             #obtem os arquivos para upload
-            fpath = os.environ.get("F2B_APP_PATH")+'assets/images/'
-            data = ImmutableMultiDict(request.files)
-            for file in data.getlist('files[]'):
+            for file in request.files.getlist('files[]'):
                 if os.environ.get("F2B_COMPANY_UPLOAD_IMAGE")=="local":
+                    fpath = os.environ.get("F2B_APP_PATH")+'assets/images/'
                     parts = file.filename.split(".")
                     ext = parts[len(parts)-1]
                     newFileName = "product_"+datetime.now().strftime("%Y%m%d-%H%M%S")+"."+ext
@@ -183,6 +178,11 @@ class UploadProduct(Resource):
                     file.close()
                     files.append(newFileName)
                 else:
+
+                    # limpa todos os arquivos da pasta temporaria
+                    for filename in os.listdir(os.environ.get("F2B_APP_PATH")+'assets/tmp'):
+                        os.unlink(os.environ.get("F2B_APP_PATH")+'assets/tmp/'+filename)
+
                     newFileName = "product_"+file.filename
                     module = os.environ.get("F2B_COMPANY_UPLOAD_IMAGE")
                     class_name = os.environ.get("F2B_COMPANY_UPLOAD_IMAGE").replace("_"," ").title().replace(" ","")
@@ -191,18 +191,22 @@ class UploadProduct(Resource):
                     class_name
                     )
                     fl = FILE_OBJ()
-                    if fl.send(newFileName,"products",request.files[file.name].read()) is True:
+                    if fl.send(newFileName,"products",file) is True:
                         nNewFileName = fl.get(newFileName,"products")
                     files.append(nNewFileName)
 
-            i =0 
+            # remove o default existente para garantir que nao haverao 2
+            db.session.execute(Update(CmmProductsImages).values(img_default=False).where(CmmProductsImages.id_product==id))
+            db.session.commit()
+
+            i = 0 
             for f in files:
                 fUrl = os.environ.get("F2B_APP_URL")+"assets/images/"+f if os.environ.get("F2B_COMPANY_UPLOAD_IMAGE")=="local" else ""+f
                 exist = db.session.execute(Select(func.count(CmmProductsImages.id).label("total")).where(CmmProductsImages.img_url==fUrl)).first().total
                 # so irah incluir se a imagem nao existir
                 if exist == 0:
                     img = CmmProductsImages()
-                    img.img_default = True if i ==0 else False
+                    img.img_default = True if i == 0 else False
                     img.id_product = id
                     img.img_url = fUrl
                     db.session.add(img)
@@ -214,3 +218,12 @@ class UploadProduct(Resource):
             print(e)
             return False
 ns_upload.add_resource(UploadProduct,'/products/<int:id>')
+
+
+class UploadProductReturn(Resource):
+    def get(self):
+        try:
+            pass
+        except Exception as e:
+            pass
+ns_upload.add_resource(UploadProductReturn,'/products/')

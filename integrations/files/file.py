@@ -1,5 +1,5 @@
-from typing import IO
 from requests import Response,Session
+from werkzeug.datastructures import FileStorage
 from abc import abstractmethod,ABC
 from types import SimpleNamespace
 from f2bconfig import ContentType
@@ -25,10 +25,10 @@ class File(ABC):
     def _get_header(self,type:ContentType):pass
 
     @abstractmethod
-    def send(self,fName:str,fFolder:str,fContent:IO[bytes]):pass
+    def send(self,fName:str,fFolder:str,fContent:FileStorage):pass
 
     @abstractmethod
     def drop(self):pass
     
     @abstractmethod
-    def get(self, id:str):pass
+    def get(self, id:str, folder:str):pass

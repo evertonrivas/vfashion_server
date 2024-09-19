@@ -19,7 +19,7 @@ class Dropbox(file.File):
     def _get_header(self, type: file.ContentType):
         return super()._get_header(type)        
 
-    def send(self, fName: str, fFolder: str, fContent: file.IO[bytes]):
+    def send(self, fName: str, fFolder: str, fContent: file.FileStorage):
         try:
 
             # obtem a lista de pastas
@@ -33,7 +33,7 @@ class Dropbox(file.File):
                 self.dbx.files_create_folder(path="/"+fFolder)
 
             # envia o arquivo para a pasta na nuvem
-            self.dbx.files_upload(f=fContent,path="/"+fFolder+"/"+fName,mode=WriteMode('overwrite'))
+            self.dbx.files_upload(f=fContent.read(),path="/"+fFolder+"/"+fName,mode=WriteMode('overwrite'))
             # links = dbx.sharing_list_shared_links(path="/"+fFolder,directory_only=True)
             # https://www.dropbox.com/scl/fi/8fw502pnthhwaetjb6mfk/product_Design-sem-nome-2.png?rlkey=sa75al409vhqwag4sp8glz5cr&st=jc2zep8v&dl=0
             # dbx.files_upload(f.read(), BACKUPPATH, mode=WriteMode('overwrite'))
