@@ -241,7 +241,7 @@ class ProductsList(Resource):
             prod.description   = req["description"]
             prod.observation   = None if req["observation"]=="undefined" else req["observation"]
             prod.price         = float(req["price"])
-            prod.price_pos     = float(req["price_pos"])
+            prod.price_pos     = None if req["price_pos"]=="null" or req["price_pos"] is None else float(req["price_pos"])
             prod.id_measure_unit = req["id_measure_unit"]
             db.session.add(prod)
             db.session.commit()
@@ -391,7 +391,7 @@ class ProductApi(Resource):
             prod.description     = req["description"]
             prod.observation     = None if req["observation"]=="undefined" else req["observation"]
             prod.price           = float(req["price"])
-            prod.price_pos       = float(req["price_pos"])
+            prod.price_pos       = None if req["price_pos"]=="null" or req["price_pos"] is None else float(req["price_pos"])
             prod.id_measure_unit = req["id_measure_unit"]
             db.session.commit()
 
