@@ -85,7 +85,7 @@ def _send_email(p_to:[],p_cc:[],p_subject:str,p_content:str,p_tpl:MailTemplates,
         mailTemplate  = tplEnv.get_template(layoutFile)
         mail_template = mailTemplate.render(
             content=p_content,
-            url=(str(environ.get("F2B_APP_URL"))) +('reset-password/' if p_tpl==MailTemplates.PWD_RECOVERY else None)
+            url=(str(environ.get("F2B_APP_URL"))) +('reset-password/' if p_tpl==MailTemplates.PWD_RECOVERY else "")
         )
 
         if p_attach is not None:
