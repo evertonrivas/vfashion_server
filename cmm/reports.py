@@ -6,11 +6,10 @@ import json
 import os
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import CmmCities, CmmLegalEntities, CmmLegalEntityHistory, CmmReport, CmmStateRegions, CrmFunnel, CrmFunnelStage, CrmFunnelStageCustomer, ScmEvent, _get_params, _show_query,db
+from models import CmmReport, _get_params, _show_query,db
 from common import _format_action, _gen_report
-from sqlalchemy import Select, text, alias, and_, desc, exc, asc, func, or_
+from sqlalchemy import Select, text, desc, exc, asc, func, or_
 from auth import auth
-from f2bconfig import Reports
 from os import environ
 
 ns_report = Namespace("reports",description="Operações para manipular dados de relatórios")
@@ -97,7 +96,7 @@ class ReportsApi(Resource):
             cities        = []
             state_regions = []
             countries     = []
-            funnels       = []
+            funnel        = None
             categories    = []
             entities      = []
             models        = []
@@ -112,7 +111,7 @@ class ReportsApi(Resource):
                 if "id_cities" in param and len(param["id_cities"]) > 0:               cities        = param["id_cities"]
                 if "id_state_regions" in param and len(param["id_state_regions"]) > 0: state_regions = param["id_state_regions"]
                 if "id_countries" in param and len(param["id_countries"]) > 0:         countries     = param["id_countries"]
-                if "id_funnels" in param and param["id_funnels"] != 0:                 funnels       = param["id_funnels"]
+                if "id_funnels" in param and param["id_funnels"] != 0:                 funnel        = param["id_funnels"]
                 if "id_categories" in param and len(param["id_categories"]) > 0:       categories    = param["id_categories"]
                 if "id_entities" in param and len(param["id_entities"]) > 0:           entities      = param["id_entities"]
                 if "id_models" in param and len(param["id_models"]) > 0:               models        = param["id_models"]
@@ -135,13 +134,13 @@ class ReportsApi(Resource):
                 elif len(countries) > 0:
                     mwhere = mwhere.replace("%1","0").replace("%2","0").replace("%3",",".join( str(country) for country in countries ))
 
-            if len(funnels) > 0:    mwhere = mwhere.replace("%1",",".join(funnels))
+            if funnel is not None: mwhere = mwhere.replace("%1",str(funnel))
             if len(categories) > 0: mwhere = mwhere.replace("%1",",".join(categories))
-            if len(entities) > 0:   mwhere = mwhere.replace("%1",",".join(entities))
-            if len(models) > 0:     mwhere = mwhere.replace("%1",",".join(models))
-            if len(types) > 0:      mwhere = mwhere.replace("%1",",".join(types))
-            if len(status_devol)>0: mwhere = mwhere.replace("%1",",".join(status_devol))
-            if len(status_order)>0: mwhere = mwhere.replace("%1",",".join(status_order))
+            if len(entities) > 0:   mwhere = mwhere.replace("%1",",".join(str(x) for x in entities))
+            if len(models) > 0:     mwhere = mwhere.replace("%1",",".join(str(x) for x in models))
+            if len(types) > 0:      mwhere = mwhere.replace("%1",",".join(str(x) for x in types))
+            if len(status_devol)>0: mwhere = mwhere.replace("%1",",".join(str(x) for x in status_devol))
+            if len(status_order)>0: mwhere = mwhere.replace("%1",",".join(str(x) for x in status_order))
             if date_start is not None and date_end is not None: mwhere = str(mwhere).replace("%1","'"+date_start+"'").replace("%2","'"+date_end+"'")
 
             if mwhere.find("%")>-1:
