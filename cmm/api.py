@@ -17,6 +17,7 @@ from cmm.email import ns_email
 from cmm.measure_unit import ns_measure_unit
 from cmm.config import ns_config
 from cmm.reports import ns_report
+from cmm.ai import ns_ai
 
 
 """ Módulo Common entre os sistemas
@@ -26,7 +27,8 @@ Keyword arguments: usuarios, produtos
 """
 
 #nss = [ns_user]
-nss = [ns_cat,
+nss = [ns_ai,
+       ns_cat,
        ns_city,
        ns_color,
        ns_config,
