@@ -22,13 +22,11 @@ def verify_token(token):
         user = CmmUsers.check_token(token)
         if user is not None:
             try:
-                complete_key = datetime.now().year+datetime.now().month+datetime.now().day
-                data = jwt.decode(token,str(environ.get("F2B_TOKEN_KEY"))+str(complete_key),algorithms=['HS256'])
+                data = jwt.decode(token,str(environ.get("F2B_TOKEN_KEY")),algorithms=['HS256'])
+                if 'username' in data:
+                    return True
             except Exception as e:
                 logging.error(e)
-                print(e)
-            if 'username' in data:
-                return True
         else:
             logging.info("TOKEN:"+str(token))
             # logging.info(request.headers)

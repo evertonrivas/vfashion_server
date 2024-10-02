@@ -2,7 +2,7 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import Insert, String, Integer, CHAR, DateTime, Boolean, Text, DECIMAL, SmallInteger, Date
 from sqlalchemy import ForeignKey, Index, event, func, Column
 from sqlalchemy_serializer import SerializerMixin
-from datetime import datetime,timedelta
+from datetime import datetime,timedelta, timezone
 import jwt
 import bcrypt
 from f2bconfig import CustomerAction
@@ -85,22 +85,21 @@ class CmmUsers(db.Model,SerializerMixin):
         return bcrypt.checkpw(pwd,self.password.encode())
 
     def get_token(self,expires_in:int=int(environ.get("F2B_EXPIRE_SESSION"))):
-        now = datetime.now()
+        now = datetime.now(tz=timezone.utc)
         expire_utc = now + timedelta(seconds=expires_in)
-        complete_key = now.year + now.month + now.day
-
-        if self.token and self.token_expire > expire_utc:
-            return self.token
 
         #encode e decode por causa da diferenca de versoes do windows que pode retornar byte array ao inves de str
-        self.token = jwt.encode({"username":str(self.username) },str(environ.get("F2B_TOKEN_KEY"))+str(complete_key)).encode().decode()
-        self.token_expire = now + timedelta(seconds=expires_in)
+        self.token = jwt.encode({"username":str(self.username), "iat": now, "exp": expire_utc},str(environ.get("F2B_TOKEN_KEY"))).encode().decode()
+        self.token_expire = expire_utc
         return self.token
     
     def renew_token(self):
-        now = datetime.now()
-        expire = now + timedelta(seconds=3600)
-        return expire
+        now = datetime.now(tz=timezone.utc) + timedelta(seconds=int(environ.get("F2B_EXPIRE_SESSION")))
+        data_token = jwt.decode(self.token,str(environ.get("F2B_TOKEN_KEY")),algorithms=['HS256'])
+        data_token["exp"] = now
+        self.token = jwt.encode(data_token,str(environ.get("F2B_TOKEN_KEY")))
+        self.token_expire = now
+        return now
 
     def revoke_token(self):
         self.token_expire = datetime.now() - timedelta(seconds=1)

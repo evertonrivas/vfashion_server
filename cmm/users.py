@@ -368,6 +368,8 @@ class UserAuth(Resource):
                         return obj_retorno
         return -1 #usuario invalido
     
+    @ns_user.response(HTTPStatus.OK.value,"Realiza a validacao do token do usuario")
+    @ns_user.response(HTTPStatus.BAD_REQUEST.value,"Falha ao verificar o token!")
     def put(self):
         try:
             #print(request.get_json())
@@ -377,10 +379,12 @@ class UserAuth(Resource):
         except:
             return False
     
+    @ns_user.response(HTTPStatus.OK.value,"Realiza a atualizacao do token do usuario")
+    @ns_user.response(HTTPStatus.BAD_REQUEST.value,"Falha ao atualizar o token!")
     def get(self):
         try:
             usr = CmmUsers.query.get(request.args.get("id"))
-            usr.token_expire = usr.renew_token()
+            usr.renew_token()
             db.session.commit()
             return usr.token_expire.strftime("%Y-%m-%d %H:%M:%S")
         except Exception as e:
