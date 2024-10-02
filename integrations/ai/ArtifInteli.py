@@ -18,4 +18,4 @@ class ArtifInteli(ABC):
     
     
     @abstractmethod 
-    def suggest_email(self,subject:str): pass
+    def suggest_email(self,subject:str,type:str): pass

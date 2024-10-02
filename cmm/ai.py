@@ -31,7 +31,7 @@ class CategoryList(Resource):
             class_name
             )
             ai = AI_OBJ()
-            return ai.suggest_email(req["text"])
+            return ai.suggest_email(req["text"],req["type"])
         except Exception as e:
             print(e)
             return False
