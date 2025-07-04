@@ -5,19 +5,19 @@ import logging
 
 class Jadlog(shipping.Shipping):
     def __init__(self) -> None:
-        self.nav.verify = False
         super().__init__()
+        self.verify_nav(False)
 
     def _get_header(self):
         self.nav.headers = {
-            "Authorization": self.env.get("F2B_JADLOG_TOKEN_TYPE")+" "+self.env.get("F2B_JADLOG_TOKEN_ACCESS"),
+            "Authorization": str(self.env.get("F2B_JADLOG_TOKEN_TYPE"))+" "+str(self.env.get("F2B_JADLOG_TOKEN_ACCESS")),
             "Content-type": "application/json"
         }
     
-    def tracking(self, _taxvat: str, _invoice: str, _invoice_serie: str = None, _cte: str = None, _code:str = None):
+    def tracking(self, _taxvat: str, _invoice: str, _invoice_serie: str|None = None, _cte: str|None = None, _code:str|None = None):
         self._get_header()
         try:
-            resp = self.nav.get("https://jadlog.com.br/api/tracking/consultar",params={
+            resp = self.nav.get("https://jadlog.com.br/api/tracking/consultar",data={
                 "consulta":[{
                     "df":{
                         "nf": _invoice,

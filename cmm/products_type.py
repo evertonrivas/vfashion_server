@@ -1,7 +1,8 @@
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import CmmProductsTypes, _get_params,db
+from models import CmmProductsTypes, _get_params, db
+# from models import _show_query
 from sqlalchemy import Select, exc, asc, desc
 from auth import auth
 from os import environ

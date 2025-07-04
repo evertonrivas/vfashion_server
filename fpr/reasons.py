@@ -1,7 +1,8 @@
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import FprReason, _get_params,db
+from models import FprReason, _get_params, db
+# from models import _show_query
 from sqlalchemy import Select, desc, exc, asc
 from auth import auth
 from os import environ
@@ -45,7 +46,7 @@ class CategoryList(Resource):
     @auth.login_required
     def get(self):
         pag_num  = 1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size = int(environ.get("F2B_PAGINATION_SIZE")) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_size = int(str(environ.get("F2B_PAGINATION_SIZE"))) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
 
         try:
             params = _get_params(request.args.get("query"))
@@ -120,7 +121,7 @@ class CategoryList(Resource):
     @ns_reason.response(HTTPStatus.OK.value,"Exclui os dados de um país")
     @ns_reason.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
     @auth.login_required
-    def delete(self)->bool:
+    def delete(self)->bool|dict:
         try:
             req = request.get_json()
             for id in req["ids"]:
@@ -160,7 +161,7 @@ class CategoryApi(Resource):
     @ns_reason.response(HTTPStatus.OK.value,"Atualiza os dados de um país")
     @ns_reason.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
     @auth.login_required
-    def post(self,id:int):
+    def post(self,id:int)->bool|dict:
         try:
             req = request.get_json()
             reg:FprReason = FprReason.query.get(id)

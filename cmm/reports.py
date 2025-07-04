@@ -4,9 +4,10 @@ import decimal
 from http import HTTPStatus
 import json
 import os
-from flask_restx import Resource,Namespace,fields
+from flask_restx import Resource,Namespace
 from flask import request
-from models import CmmReport, _get_params, _show_query,db
+from models import CmmReport, _get_params ,db
+# from models import _show_query
 from common import _format_action, _gen_report
 from sqlalchemy import Select, text, desc, exc, asc, func, or_
 from auth import auth
@@ -24,7 +25,7 @@ class ReportsApi(Resource):
     @auth.login_required
     def get(self):
         pag_num  = 1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size = int(environ.get("F2B_PAGINATION_SIZE")) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_size = int(str(environ.get("F2B_PAGINATION_SIZE"))) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
         query    = "" if request.args.get("query") is None else request.args.get("query")
 
         try:

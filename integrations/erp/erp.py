@@ -16,7 +16,12 @@ class ERP(ABC):
 
     def __init__(self) -> None:
         self.nav = Session()
-        self.dbconn = create_engine(environ.get("F2B_DB_LIB")+"://"+environ.get("F2B_DB_USER")+":"+environ.get("F2B_DB_PASS")+"@"+environ.get("F2B_DB_HOST")+"/"+environ.get("F2B_DB_NAME"))
+        conn = str(environ.get("F2B_DB_LIB"))+"://"
+        conn += str(environ.get("F2B_DB_USER"))+":"
+        conn += str(environ.get("F2B_DB_PASS"))+"@"
+        conn += str(environ.get("F2B_DB_HOST"))+"/"
+        conn += str(environ.get("F2B_DB_NAME"))
+        self.dbconn = create_engine(conn)
         super().__init__()
 
     

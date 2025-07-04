@@ -5,7 +5,8 @@ from flask import request
 from f2bconfig import ProductMassiveAction
 from models import B2bCollection, B2bProductStock, CmmCategories, CmmMeasureUnit, CmmProducts, CmmProductsCategories
 from models import CmmProductsGrid, CmmProductsImages, CmmProductsTypes, CmmProductsModels
-from models import _get_params, _show_query, db
+from models import _get_params, db
+# from models import _show_query
 from sqlalchemy import Delete, Update, desc, exc, asc,Select, or_
 from auth import auth
 from decimal import Decimal
@@ -227,7 +228,7 @@ class ProductsList(Resource):
     @ns_prod.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar novo produto!")
     @ns_prod.doc(body=prd_model)
     @auth.login_required
-    def post(self)->int:
+    def post(self)->int|dict:
         try:
             req = request.get_json()
             prod:CmmProducts = CmmProducts()
@@ -281,7 +282,7 @@ class ProductsList(Resource):
     @ns_prod.response(HTTPStatus.OK.value,"Exclui os dados de produto(s)")
     @ns_prod.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
     @auth.login_required
-    def delete(self)->bool:
+    def delete(self)->bool|dict:
         try:
             req = request.get_json()
             for id in req["ids"]:
@@ -298,7 +299,7 @@ class ProductsList(Resource):
 
     @ns_prod.response(HTTPStatus.OK.value,"Realiza ações massivas em produto(s)")
     @ns_prod.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
-    def patch(self)->bool:
+    def patch(self)->bool|dict:
         try:
             req = request.get_json()
             print(ProductMassiveAction.TYPE.value)
@@ -377,7 +378,7 @@ class ProductApi(Resource):
     @ns_prod.response(HTTPStatus.OK.value,"Salva dados de um produto")
     @ns_prod.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
     @auth.login_required
-    def post(self,id:int)->bool:
+    def post(self,id:int)->bool|dict:
         try:
             req = request.get_json()
             prod:CmmProducts = CmmProducts.query.get(id)
@@ -424,7 +425,7 @@ class ProductApi(Resource):
     @ns_prod.response(HTTPStatus.OK.value,"Exclui os dados de um produto")
     @ns_prod.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
     @auth.login_required
-    def delete(self,id:int)->bool:
+    def delete(self,id:int)->bool|dict:
         try:
             prod = CmmProducts.query.get(id)
             prod.trash = True

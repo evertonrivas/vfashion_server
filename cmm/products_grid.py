@@ -1,9 +1,9 @@
 from http import HTTPStatus
-import json
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import CmmProductsGrid,CmmProductsGridDistribution, CmmProductsGridSizes, CmmTranslateColors, CmmTranslateSizes, _get_params, db
-from sqlalchemy import Delete, Select, Update, asc, desc, exc, and_
+from models import CmmProductsGrid,CmmProductsGridDistribution, CmmProductsGridSizes, CmmTranslateSizes, _get_params, db
+# from models import _show_query
+from sqlalchemy import Delete, Select, asc, desc, exc, and_
 from auth import auth
 from os import environ
 

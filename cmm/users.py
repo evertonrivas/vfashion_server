@@ -3,7 +3,8 @@ from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
 from common import _send_email
-from models import CmmLegalEntities, CmmLegalEntityContact, CmmUserEntity, CmmUsers, _get_params, _show_query, db, _save_log
+from models import CmmLegalEntities, CmmLegalEntityContact, CmmUserEntity, CmmUsers, _get_params, db, _save_log
+# from models import _show_query
 from sqlalchemy import Delete, Select, desc, exc, and_, asc, Insert, func, or_
 from auth import auth
 from f2bconfig import ContactType,CustomerAction, MailTemplates
@@ -51,7 +52,7 @@ class UsersList(Resource):
     @auth.login_required
     def get(self):
         pag_num   = 1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size  = int(environ.get("F2B_PAGINATION_SIZE")) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_size  = int(str(environ.get("F2B_PAGINATION_SIZE"))) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
         query     = "" if request.args.get("query") is None else request.args.get("query")
 
         try:
@@ -118,7 +119,7 @@ class UsersList(Resource):
     @ns_user.response(HTTPStatus.OK.value,"Cria um ou mais novo(s) usuário(s) no sistema")
     @ns_user.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar!")
     @auth.login_required
-    def post(self):
+    def post(self)->bool|dict:
         try:
             req = request.get_json()
 
@@ -128,31 +129,31 @@ class UsersList(Resource):
                     Select(func.count(CmmUsers.id).label("total_lic")).where(CmmUsers.type==usr["type"])
                 ).first().total_lic
                 #A = Administrador, L = Lojista, I = Lojista (IA), R = Representante, V = Vendedor, C = Company User
-                if usr["type"]=="A" and total == int(environ.get("F2B_MAX_ADM_LICENSE")):
+                if usr["type"]=="A" and total == int(str(environ.get("F2B_MAX_ADM_LICENSE"))):
                     return {
                         "error_code": -1,
                         "error_details": "Número máximo de licenças Adm. atingido!",
                         "error_sql": ""
                     }
-                elif usr["type"]=="R" and total == int(environ.get("F2B_MAX_REP_LICENSE")):
+                elif usr["type"]=="R" and total == int(str(environ.get("F2B_MAX_REP_LICENSE"))):
                     return {
                         "error_code": -1,
                         "error_details": "Número máximo de licenças REP. atingido!",
                         "error_sql": ""
                     }
-                elif usr["type"]=="I" and total == int(environ.get("F2B_MAX_SIA_LICENSE")):
+                elif usr["type"]=="I" and total == int(str(environ.get("F2B_MAX_SIA_LICENSE"))):
                     return {
                         "error_code": -1,
                         "error_details": "Número máximo de licenças I.A atingido!",
                         "error_sql": ""
                     }
-                elif usr["type"]=="L" and total == int(environ.get("F2B_MAX_STR_LICENSE")):
+                elif usr["type"]=="L" and total == int(str(environ.get("F2B_MAX_STR_LICENSE"))):
                     return {
                         "error_code": -1,
                         "error_details": "Número máximo de licenças Lojista atingido!",
                         "error_sql": ""
                     }
-                elif usr["type"]=="U" and total == int(environ.get("F2B_MAX_USR_LICENSE")):
+                elif usr["type"]=="U" and total == int(str(environ.get("F2B_MAX_USR_LICENSE"))):
                     return {
                         "error_code": -1,
                         "error_details": "Número máximo de licenças Colaborador atingido!",
@@ -190,7 +191,7 @@ class UsersList(Resource):
     @ns_user.response(HTTPStatus.OK.value,"Exclui os dados de um usuario")
     @ns_user.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
     @auth.login_required
-    def delete(self)->bool:
+    def delete(self)->bool|dict:
         try:
             req = request.get_json()
             for id in req["ids"]:
@@ -277,7 +278,7 @@ class UserApi(Resource):
     @ns_user.response(HTTPStatus.OK.value,"Exclui os dados de um usuario")
     @ns_user.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
     @auth.login_required
-    def delete(self,id:int)->bool:
+    def delete(self,id:int)->bool|dict:
         try:
             usr = CmmUsers.query.get(id)
             usr.active = False
@@ -301,13 +302,13 @@ class UserAuth(Resource):
                      .outerjoin(CmmUserEntity,CmmUserEntity.id_user==CmmUsers.id)\
                      .outerjoin(CmmLegalEntities,CmmLegalEntities.id==CmmUserEntity.id_entity)\
                      .outerjoin(CmmLegalEntityContact,CmmLegalEntityContact.id_legal_entity==CmmLegalEntities.id)\
-                     .where(CmmUsers.active==True)\
+                     .where(CmmUsers.active.is_(True))\
                      .where(or_(
                          CmmUsers.username==request.form.get("username"),
                          CmmLegalEntities.taxvat==request.form.get("username"),
                          and_(
                              CmmLegalEntityContact.contact_type==ContactType.EMAIL.value,
-                             CmmLegalEntityContact.is_default==True,
+                             CmmLegalEntityContact.is_default.is_(True),
                              CmmLegalEntityContact.value==request.form.get("username")
                          )
                      ))
@@ -370,13 +371,13 @@ class UserAuth(Resource):
     
     @ns_user.response(HTTPStatus.OK.value,"Realiza a validacao do token do usuario")
     @ns_user.response(HTTPStatus.BAD_REQUEST.value,"Falha ao verificar o token!")
-    def put(self):
+    def put(self) -> bool:
         try:
             #print(request.get_json())
             req = request.get_json()
             retorno = CmmUsers.check_token(req['token'])
             return False if retorno is None else retorno.token_expire.strftime("%Y-%m-%d %H:%M:%S")
-        except:
+        except Exception:
             return False
     
     @ns_user.response(HTTPStatus.OK.value,"Realiza a atualizacao do token do usuario")
@@ -404,7 +405,7 @@ class UserAuthLogout(Resource):
             if entity is not None:
                 _save_log(entity.id,CustomerAction.SYSTEM_ACCESS,'Efetuou logoff')
             return True
-        except:
+        except Exception:
             return False
         
 ns_user.add_resource(UserAuthLogout,"/logout/<int:id>")
@@ -575,7 +576,7 @@ class UserPassword(Resource):
                 .join(CmmUserEntity,CmmUserEntity.id_entity==CmmLegalEntities.id)\
                 .join(CmmUsers,CmmUsers.id==CmmUserEntity.id_user)\
                 .where(and_(
-                    CmmUsers.active==True,
+                    CmmUsers.active.is_(True),
                     CmmLegalEntityContact.value==req["email"]
                 ))
             ).first()

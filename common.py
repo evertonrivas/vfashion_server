@@ -1,9 +1,8 @@
 from random import seed,randint
-from f2bconfig import CustomerAction, MailTemplates, Reports
+from f2bconfig import CustomerAction, MailTemplates
 import jinja2
 import pdfkit
 import os
-import html.entities
 import requests
 from os import environ
 import logging
@@ -135,7 +134,7 @@ def _send_email(p_to:[],p_cc:[],p_subject:str,p_content:str,p_tpl:MailTemplates,
         logging.error(e)
         return False
     
-def _format_action(act:CustomerAction):
+def _format_action(act:CustomerAction) ->str:
     if act==CustomerAction.DATA_REGISTERED.value:
         return "Registro de Dados"
     if act==CustomerAction.DATA_UPDATED.value:
@@ -176,3 +175,4 @@ def _format_action(act:CustomerAction):
         return "Desbloqueio financeiro"
     if act==CustomerAction.COMMENT_ADDED.value:
         return "Observação"
+    return ""

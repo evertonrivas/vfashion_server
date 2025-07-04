@@ -1,8 +1,8 @@
-from datetime import datetime
 from http import HTTPStatus
-from flask_restx import Resource,Namespace,fields
+from flask_restx import Resource,Namespace
 from flask import request
 from models import CrmConfig, db
+# from models import _show_query
 import json
 from sqlalchemy import Select, exc
 from auth import auth
@@ -37,7 +37,7 @@ class CollectionList(Resource):
     @ns_crm_cfg.response(HTTPStatus.OK.value,"Cria ou atualiza as configurações")
     @ns_crm_cfg.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar registro!")
     @auth.login_required
-    def post(self)->int:
+    def post(self)->int|dict:
         try:
             req = request.get_json()
             for k in req:

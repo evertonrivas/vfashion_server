@@ -28,9 +28,9 @@ class Shipping():
         self.nav.verify = False
         self.nav.headers = {
             # "Authorization": ConfigBraspress.TOKEN_TYPE.value+" "+ConfigBraspress.TOKEN_ACCESS.value
-            "Authorization": environ.get("F2B_BRASPRESS_TOKEN_TYPE")+" "+environ.get("F2B_BRASPRESS_TOKEN_ACCESS")
+            "Authorization": str(environ.get("F2B_BRASPRESS_TOKEN_TYPE"))+" "+str(environ.get("F2B_BRASPRESS_TOKEN_ACCESS"))
         }
-        resp = self.nav.get('https://api.braspress.com/v'+environ.get("F2B_BRASPRESS_API_VERSION")+'/tracking/byNf/'+_taxvat+'/'+_invoice+'/json')
+        resp = self.nav.get('https://api.braspress.com/v'+str(environ.get("F2B_BRASPRESS_API_VERSION"))+'/tracking/byNf/'+_taxvat+'/'+_invoice+'/json')
         if resp.status_code==200:
             consulta = resp.json()
 
@@ -60,7 +60,7 @@ class Shipping():
             "Authorization": environ.get("F2B_JADLOG_TOKEN_TYPE")+" "+environ.get("F2B_JADLOG_TOKEN_ACCESS"),
             "Content-Type": "application/json"
         }
-        resp = self.nav.get('https://jadlog.com.br/api/tracking/consultar',params={
+        resp = self.nav.get('https://jadlog.com.br/api/tracking/consultar',data={
             "consulta":[{
                 "df":{
                     "nf": _nf,
@@ -111,12 +111,10 @@ class Shipping():
                 "Authorization": login.token_type+" "+login.access_token
             }
             resp = self.nav.post('https://developers.jamef.com.br/rastreamento/ver',data={
-                {
                     "documentoResponsavelPagamento" : str(environ.get("F2B_COMPANY_TAXVAT")),
                     "documentoDestinatario": _cnpj,
                     "numeroNotaFiscal": _nf,
                     "numeroSerieNotaFiscal": _serie_nf
-                }
             })
             if resp.status_code==200:
                 consulta = resp.json()

@@ -2,6 +2,7 @@ from http import HTTPStatus
 from flask_restx import Resource, fields, Namespace
 from flask import request
 from models import _get_params,CrmFunnel, CrmFunnelStage, db
+# from models import _show_query
 from sqlalchemy import Update, desc, exc, and_, asc, Select
 from auth import auth
 from os import environ
@@ -57,7 +58,7 @@ class FunnelList(Resource):
     @auth.login_required
     def get(self):
         pag_num  = 1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size = int(environ.get("F2B_PAGINATION_SIZE")) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_size = int(str(environ.get("F2B_PAGINATION_SIZE"))) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
         query   = "" if request.args.get("query") is None else request.args.get("query")
     
         try:
@@ -128,7 +129,7 @@ class FunnelList(Resource):
             }
 
     def get_stages(self,id:int):
-        rquery = CrmFunnelStage.query.filter(and_(CrmFunnelStage.id_funnel==id,CrmFunnelStage.trash==False)).order_by(asc(CrmFunnelStage.order))
+        rquery = CrmFunnelStage.query.filter(and_(CrmFunnelStage.id_funnel==id,CrmFunnelStage.trash.is_(False))).order_by(asc(CrmFunnelStage.order))
         return [{
             "id": m.id,
             "name": m.name,
@@ -144,7 +145,7 @@ class FunnelList(Resource):
     @ns_funil.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar novo funil!")
     @ns_funil.doc(body=fun_model)
     @auth.login_required
-    def post(self)->int:
+    def post(self)->int|dict:
         try:
             req = request.get_json()
 
@@ -187,7 +188,7 @@ class FunnelList(Resource):
                 fun.trash = req["toTrash"]
                 db.session.commit()
             return True
-        except:
+        except Exception:
             return False
 
 @ns_funil.route("/<int:id>")
@@ -231,7 +232,7 @@ class FunnelApi(Resource):
     @ns_funil.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
     @ns_funil.param("name","Nome do funil",required=True)
     @auth.login_required
-    def post(self,id:int)->bool:
+    def post(self,id:int)->bool|dict:
         try:
             req = request.get_json()
 

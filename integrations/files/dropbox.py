@@ -9,7 +9,7 @@ import logging
 from os import environ
 
 class Dropbox(file.File):
-    dbx = dropbox.Dropbox(environ.get("F2B_DROPBOX_TOKEN"))
+    dbx = dropbox.Dropbox(str(environ.get("F2B_DROPBOX_TOKEN")))
 
     def __init__(self) -> None:
         super().__init__()

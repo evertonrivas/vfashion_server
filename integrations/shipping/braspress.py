@@ -11,13 +11,13 @@ class Braspress(shipping.Shipping):
     def _get_header(self):
         self.nav.headers = {
             # "Authorization": ConfigBraspress.TOKEN_TYPE.value+" "+ConfigBraspress.TOKEN_ACCESS.value
-            "Authorization": self.env.get("F2B_BRASPRESS_TOKEN_TYPE")+" "+self.env.get("F2B_BRASPRESS_TOKEN_ACCESS")
+            "Authorization": str(self.env.get("F2B_BRASPRESS_TOKEN_TYPE"))+" "+str(self.env.get("F2B_BRASPRESS_TOKEN_ACCESS"))
         }
 
-    def tracking(self, _taxvat: str, _invoice: str, _invoice_serie: str = None, _cte: str = None, _code:str = None):
+    def tracking(self, _taxvat: str, _invoice: str, _invoice_serie: str|None = None, _cte: str|None = None, _code:str|None = None):
         self._get_header()
         try:
-            resp = self.nav.get('https://api.braspress.com/v'+self.env.get("F2B_BRASPRESS_API_VERSION")+'/tracking/byNf/'+_taxvat+'/'+_invoice+'/json')
+            resp = self.nav.get('https://api.braspress.com/v'+str(self.env.get("F2B_BRASPRESS_API_VERSION"))+'/tracking/byNf/'+_taxvat+'/'+_invoice+'/json')
             if resp.status_code==200:
                 consulta = resp.json()
                 

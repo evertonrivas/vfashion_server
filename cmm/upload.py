@@ -1,6 +1,6 @@
 from http import HTTPStatus
 import importlib
-from flask_restx import Resource,Namespace,fields
+from flask_restx import Resource,Namespace
 from flask import request
 from sqlalchemy import Select, Update, desc, exc, asc,Delete, func
 from werkzeug import exceptions
@@ -8,8 +8,8 @@ from auth import auth
 from f2bconfig import CustomerAction
 from datetime import datetime
 import filetype
-from werkzeug.datastructures import ImmutableMultiDict
 from models import db, _save_log, CmmLegalEntities, CmmLegalEntityFile, CmmProductsImages
+# from models import _show_query
 import os
 
 ns_upload = Namespace("upload",description="Operações para manipular upload de dados")
@@ -26,9 +26,9 @@ class UploadApi(Resource):
             #obtem os arquivos para upload
             files = []
             fileCount = 1
-            fpath = os.environ.get("F2B_APP_PATH")+'assets/'
+            fpath = str(os.environ.get("F2B_APP_PATH"))+'assets/'
             for file in request.files.getlist('files[]'):
-                parts = file.filename.split(".")
+                parts = str(file.filename).split(".")
                 ext = parts[len(parts)-1]
                 if ext=='pdf':
                     ffolder = 'pdf/'
@@ -84,8 +84,8 @@ class UploadApi(Resource):
                                              CmmLegalEntityFile.date_created,
                                              CmmLegalEntityFile.date_updated).where(CmmLegalEntityFile.id==id)).first()
             if file is not None:
-                if os.path.exists(os.environ.get("F2B_APP_PATH")+'assets/'+str(file.folder)+str(file.name)):
-                    os.remove(os.environ.get("F2B_APP_PATH")+'assets/'+str(file.folder)+str(file.name))
+                if os.path.exists(str(os.environ.get("F2B_APP_PATH"))+'assets/'+str(file.folder)+str(file.name)):
+                    os.remove(str(os.environ.get("F2B_APP_PATH"))+'assets/'+str(file.folder)+str(file.name))
                     db.session.execute(Delete(CmmLegalEntityFile).where(CmmLegalEntityFile.id==id))
                     db.session.commit()
                     _save_log(file.id_legal_entity,CustomerAction.FILE_DETTACHED,'Removido o arquivo '+file.name)
@@ -101,9 +101,9 @@ class UploadTmp(Resource):
     def post(self):
         try:
             #obtem os arquivos para upload
-            fpath = os.environ.get("F2B_APP_PATH")+'assets/tmp/'
+            fpath = str(os.environ.get("F2B_APP_PATH"))+'assets/tmp/'
             for file in request.files.getlist('files[]'):
-                file.save(fpath+file.filename)
+                file.save(fpath+str(file.filename))
 
             return True
         except exceptions.HTTPException as e:
@@ -120,10 +120,10 @@ class UploadDevolution(Resource):
         try:
             files = []
             #obtem os arquivos para upload
-            fpath = os.environ.get("F2B_APP_PATH")+'assets/tmp/'
+            fpath = str(os.environ.get("F2B_APP_PATH"))+'assets/tmp/'
             file_count = 1
             for file in request.files.getlist('files[]'):
-                parts = file.filename.split(".")
+                parts = str(file.filename).split(".")
                 ext = parts[len(parts)-1]
                 newFileName = "devolution_"+str(id)+"_"+str(idprod)+"_"+str(idcolor)+"_"+str(idsize)+"_"+str(file_count)+"."+ext
                 file.save(fpath+newFileName)
@@ -145,9 +145,9 @@ class UploadImport(Resource):
             type = request.args.get("type")
             files = []
             #obtem os arquivos para upload
-            fpath = os.environ.get("F2B_APP_PATH")+'assets/import/'
+            fpath = str(os.environ.get("F2B_APP_PATH"))+'assets/import/'
             for file in request.files.getlist('files[]'):
-                parts = file.filename.split(".")
+                parts = str(file.filename).split(".")
                 ext = parts[len(parts)-1]
                 newFileName = "import_"+str(type)+"_"+datetime.now().strftime("%Y%m%d-%H%M%S")+"."+ext
                 file.save(fpath+newFileName)
@@ -170,8 +170,8 @@ class UploadProduct(Resource):
             #obtem os arquivos para upload
             for file in request.files.getlist('files[]'):
                 if os.environ.get("F2B_COMPANY_UPLOAD_IMAGE")=="local":
-                    fpath = os.environ.get("F2B_APP_PATH")+'assets/images/'
-                    parts = file.filename.split(".")
+                    fpath = str(os.environ.get("F2B_APP_PATH"))+'assets/images/'
+                    parts = str(file.filename).split(".")
                     ext = parts[len(parts)-1]
                     newFileName = "product_"+datetime.now().strftime("%Y%m%d-%H%M%S")+"."+ext
                     file.save(fpath+newFileName)
@@ -180,12 +180,12 @@ class UploadProduct(Resource):
                 else:
 
                     # limpa todos os arquivos da pasta temporaria
-                    for filename in os.listdir(os.environ.get("F2B_APP_PATH")+'assets/tmp'):
-                        os.unlink(os.environ.get("F2B_APP_PATH")+'assets/tmp/'+filename)
+                    for filename in os.listdir(str(os.environ.get("F2B_APP_PATH"))+'assets/tmp'):
+                        os.unlink(str(os.environ.get("F2B_APP_PATH"))+'assets/tmp/'+filename)
 
-                    newFileName = "product_"+file.filename
-                    module = os.environ.get("F2B_COMPANY_UPLOAD_IMAGE")
-                    class_name = os.environ.get("F2B_COMPANY_UPLOAD_IMAGE").replace("_"," ").title().replace(" ","")
+                    newFileName = "product_"+str(file.filename)
+                    module = str(os.environ.get("F2B_COMPANY_UPLOAD_IMAGE"))
+                    class_name = str(os.environ.get("F2B_COMPANY_UPLOAD_IMAGE")).replace("_"," ").title().replace(" ","")
                     FILE_OBJ = getattr(
                     importlib.import_module('integrations.files.'+module),
                     class_name
@@ -201,7 +201,7 @@ class UploadProduct(Resource):
 
             i = 0 
             for f in files:
-                fUrl = os.environ.get("F2B_APP_URL")+"assets/images/"+f if os.environ.get("F2B_COMPANY_UPLOAD_IMAGE")=="local" else ""+f
+                fUrl = str(os.environ.get("F2B_APP_URL"))+"assets/images/"+f if os.environ.get("F2B_COMPANY_UPLOAD_IMAGE")=="local" else ""+f
                 exist = db.session.execute(Select(func.count(CmmProductsImages.id).label("total")).where(CmmProductsImages.img_url==fUrl)).first().total
                 # so irah incluir se a imagem nao existir
                 if exist == 0:

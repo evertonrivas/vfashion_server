@@ -2,6 +2,7 @@ from http import HTTPStatus
 from flask import request
 from flask_restx import Resource, Namespace, fields
 from models import B2bTablePrice, B2bTablePriceProduct, _get_params, db
+# from models import _show_query
 import json
 from sqlalchemy import Select, exc, desc, asc
 from auth import auth

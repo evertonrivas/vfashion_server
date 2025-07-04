@@ -1,11 +1,10 @@
-from datetime import datetime
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import B2bComissionRepresentative, _get_params, db
-from sqlalchemy import Select, Update, and_, exc, asc, desc, func
+from models import B2bComissionRepresentative, db
+# from models import _show_query
+from sqlalchemy import Select, Update, and_, exc, func
 from auth import auth
-from os import environ
 
 ns_comission = Namespace("comission",description="Operações para manipular dados de comissoes")
 
@@ -54,7 +53,7 @@ class ComissionList(Resource):
     @ns_comission.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar registro!")
     @ns_comission.doc(body=comission_model)
     @auth.login_required
-    def post(self,year:int)->bool:
+    def post(self,year:int)->bool|dict:
         try:
             req = request.get_json()
 

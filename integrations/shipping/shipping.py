@@ -16,6 +16,9 @@ class Shipping(ABC):
         self.nav = Session()
         super().__init__()
 
+    def verify_nav(self,_verify:bool = False) -> None:
+        self.nav.verify = _verify
+
     def _as_object(self,req:Response):
         return json.loads(req.text,object_hook=lambda d: SimpleNamespace(**d))
 
@@ -23,4 +26,4 @@ class Shipping(ABC):
     def _get_header(self):pass
 
     @abstractmethod
-    def tracking(self,_taxvat:str,_invoice:str,_invoice_serie:str = None, _cte:str = None, _code:str = None):pass
+    def tracking(self,_taxvat:str,_invoice:str,_invoice_serie:str|None = None, _cte:str|None = None, _code:str|None = None):pass

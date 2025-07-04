@@ -18,16 +18,21 @@ class CEP(ABC):
 
     def __init__(self) -> None:
         self.nav = Session()
-        self.dbconn = create_engine(environ.get("F2B_DB_LIB")+"://"+environ.get("F2B_DB_USER")+":"+environ.get("F2B_DB_PASS")+"@"+environ.get("F2B_DB_HOST")+"/"+environ.get("F2B_DB_NAME"))
+        conn = str(environ.get("F2B_DB_LIB"))+"://"
+        conn += str(environ.get("F2B_DB_USER"))+":"
+        conn += str(environ.get("F2B_DB_PASS"))+"@"
+        conn += str(environ.get("F2B_DB_HOST"))+"/"
+        conn += str(environ.get("F2B_DB_NAME"))
+        self.dbconn = create_engine(conn)
         super().__init__()
 
     def _as_object(self,req:Response,try_convert:bool = False):
         return json.loads(req.text,object_hook=lambda d: SimpleNamespace(**d))
     
-    def _get_env(self,name:str):
-        return environ.get(name)
+    def _get_env(self,name:str)->str:
+        return str(environ.get(name))
     
-    def _get_city_id(self,ibge:str):
+    def _get_city_id(self,ibge:str)->int:
         id = 0
         with self.dbconn.connect() as con:
             id = con.execute(Select(CmmCities.id).where(CmmCities.brazil_ibge_code==ibge)).first().id

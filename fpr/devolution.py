@@ -2,7 +2,8 @@ from datetime import datetime
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import CmmTranslateColors, CmmTranslateSizes, FprDevolution, FprDevolutionItem, B2bOrders, CmmProducts, CmmLegalEntities, FprReason, _get_params, _save_log, _show_query, db
+from models import CmmTranslateColors, CmmTranslateSizes, FprDevolution, FprDevolutionItem, B2bOrders, CmmProducts, CmmLegalEntities, FprReason, _get_params, _save_log, db
+# from models import _show_query
 from sqlalchemy import Delete, Select, Update, desc, distinct, exc, asc, func, text, tuple_
 from auth import auth
 from f2bconfig import CustomerAction, DevolutionStatus
@@ -45,7 +46,7 @@ class CategoryList(Resource):
     @auth.login_required
     def get(self):
         pag_num  = 1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size = int(environ.get("F2B_PAGINATION_SIZE")) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_size = int(str(environ.get("F2B_PAGINATION_SIZE"))) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
 
         try:
             params    = _get_params(request.args.get("query"))

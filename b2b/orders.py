@@ -2,10 +2,10 @@ from http import HTTPStatus
 import importlib
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import B2bComissionRepresentative, B2bCustomerGroup, B2bCustomerGroupCustomers, B2bProductStock, B2bTarget, CmmProducts, CmmTranslateColors
+from models import B2bCustomerGroup, B2bCustomerGroupCustomers, B2bProductStock, B2bTarget, CmmProducts, CmmTranslateColors
 from models import B2bCartShopping, B2bOrders,B2bOrdersProducts, B2bPaymentConditions, CmmLegalEntities
-from models import CmmTranslateSizes, CmmUserEntity, CmmUsers, FprDevolution, _save_log, _show_query, db,_get_params
-from sqlalchemy import Update, and_, exc,Select,Delete,asc,desc,func,between
+from models import CmmTranslateSizes, CmmUserEntity, CmmUsers, FprDevolution, _save_log, db,_get_params
+from sqlalchemy import Update, and_, exc,Select,Delete,asc,desc,func
 import simplejson
 from auth import auth
 from f2bconfig import CustomerAction,DevolutionStatus, OrderStatus
@@ -70,7 +70,7 @@ class OrdersList(Resource):
     @auth.login_required
     def get(self):
         pag_num  =  1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size = int(environ.get("F2B_PAGINATION_SIZE")) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_size = int(str(environ.get("F2B_PAGINATION_SIZE"))) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
         query   = "" if request.args.get("query") is None else request.args.get("query")
 
         try:
@@ -117,7 +117,7 @@ class OrdersList(Resource):
     @ns_order.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar pedido!")
     @ns_order.doc(body=ord_model)
     @auth.login_required
-    def post(self)->int:
+    def post(self)->int|dict:
         try:
             req = request.get_json()
 
@@ -293,7 +293,7 @@ class OrderApi(Resource):
     @ns_order.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
     @ns_order.doc(body=ord_model)
     @auth.login_required
-    def post(self,id:int)->bool:
+    def post(self,id:int)->bool|dict:
         try:
             req = request.get_json()
 
@@ -367,7 +367,7 @@ class OrderApi(Resource):
     @ns_order.response(HTTPStatus.OK.value,"Exclui os dados de um pedido")
     @ns_order.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
     @auth.login_required
-    def delete(self,id:int)->bool:
+    def delete(self,id:int)->bool|dict:
         try:
             req   = request.get_json()
             order:B2bOrders = B2bOrders.query.get(id)

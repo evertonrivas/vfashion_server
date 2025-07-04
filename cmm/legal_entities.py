@@ -2,7 +2,8 @@ from datetime import datetime
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import  B2bCustomerGroup, CmmLegalEntityHistory, CmmUsers, _show_query, db,_save_log,_get_params,B2bCustomerGroupCustomers, CmmCities, CmmCountries, CmmLegalEntityContact, CmmLegalEntityFile, CmmStateRegions, CrmFunnelStageCustomer,CmmLegalEntities,CmmUserEntity
+from models import  B2bCustomerGroup, CmmLegalEntityHistory, CmmUsers, db,_save_log,_get_params,B2bCustomerGroupCustomers, CmmCities, CmmCountries, CmmLegalEntityContact, CmmLegalEntityFile, CmmStateRegions, CrmFunnelStageCustomer,CmmLegalEntities,CmmUserEntity
+# from models import _show_query
 from sqlalchemy import Delete, Select, Update,and_,exc,asc,desc,func, or_
 from auth import auth
 from f2bconfig import CustomerAction

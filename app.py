@@ -19,8 +19,8 @@ load_dotenv(path.join(BASEDIR, '.env'))
 locale.setlocale(locale.LC_TIME,environ.get("F2B_LOCALE"))
 
 app = Flask(__name__)
-app.config["SQLALCHEMY_DATABASE_URI"] = environ.get("F2B_DB_LIB")+"://"+environ.get("F2B_DB_USER")+":"+\
-environ.get("F2B_DB_PASS")+"@"+environ.get("F2B_DB_HOST")+"/"+environ.get("F2B_DB_NAME")
+app.config["SQLALCHEMY_DATABASE_URI"] = str(environ.get("F2B_DB_LIB"))+"://"+str(environ.get("F2B_DB_USER"))+":"+\
+str(environ.get("F2B_DB_PASS"))+"@"+str(environ.get("F2B_DB_HOST"))+"/"+str(environ.get("F2B_DB_NAME"))
 SQLALCHEMY_ENGINE_OPTIONS = {
     'pool_recycle': 280,
     'pool_pre_ping': True

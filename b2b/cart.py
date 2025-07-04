@@ -2,7 +2,8 @@
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import B2bCartShopping, B2bCustomerGroup, B2bCustomerGroupCustomers, B2bProductStock, CmmLegalEntities, CmmProducts, CmmProductsGrid, CmmProductsGridDistribution, CmmProductsGridSizes, CmmTranslateColors, CmmTranslateSizes,CmmProductsImages, _show_query, db
+from models import B2bCartShopping, B2bCustomerGroup, B2bCustomerGroupCustomers, B2bProductStock, CmmLegalEntities, CmmProducts, CmmProductsGrid, CmmProductsGridDistribution, CmmTranslateColors, CmmTranslateSizes,CmmProductsImages, db
+# from models import _show_query
 from sqlalchemy import exc, Select, and_, func, tuple_, distinct, desc, asc, Delete, text
 from auth import auth
 

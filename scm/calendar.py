@@ -3,6 +3,7 @@ from flask_restx import Resource,Namespace,fields
 from flask import request
 from f2bconfig import CrmFunnelType
 from models import CrmConfig, CrmFunnel, CrmFunnelStage, db,_get_params,B2bBrand, B2bCollection, ScmCalendar, ScmEvent, ScmEventType
+# from models import _show_query
 from sqlalchemy import exc, asc,between,Select,and_, func
 from auth import auth
 from datetime import datetime,date

@@ -1,9 +1,10 @@
 from datetime import datetime
 from sqlalchemy import Insert, Select, Update, and_, create_engine, distinct, func, tuple_
-from models import B2bCollection, B2bOrdersProducts, CmmLegalEntities, CmmProducts, CmmProductsGrid, CmmProductsGridDistribution, FprDevolution, FprDevolutionItem, B2bOrders, ScmFlimvResult, _show_query
+from models import B2bCollection, B2bOrdersProducts, CmmLegalEntities, CmmProducts, CmmProductsGridDistribution, FprDevolution, FprDevolutionItem, B2bOrders, ScmFlimvResult
+# from models import _show_query
 from dotenv import load_dotenv
 from os import environ,path
-from f2bconfig import DevolutionStatus, LegalEntityType, OrderStatus,FlimvModel
+from f2bconfig import LegalEntityType, OrderStatus,FlimvModel
 
 BASEDIR = path.abspath(path.dirname(__file__))
 load_dotenv(path.join(BASEDIR, '.env'))
@@ -13,7 +14,12 @@ class Flimv():
     internal_flimv = []
 
     def __init__(self) -> None:
-        self.dbconn = create_engine(environ.get("F2B_DB_LIB")+"://"+environ.get("F2B_DB_USER")+":"+environ.get("F2B_DB_PASS")+"@"+environ.get("F2B_DB_HOST")+"/"+environ.get("F2B_DB_NAME"))
+        conn = str(environ.get("F2B_DB_LIB"))+"://"
+        conn += str(environ.get("F2B_DB_USER"))+":"
+        conn += str(environ.get("F2B_DB_PASS"))+"@"
+        conn += str(environ.get("F2B_DB_HOST"))+"/"
+        conn += str(environ.get("F2B_DB_NAME"))
+        self.dbconn = create_engine(conn)
         super().__init__()
 
     def process(self) -> None:

@@ -2,6 +2,7 @@ from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
 from models import B2bTarget, db
+# from models import _show_query
 from sqlalchemy import Select, Update, exc, func
 from auth import auth
 
@@ -99,7 +100,7 @@ class CollectionList(Resource):
     @ns_target.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar registro!")
     @ns_target.doc(body=target_model)
     @auth.login_required
-    def post(self,year:int)->bool:
+    def post(self,year:int)->bool|dict:
         try:
             req = request.get_json()
 

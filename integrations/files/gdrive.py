@@ -1,5 +1,3 @@
-import codecs
-import io
 import json
 from pydrive.drive import GoogleDrive
 from pydrive.auth import GoogleAuth
@@ -7,7 +5,7 @@ from googleapiclient.errors import HttpError
 import requests
 from integrations.files import file
 import logging
-from os import environ,path,remove
+from os import environ
 
 class Gdrive(file.File):
     drive = None

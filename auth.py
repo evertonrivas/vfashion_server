@@ -1,7 +1,6 @@
-from datetime import datetime
 from flask import request
 from flask_httpauth import HTTPTokenAuth
-from models import CmmUsers,db
+from models import CmmUsers
 import jwt
 from os import environ,path
 from dotenv import load_dotenv

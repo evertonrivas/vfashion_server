@@ -6,20 +6,25 @@ from datetime import datetime
 from flimv import Flimv
 import csv
 from models import CmmLegalEntityImport, CmmProductsImport
-from sqlalchemy import Insert, Select, create_engine
+from sqlalchemy import Insert, create_engine
 import logging
 
 BASEDIR = path.abspath(path.dirname(__file__))
 load_dotenv(path.join(BASEDIR, '.env'))
 
 # realiza a conexao com o banco de dados
-db = create_engine(environ.get("F2B_DB_LIB")+"://"+environ.get("F2B_DB_USER")+":"+environ.get("F2B_DB_PASS")+"@"+environ.get("F2B_DB_HOST")+"/"+environ.get("F2B_DB_NAME"))
+conn = str(environ.get("F2B_DB_LIB"))+"://"
+conn += str(environ.get("F2B_DB_USER"))+":"
+conn += str(environ.get("F2B_DB_PASS"))+"@"
+conn += str(environ.get("F2B_DB_HOST"))+"/"
+conn += str(environ.get("F2B_DB_NAME"))
+db = create_engine(conn)
 
 # esse eh o job de carga do ERP que eh executado de hora em hora
 if datetime.now().strftime("%M")=="00":
-    if int(environ.get("F2B_CONNECT_ERP"))==1:
-        module = environ.get("F2B_ERP_MODULE")
-        class_name = environ.get("F2B_ERP_MODULE").replace("_"," ").title().replace(" ","")
+    if int(str(environ.get("F2B_CONNECT_ERP")))==1:
+        module = str(environ.get("F2B_ERP_MODULE"))
+        class_name = str(environ.get("F2B_ERP_MODULE")).replace("_"," ").title().replace(" ","")
         ERP = getattr(
             importlib.import_module('integrations.erp.'+module),
             class_name
@@ -112,7 +117,7 @@ def process_import():
 
 # realiza varredura dos arquivos de importacao e adiciona um em cada thread para execucao
 # mesmo por que nao deverao haver muitas importacoes de dados
-fpath = environ.get("F2B_APP_PATH")+'assets/import/' 
+fpath = str(environ.get("F2B_APP_PATH"))+'assets/import/' 
 files = [f for f in listdir(fpath) if path.isfile(fpath+f)]
 workers = len(files)+1
 for f in files:

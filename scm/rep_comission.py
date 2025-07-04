@@ -44,7 +44,7 @@ class ComissionList(Resource):
     @auth.login_required
     def get(self):
         pag_num  = 1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size = int(environ.get("F2B_PAGINATION_SIZE")) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_size = int(str(environ.get("F2B_PAGINATION_SIZE"))) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
         query    = "" if request.args.get("query") is None else request.args.get("query")
 
         try:
@@ -103,7 +103,7 @@ class ComissionList(Resource):
     @ns_comission.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar registro!")
     @ns_comission.doc(body=comission_model)
     @auth.login_required
-    def post(self)->int:
+    def post(self)->int|dict:
         try:
             req = request.get_json()
 
@@ -125,7 +125,7 @@ class ComissionList(Resource):
     @ns_comission.response(HTTPStatus.OK.value,"Exclui os dados de uma ou mais marcas")
     @ns_comission.response(HTTPStatus.BAD_REQUEST.value,"Falha ao excluir registro!")
     @auth.login_required
-    def delete(self)->bool:
+    def delete(self)->bool|dict:
         try:
             req = request.get_json()
             for id in req["ids"]:
@@ -167,7 +167,7 @@ class CollectionApi(Resource):
     @ns_comission.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
     @ns_comission.doc(body=comission_model)
     @auth.login_required
-    def post(self,id:int)->bool:
+    def post(self,id:int)->bool|dict:
         try:
             req = request.get_json()
             brand = B2bBrand.query.get(id)

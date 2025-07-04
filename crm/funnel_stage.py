@@ -1,8 +1,8 @@
 from http import HTTPStatus
 from flask_restx import Resource,Namespace
 from flask import request
-from models import CmmLegalEntities, CrmFunnel, CrmFunnelStageCustomer, _get_params, CrmFunnelStage, _show_query, db, _save_log
-import json
+from models import CmmLegalEntities, CrmFunnel, CrmFunnelStageCustomer, _get_params, CrmFunnelStage, db, _save_log
+# from models import _show_query
 from sqlalchemy import Select, Update, desc, exc, and_, asc, or_
 from auth import auth
 from f2bconfig import CrmFunnelType, CustomerAction, LegalEntityType
@@ -21,7 +21,7 @@ class FunnelStagesApi(Resource):
     @auth.login_required
     def get(self):
         pag_num  = 1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size = int(environ.get("F2B_PAGINATION_SIZE")) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_size = int(str(environ.get("F2B_PAGINATION_SIZE"))) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
         query    = "" if request.args.get("query") is None else request.args.get("query")
         try:
             params    = _get_params(query)
@@ -135,7 +135,7 @@ class FunnelStagesApi(Resource):
     @ns_fun_stg.response(HTTPStatus.OK.value,"Exclui um estágio de um funil")
     @ns_fun_stg.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
     @auth.login_required
-    def delete(self)->bool:
+    def delete(self)->bool|dict:
         try:
             req = request.get_json()
             for id in req["ids"]:
@@ -167,7 +167,7 @@ class FunnelStagesApi(Resource):
                           CmmLegalEntities.address)\
                 .where(and_(
                     CmmLegalEntities.type==LegalEntityType.CUSTOMER.value,
-                    CmmLegalEntities.trash==False,
+                    CmmLegalEntities.trash.is_(False),
                     CmmLegalEntities.id.not_in(
                         Select(CrmFunnelStageCustomer.id_customer).select_from(CrmFunnelStageCustomer)
                     )

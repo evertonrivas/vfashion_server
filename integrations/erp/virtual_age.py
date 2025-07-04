@@ -1,5 +1,6 @@
 from requests import RequestException
 from models import CmmMeasureUnit,CmmLegalEntities,CmmLegalEntityContact,CmmProducts,CmmProductsCategories,CmmCities,CmmStateRegions
+# from models import _show_query
 from sqlalchemy import Insert,Select, Update, and_,or_,exc
 from integrations.erp import erp
 from time import sleep
