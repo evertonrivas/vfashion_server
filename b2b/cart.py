@@ -157,12 +157,12 @@ class CartApi(Resource):
                 ))).scalar()
                 if pItem is None:
                     it:B2bCartShopping = B2bCartShopping()
-                    it.id_customer = int(item['id_customer'])
-                    it.id_product  = int(item['id_product'])
+                    setattr(it,"id_customer",int(item['id_customer']))
+                    setattr(it,"id_product",int(item['id_product']))
                     it.id_color    = item['id_color']
                     it.id_size     = item['id_size']
                     it.price       = item['price']
-                    it.quantity    = int(item['quantity'])
+                    setattr(it,"quantity",int(item['quantity']))
                     it.user_create = item["user_create"]
                     db.session.add(it)
                     db.session.commit()
@@ -220,7 +220,7 @@ class CartApi(Resource):
                                         B2bCartShopping.id_customer==req['customer']
                                     )
                                 )).first()
-                                if car_query.total == 0: # nao ha no carrinho
+                                if car_query is None or car_query.total == 0: # nao ha no carrinho
                                     # se o estoque for ilimitado ou disponivel adiciona ao carrinho
                                     if stock.ilimited is True or (stock.quantity-(0 if stock.in_order is  None else stock.in_order)) >= size.value:
                                         bcs = B2bCartShopping()

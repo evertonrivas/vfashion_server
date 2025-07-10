@@ -11,8 +11,9 @@ from datetime import datetime
 from flask_restx import Resource,Namespace,fields
 from f2bconfig import CustomerAction, DevolutionStatus, OrderStatus
 from sqlalchemy import Update, and_, exc, Select, Delete, asc, desc, func
+from models.public import SysUsers as CmmUsers
 from models.tenant import B2bCartShopping, B2bOrders,B2bOrdersProducts, B2bPaymentConditions, CmmLegalEntities
-from models.tenant import CmmTranslateSizes, CmmUserEntity, CmmUsers, FprDevolution, _save_log, _get_params
+from models.tenant import CmmTranslateSizes, CmmUserEntity, FprDevolution, _save_log, _get_params
 from models.tenant import B2bCustomerGroup, B2bCustomerGroupCustomers, B2bProductStock, B2bTarget, CmmProducts, CmmTranslateColors
 
 ns_order = Namespace("orders",description="Operações para manipular dados de pedidos")
@@ -77,11 +78,11 @@ class OrdersList(Resource):
         try:
             params    = _get_params(str(query))
             if params is not None:
-                direction = asc if not hasattr(params,'order') else asc if str(params.order).upper()=='ASC' else desc
-                order_by  = 'id' if not hasattr(params,'order_by') else params.order_by
+                # direction = asc if not hasattr(params,'order') else asc if str(params.order).upper()=='ASC' else desc
+                # order_by  = 'id' if not hasattr(params,'order_by') else params.order_by
                 search    = None if not hasattr(params,"search") else params.search
-                trash     = True if not hasattr(params,'active') else False #foi invertido
-                list_all  = False if not hasattr(params,'list_all') else True
+                # trash     = True if not hasattr(params,'active') else False #foi invertido
+                # list_all  = False if not hasattr(params,'list_all') else True
 
 
             if search is not None:
@@ -105,7 +106,7 @@ class OrdersList(Resource):
                     "make_online": m.make_online,
                     "id_payment_condition": m.id_payment_condition,
                     "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                    "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
+                    "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated is not None else None
                 } for m in rquery.items]
             }
         except exc.SQLAlchemyError as e:

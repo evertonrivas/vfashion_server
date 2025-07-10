@@ -97,9 +97,9 @@ class ProductStockList(Resource):
         try:
             params    = _get_params(str(query))
             if params is not None:
-                trash     = False if not hasattr(params,"trash") else True
-                order_by  = "id" if not hasattr(params,"order_by") else params.order_by
-                direction = asc if not hasattr(params,"order") else asc if str(params.order).lower()=="asc" else desc
+                # trash     = False if not hasattr(params,"trash") else True
+                # order_by  = "id" if not hasattr(params,"order_by") else params.order_by
+                # direction = asc if not hasattr(params,"order") else asc if str(params.order).lower()=="asc" else desc
                 search    = None if not hasattr(params,"search") else params.search
                 list_all  = False if not hasattr(params,"list_all") else True
 
@@ -431,7 +431,7 @@ class ProductStockLoad(Resource):
             }for s in query]
     
     def formatQuantity(self,quantity:int,ilimited:bool):
-        if (quantity is None or quantity == 0) and ilimited==True:
+        if (quantity is None or quantity == 0) and ilimited is True:
             return "999+"
         if (quantity is None or quantity == 0) and ilimited is None:
             return None
@@ -686,7 +686,7 @@ class ProductsGallery(Resource):
                         "measure_unit": m.measure_unit,
                         "structure": m.structure,
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                        "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None,
+                        "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated is not None else None,
                         "images": self.get_images(m.id),
                         "colors": [{
                             "id": c.id,
@@ -710,7 +710,7 @@ class ProductsGallery(Resource):
                         "measure_unit": m.measure_unit,
                         "structure": m.structure,
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                        "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None,
+                        "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated is not None else None,
                         "images": self.get_images(m.id),
                         "colors": [{
                             "id": c.id,

@@ -83,7 +83,7 @@ class CollectionList(Resource):
                         "id": m.id,
                         "name": m.name,
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                        "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
+                        "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated is not None else None
                     } for m in db.session.execute(rquery)]
                 }
             else:
@@ -91,7 +91,7 @@ class CollectionList(Resource):
                         "id":m.id,
                         "name":m.name,
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                        "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
+                        "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated is not None else None
                     } for m in db.session.execute(rquery)]
             return retorno
         except exc.SQLAlchemyError as e:
@@ -156,7 +156,7 @@ class CollectionApi(Resource):
                 "id": cquery.id,
                 "name": cquery.name,
                 "date_created": cquery.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                "date_updated": cquery.date_updated.strftime("%Y-%m-%d %H:%M:%S") if cquery.date_updated!=None else None
+                "date_updated": cquery.date_updated.strftime("%Y-%m-%d %H:%M:%S") if cquery.date_updated is not None else None
             }
         except exc.SQLAlchemyError as e:
             return {
