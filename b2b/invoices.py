@@ -1,11 +1,11 @@
-from http import HTTPStatus
-from flask_restx import Resource,Namespace,fields
-from flask import request
-from models import db
-from sqlalchemy import exc,Select,and_,Delete,asc,desc
-# from models import _show_query
 from auth import auth
 from os import environ
+from flask import request
+from http import HTTPStatus
+from models.tenant import db
+# from models import _show_query
+from flask_restx import Resource, Namespace, fields
+from sqlalchemy import exc, Select, and_, Delete, asc, desc
 
 ns_invoice = Namespace("invoices",description="Operações para manipular dados de notas fiscais")
 
@@ -43,8 +43,8 @@ class InvoiceList(Resource):
     @ns_invoice.param("order_dir","Direção da ordenação","query",enum=['ASC','DESC'])
     @auth.login_required
     def get(self):
-        pag_num  = 1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size = int(environ.get("F2B_PAGINATION_SIZE")) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_num  = 1 if request.args.get("page") is None else int(str(request.args.get("page")))
+        pag_size = int(str(environ.get("F2B_PAGINATION_SIZE"))) if request.args.get("pageSize") is None else int(str(request.args.get("pageSize")))
         query    = "" if request.args.get("query") is None else request.args.get("query")
         pass
 

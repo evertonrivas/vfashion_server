@@ -7,8 +7,7 @@ from b2b.api import blueprint as b2b
 from fpr.api import blueprint as fpr
 from scm.api import blueprint as scm
 from mpg.api import blueprint as mpg
-from models import db
-from flask_migrate import Migrate
+from models.helpers import db, migrate
 import locale
 from dotenv import load_dotenv
 from os import environ,path
@@ -19,14 +18,12 @@ load_dotenv(path.join(BASEDIR, '.env'))
 locale.setlocale(locale.LC_TIME,environ.get("F2B_LOCALE"))
 
 app = Flask(__name__)
-app.config["SQLALCHEMY_DATABASE_URI"] = str(environ.get("F2B_DB_LIB"))+"://"+str(environ.get("F2B_DB_USER"))+":"+\
+SQLALCHEMY_DATABASE_URI = str(environ.get("F2B_DB_LIB"))+"://"+str(environ.get("F2B_DB_USER"))+":"+\
 str(environ.get("F2B_DB_PASS"))+"@"+str(environ.get("F2B_DB_HOST"))+"/"+str(environ.get("F2B_DB_NAME"))
 SQLALCHEMY_ENGINE_OPTIONS = {
     'pool_recycle': 280,
     'pool_pre_ping': True
 }
-
-migrate = Migrate()
 
 db.init_app(app)
 try:

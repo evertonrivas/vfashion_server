@@ -1,11 +1,12 @@
-from http import HTTPStatus
-from flask_restx import Resource,Namespace,fields
-from flask import request
-from models import B2bBrand, B2bCollection, _get_params,db
-# from models import _show_query
-from sqlalchemy import Select, exc, desc, asc
 from auth import auth
 from os import environ
+from flask import request
+from http import HTTPStatus
+from models.tenant import db
+# from models import _show_query
+from sqlalchemy import Select, exc, desc, asc
+from flask_restx import Resource,Namespace,fields
+from models.tenant import B2bBrand, B2bCollection, _get_params
 
 ns_collection = Namespace("collection",description="Operações para manipular dados de coleções")
 
@@ -55,19 +56,20 @@ class CollectionList(Resource):
     @ns_collection.param("query","Texto para busca","query")
     @auth.login_required
     def get(self):
-        pag_num  =  1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size = int(environ.get("F2B_PAGINATION_SIZE")) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_num  =  1 if request.args.get("page") is None else int(str(request.args.get("page")))
+        pag_size = int(str(environ.get("F2B_PAGINATION_SIZE"))) if request.args.get("pageSize") is None else int(str(request.args.get("pageSize")))
         query    = "" if request.args.get("query") is None else request.args.get("query")
 
         try:
-            params = _get_params(query)
-            direction = asc if hasattr(params,'order')==False else asc if str(params.order).upper()=='ASC' else desc
-            order_by  = 'id' if hasattr(params,'order_by')==False else params.order_by
-            search    = None if hasattr(params,"search")==False else params.search
-            trash     = False if hasattr(params,'active')==False else True
-            list_all  = False if hasattr(params,'list_all')==False else True
+            params = _get_params(str(query))
+            if params is not None:
+                direction = asc if not hasattr(params,'order') else asc if str(params.order).upper()=='ASC' else desc
+                order_by  = 'id' if not hasattr(params,'order_by') else params.order_by
+                search    = None if not hasattr(params,"search") else params.search
+                trash     = False if not hasattr(params,'active') else True
+                list_all  = False if not hasattr(params,'list_all') else True
 
-            filter_brand = None if hasattr(params,'brand')==False or (hasattr(params,'brand')==True and params.brand==0) else params.brand
+                filter_brand = None if not hasattr(params,'brand') or (hasattr(params,'brand') and params.brand==0) else params.brand
 
             rquery = Select(B2bCollection.id,
                             B2bCollection.id_brand,
@@ -86,7 +88,7 @@ class CollectionList(Resource):
                 rquery = rquery.where(B2bCollection.id_brand==filter_brand)
 
 
-            if list_all==False:
+            if not list_all:
                 pag = db.paginate(rquery,page=pag_num,per_page=pag_size)
                 rquery = rquery.limit(pag_size).offset((pag_num - 1) * pag_size)
 
@@ -132,7 +134,7 @@ class CollectionList(Resource):
     @ns_collection.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar registro!")
     @ns_collection.doc(body=coll_model)
     @auth.login_required
-    def post(self)->int:
+    def post(self):
         try:
             req = request.get_json()
             col = B2bCollection()
@@ -174,11 +176,11 @@ class CollectionApi(Resource):
                             .where(B2bCollection.id==id)).first()
 
             return {
-                "id": cquery.id,
-                "name": cquery.name,
+                "id": 0 if cquery is None else cquery.id,
+                "name": "" if cquery is None else cquery.name,
                 "brand":{
-                    "id": cquery.id_brand,
-                    "name": cquery.brand
+                    "id": 0 if cquery is None else cquery.id_brand,
+                    "name": "" if cquery is None else cquery.brand
                 }
             }
         except exc.SQLAlchemyError as e:
@@ -191,12 +193,12 @@ class CollectionApi(Resource):
     @ns_collection.response(HTTPStatus.OK.value,"Exclui os dados de uma coleção")
     @ns_collection.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
     @auth.login_required
-    def delete(self)->bool:
+    def delete(self)->bool | dict:
         try:
             req = request.get_json()
             for id in req["ids"]:
-                grp = B2bCollection.query.get(id)
-                grp.trash = True
+                grp:B2bCollection = B2bCollection.query.get(id) # type: ignore
+                setattr(grp, "trash", True)
                 db.session.commit()
             return True
         except exc.SQLAlchemyError as e:
@@ -210,10 +212,10 @@ class CollectionApi(Resource):
     @ns_collection.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
     @ns_collection.doc(body=coll_model)
     @auth.login_required
-    def post(self,id:int)->bool:
+    def post(self,id:int)->bool | dict:
         try:
             req = request.get_json()
-            col:B2bCollection = B2bCollection.query.get(id)
+            col:B2bCollection = B2bCollection.query.get(id) # type: ignore
             col.name     = req["name"]
             col.id_brand = req["id_brand"]
             db.session.commit()

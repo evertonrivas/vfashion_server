@@ -2,7 +2,7 @@ from datetime import datetime
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import B2bBrand, _get_params, db
+from models.public import B2bBrand, _get_params, db
 from sqlalchemy import Select, exc, asc, desc
 from auth import auth
 from os import environ

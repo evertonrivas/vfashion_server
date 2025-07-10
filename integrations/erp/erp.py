@@ -2,7 +2,7 @@ from abc import abstractmethod,ABC
 from types import SimpleNamespace
 from requests import Response,Session
 import json
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, Engine
 from dotenv import load_dotenv
 from os import environ,path
 
@@ -11,8 +11,8 @@ load_dotenv(path.join(BASEDIR, '.env'))
 
 
 class ERP(ABC):
-    nav = None
-    dbconn = None
+    nav: Session
+    dbconn: Engine
 
     def __init__(self) -> None:
         self.nav = Session()

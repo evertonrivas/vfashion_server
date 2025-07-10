@@ -1,22 +1,19 @@
-from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import String, Integer, CHAR, DateTime, Boolean, Text, DECIMAL, SmallInteger, Date
-from sqlalchemy import ForeignKey, Index, event, func, Column
-from datetime import datetime,timedelta, timezone
-import jwt
-import bcrypt
-from f2bconfig import CustomerAction
 import json
-from types import SimpleNamespace
-from os import environ,path
+from os import path
 from dotenv import load_dotenv
+from types import SimpleNamespace
+from f2bconfig import CustomerAction
+from helpers import db
+from datetime import datetime
+from sqlalchemy import ForeignKey, event, func, Column
+from sqlalchemy import String, Integer, CHAR, DateTime, Boolean, Text, DECIMAL, SmallInteger, Date
 
 BASEDIR = path.abspath(path.dirname(__file__))
 load_dotenv(path.join(BASEDIR, '.env'))
 
-db = SQLAlchemy()
 
-def _get_params(search:str):
-    if search!=None:
+def _get_params(search:str|None):
+    if search is not None:
         # verifica se existem os pipes de separacao
         if search.find("||")!=-1:
             #ajusta os parametros para nao vacilar com espacos
@@ -40,7 +37,7 @@ def _get_params(search:str):
             #retorna um objeto para realizar a busca
             return json.loads(p_obj,object_hook=lambda d: SimpleNamespace(**d))
         else:
-            if len(search)>0:
+            if len(search) > 0:
                 p_obj = "{\n"
                 broken = search.split( )
                 if len(broken)==2:
@@ -55,65 +52,14 @@ def _get_params(search:str):
 def _show_query(rquery):
     print(rquery.compile(compile_kwargs={"literal_binds": True}))
 
-def _save_log(id:int,act:CustomerAction,p_log_action:str):
-    log = CmmLegalEntityHistory()
-    log.action          = act.value
-    log.history         = p_log_action
-    log.id_legal_entity = id
-    log.date_created    = datetime.now()
+def _save_log(id:int, act:CustomerAction, p_log_action:str):
+    log:CmmLegalEntityHistory = CmmLegalEntityHistory()
+    setattr(log,"action",act.value)
+    setattr(log,"history",p_log_action)
+    setattr(log,"id_legal_entity",id)
+    setattr(log,"date_created",datetime.now())
     db.session.add(log)
     db.session.commit()
-
-class CmmUsers(db.Model):
-    id              = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
-    username        = Column(String(100), nullable=False,unique=True)
-    password        = Column(String(255), nullable=False)
-    type            = Column(CHAR(1),nullable=False,default='L',server_default='L',comment='A = Administrador, L = Lojista, I = Lojista (IA), R = Representante, V = Vendedor, C = Company User')
-    date_created    = Column(DateTime,nullable=False,server_default=func.now())
-    date_updated    = Column(DateTime,onupdate=func.now())
-    active          = Column(Boolean,nullable=False,server_default='1',default=1)
-    token           = Column(String(255),index=True,unique=True,nullable=True)
-    token_expire    = Column(DateTime,nullable=True)
-    is_authenticate = Column(Boolean,nullable=False,server_default='0',default=0)
-
-    def hash_pwd(self,pwd:str):
-        self.password = bcrypt.hashpw(pwd.encode(),bcrypt.gensalt()).decode()
-        return self.password
-    
-    def check_pwd(self,pwd:str):
-        return bcrypt.checkpw(pwd,self.password.encode())
-
-    def get_token(self,expires_in:int=int(str(environ.get("F2B_EXPIRE_SESSION")))):
-        now = datetime.now(tz=timezone.utc)
-        expire_utc = now + timedelta(seconds=expires_in)
-
-        #encode e decode por causa da diferenca de versoes do windows que pode retornar byte array ao inves de str
-        self.token = jwt.encode({"username":str(self.username), "iat": now, "exp": expire_utc},str(environ.get("F2B_TOKEN_KEY"))).encode().decode()
-        self.token_expire = expire_utc
-        return self.token
-    
-    def renew_token(self):
-        now = datetime.now(tz=timezone.utc) + timedelta(seconds=int(str(environ.get("F2B_EXPIRE_SESSION"))))
-        data_token = jwt.decode(self.token,str(environ.get("F2B_TOKEN_KEY")),algorithms=['HS256'])
-        data_token["exp"] = now
-        self.token = jwt.encode(data_token,str(environ.get("F2B_TOKEN_KEY")))
-        self.token_expire = now
-        return now
-
-    def revoke_token(self):
-        self.token_expire = datetime.now() - timedelta(seconds=1)
-
-    def logout(self):
-        self.is_authenticate = False
-        self.token = None
-
-    @staticmethod
-    def check_token(token):
-        user = CmmUsers.query.filter(CmmUsers.token==token).first()
-        if user is None or user.token_expire < datetime.now():
-            return None
-        return user
-IDX_USERNAME = Index("IDX_USERNAME",CmmUsers.username,unique=True)
 
 class CmmUserEntity(db.Model):
     id_user     = Column(Integer,nullable=False,primary_key=True)
@@ -608,7 +554,7 @@ class ScmFlimvAudit(db.Model):
 @event.listens_for(ScmFlimv,"after_insert")
 def insert_flimv_log(mapper,connection,target):
     # esse insert eh para sistemas zerados
-    po = ScmFlimvAudit.__table__
+    po = ScmFlimvAudit.__table__ # type: ignore
     connection.execute(po.insert().values(
         flimv_id=target.id,
         frequency=target.frequency,
@@ -621,7 +567,7 @@ def insert_flimv_log(mapper,connection,target):
     
 @event.listens_for(ScmFlimv,"after_update")
 def update_flimv_log(mapper,connection,target):
-    po = ScmFlimvAudit.__table__
+    po = ScmFlimvAudit.__table__ # type: ignore
     connection.execute(po.insert().values(
         flimv_id=target.id,
         frequency=target.frequency,

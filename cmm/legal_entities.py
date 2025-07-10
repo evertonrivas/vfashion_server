@@ -1,13 +1,18 @@
-from datetime import datetime
-from http import HTTPStatus
-from flask_restx import Resource,Namespace,fields
-from flask import request
-from models import  B2bCustomerGroup, CmmLegalEntityHistory, CmmUsers, db,_save_log,_get_params,B2bCustomerGroupCustomers, CmmCities, CmmCountries, CmmLegalEntityContact, CmmLegalEntityFile, CmmStateRegions, CrmFunnelStageCustomer,CmmLegalEntities,CmmUserEntity
-# from models import _show_query
-from sqlalchemy import Delete, Select, Update,and_,exc,asc,desc,func, or_
 from auth import auth
-from f2bconfig import CustomerAction
 from os import environ
+from flask import request
+from http import HTTPStatus
+from datetime import datetime
+from models.helpers import db
+# from models import _show_query
+from f2bconfig import CustomerAction
+from flask_restx import Resource,Namespace,fields
+from models.tenant import CmmLegalEntities,CmmUserEntity
+from models.tenant import CmmCities, CmmCountries, CmmLegalEntityContact
+from sqlalchemy import Delete, Select, Update,and_,exc,asc,desc,func, or_
+from models.tenant import _save_log,_get_params,B2bCustomerGroupCustomers 
+from models.tenant import  B2bCustomerGroup, CmmLegalEntityHistory, CmmUsers
+from models.tenant import CmmLegalEntityFile, CmmStateRegions, CrmFunnelStageCustomer
 
 ns_legal = Namespace("legal-entities",description="Operações para manipular dados de clientes/representantes")
 
@@ -68,24 +73,24 @@ class EntitysList(Resource):
     @ns_legal.param("list_all","Se deve exportar","query",type=bool,default=False)
     @auth.login_required
     def get(self):
-        pag_num   = 1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size  = int(environ.get("F2B_PAGINATION_SIZE")) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_num   = 1 if request.args.get("page") is None else int(str(request.args.get("page")))
+        pag_size  = int(str(environ.get("F2B_PAGINATION_SIZE"))) if request.args.get("pageSize") is None else int(str(request.args.get("pageSize")))
         search    = "" if request.args.get("query") is None else request.args.get("query")
 
         try:
             params = _get_params(search)
+            if params is not None:
+                direction = asc if not hasattr(params,'order') else asc if params.order=='ASC' else desc
+                order_by  = 'id' if not hasattr(params,'order_by') else params.order_by
+                trash     = False if not hasattr(params,"trash") else True
+                list_all  = False if not hasattr(params,"list_all") else True
 
-            direction = asc if hasattr(params,'order')==False else asc if params.order=='ASC' else desc
-            order_by  = 'id' if hasattr(params,'order_by')==False else params.order_by
-            trash     = False if hasattr(params,"trash")==False else True
-            list_all  = False if hasattr(params,"list_all")==False else True
-
-            filter_search = None if hasattr(params,"search")==False else params.search
-            filter_type   = None if hasattr(params,'type')==False else params.type
-            filter_rep    = None if hasattr(params,'representative')==False else params.filter_rep
-            filter_country = None if hasattr(params,'id_country')==False else params.id_country
-            filter_city    = None if hasattr(params,"id_city")==False else params.id_city
-            filter_state_region = None if hasattr(params,'id_state_region')==False else params.id_state_region
+                filter_search = None if not hasattr(params,"search") else params.search
+                filter_type   = None if not hasattr(params,'type') else params.type
+                filter_rep    = None if not hasattr(params,'representative') else params.filter_rep
+                filter_country = None if not hasattr(params,'id_country') else params.id_country
+                filter_city    = None if not hasattr(params,"id_city") else params.id_city
+                filter_state_region = None if not hasattr(params,'id_state_region') else params.id_state_region
 
             rquery = Select(
                     CmmLegalEntities.id,
@@ -112,7 +117,7 @@ class EntitysList(Resource):
                 .where(CmmLegalEntities.trash==trash)\
                 .order_by(direction(getattr(CmmLegalEntities,order_by)))
             
-            if filter_search!=None:
+            if filter_search is not None:
                 rquery = rquery.where(
                     or_(
                         CmmCountries.name.like("%{}%".format(filter_search)),
@@ -128,7 +133,9 @@ class EntitysList(Resource):
                 
             if filter_rep is not None:
                 rquery = rquery.where(CmmLegalEntities.id.in_(
-                    Select(B2bCustomerGroupCustomers.id_customer).where(B2bCustomerGroupCustomers.id_representative==filter_rep)
+                    Select(B2bCustomerGroupCustomers.id_customer)\
+                        .join(B2bCustomerGroup,B2bCustomerGroup.id==B2bCustomerGroupCustomers.id_customer_group)\
+                        .where(B2bCustomerGroup.id_representative==filter_rep)
                 ))
                 
             if filter_type is not None:
@@ -143,7 +150,7 @@ class EntitysList(Resource):
             if filter_country is not None:
                 rquery = rquery.where(CmmCountries.id==filter_country)
 
-            if list_all==False:
+            if not list_all:
                 pag = db.paginate(rquery,page=pag_num,per_page=pag_size)
                 rquery = rquery.limit(pag_size).offset((pag_num - 1) * pag_size)
 
@@ -178,7 +185,7 @@ class EntitysList(Resource):
                         "neighborhood": m.neighborhood,
                         "type": m.type,
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                        "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
+                        "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated is not None else None
                     } for m in db.session.execute(rquery)]
                 }
             else:
@@ -205,7 +212,7 @@ class EntitysList(Resource):
                         "neighborhood": m.neighborhood,
                         "type": m.type,
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                        "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
+                        "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated is not None else None
                     } for m in db.session.execute(rquery).all()]
         except exc.SQLAlchemyError as e:
             return {
@@ -223,7 +230,7 @@ class EntitysList(Resource):
     @ns_legal.response(HTTPStatus.OK.value,"Cria um novo registro de cliente/representante/fornecedor",model=lgl_registry)
     @ns_legal.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar um novo cliente/representante/fornecedor!")
     @auth.login_required
-    def post(self)->int:
+    def post(self):
         try:
             req = request.get_json()
             cst = CmmLegalEntities()
@@ -235,8 +242,8 @@ class EntitysList(Resource):
             cst.postal_code  = req["postal_code"]
             cst.neighborhood = req["neighborhood"]
             cst.type         = req["type"]
-            cst.trash        = False
-            cst.activation_date = datetime.now()
+            setattr(cst,"trash",False)
+            setattr(cst,"activation_date",datetime.now())
             db.session.add(cst)
             db.session.commit()
 
@@ -261,7 +268,7 @@ class EntitysList(Resource):
 
             db.session.commit()
 
-            _save_log(cst.id,CustomerAction.DATA_REGISTERED,'Registro criado')
+            _save_log(cst.id,CustomerAction.DATA_REGISTERED,'Registro criado')  # type: ignore
 
             return cst.id
         except exc.SQLAlchemyError as e:
@@ -274,13 +281,13 @@ class EntitysList(Resource):
     @ns_legal.response(HTTPStatus.OK.value,"Exclui os dados de um cliente/representante")
     @ns_legal.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
     @auth.login_required
-    def delete(self)->bool:
+    def delete(self):
         try:
             req = request.get_json()
             for id in req["ids"]:
                 # move a(s) entidade(s) para a lixeira
                 cst = CmmLegalEntities.query.get(id)
-                cst.trash = req["toTrash"]
+                setattr(cst,"trash",req["toTrash"])
                 db.session.commit()
 
                 for usr in db.session.execute(Select(CmmUserEntity).where(CmmUserEntity.id_entity==id)):
@@ -336,34 +343,34 @@ class EntityApi(Resource):
             m = db.session.execute(rquery).first()
 
             return {
-                    "id": m.id,
-                    "origin_id": m.origin_id,
-                    "name": m.social_name,
-                    "fantasy_name": m.fantasy_name,
-                    "taxvat": m.taxvat,
+                    "id": 0 if m is None else m.id,
+                    "origin_id": 0 if m is None else m.origin_id,
+                    "name": "" if m is None else m.social_name,
+                    "fantasy_name": "" if m is None else m.fantasy_name,
+                    "taxvat": "" if m is None else m.taxvat,
                     "city": {
-                        "id": m.city_id,
-                        "name": m.city_name,
-                        "brazil_ibge_code":m.brazil_ibge_code,
+                        "id": 0 if m is None else m.city_id,
+                        "name": "" if m is None else m.city_name,
+                        "brazil_ibge_code": "" if m is None else m.brazil_ibge_code,
                         "state_region": {
-                            "id": m.state_id,
-                            "name": m.state_name,
-                            "acronym": m.acronym,
+                            "id": 0 if m is None else m.state_id,
+                            "name": "" if m is None else m.state_name,
+                            "acronym": "" if m is None else m.acronym,
                             "country":{
-                                "id": m.country_id,
-                                "name": m.country_name
+                                "id": 0 if m is None else m.country_id,
+                                "name": "" if m is None else m.country_name
                             }
                         }
                     },
-                    "agent": self.__get_representative(m.id),
-                    "contacts": self.__get_contacts(m.id),
-                    "files": self.__get_file(m.id),
-                    "postal_code": m.postal_code,
-                    "neighborhood": m.neighborhood,
-                    "address": m.address,
-                    "type": m.type,
-                    "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                    "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None,
+                    "agent": self.__get_representative((0 if m is None else m.id)),
+                    "contacts": self.__get_contacts((0 if m is None else m.id)),
+                    "files": self.__get_file((0 if m is None else m.id)),
+                    "postal_code": None if m is None else m.postal_code,
+                    "neighborhood": None if m is None else m.neighborhood,
+                    "address": None if m is None else m.address,
+                    "type": None if m is None else m.type,
+                    "date_created": None if m is None else m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+                    "date_updated": None if m is None else m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated is not None else None,
                 }
         except exc.SQLAlchemyError as e:
             return {
@@ -429,98 +436,100 @@ class EntityApi(Resource):
                 .join(CmmCities,CmmCities.id==CmmLegalEntities.id_city)\
                 .join(CmmStateRegions,CmmStateRegions.id==CmmCities.id_state_region)\
                 .join(CmmCountries,CmmCountries.id==CmmStateRegions.id_country)\
-                .join(B2bCustomerGroupCustomers,B2bCustomerGroupCustomers.id_representative==CmmLegalEntities.id)\
+                .join(B2bCustomerGroup,B2bCustomerGroup.id_representative==CmmLegalEntities.id)\
                 .where(and_(CmmLegalEntities.trash==False,B2bCustomerGroupCustomers.id_customer==id))
             
             m = db.session.execute(rquery).first()
 
             return {
-                    "id": m.id,
-                    "origin_id": m.origin_id,
-                    "name": m.social_name,
-                    "fantasy_name": m.fantasy_name,
-                    "taxvat": m.taxvat,
+                    "id": 0 if m is None else m.id,
+                    "origin_id": 0 if m is None else m.origin_id,
+                    "name": None if m is None else m.social_name,
+                    "fantasy_name": None if m is None else m.fantasy_name,
+                    "taxvat": None if m is None else m.taxvat,
                     "city": {
-                        "id": m.city_id,
-                        "name": m.city_name,
-                        "brazil_ibge_code":m.brazil_ibge_code,
+                        "id": 0 if m is None else m.city_id,
+                        "name": None if m is None else m.city_name,
+                        "brazil_ibge_code":None if m is None else m.brazil_ibge_code,
                         "state_region": {
-                            "id": m.state_id,
-                            "name": m.state_name,
-                            "acronym": m.acronym,
+                            "id": 0 if m is None else m.state_id,
+                            "name": None if m is None else m.state_name,
+                            "acronym": None if m is None else m.acronym,
                             "country":{
-                                "id": m.country_id,
-                                "name": m.country_name
+                                "id": 0 if m is None else m.country_id,
+                                "name": None if m is None else m.country_name
                             }
                         }
                     },
-                    "contacts": self.__get_contacts(m.id),
-                    "web": self.__get_web(m.id),
-                    "files": self.__get_file(m.id),
-                    "postal_code": m.postal_code,
-                    "neighborhood": m.neighborhood,
-                    "address": m.address,
-                    "type": m.type,
-                    "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                    "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
+                    "contacts": self.__get_contacts(0 if m is None else m.id),
+                    "files": self.__get_file(0 if m is None else m.id),
+                    "postal_code": None if m is None else m.postal_code,
+                    "neighborhood": None if m is None else m.neighborhood,
+                    "address": None if m is None else m.address,
+                    "type": None if m is None else m.type,
+                    "date_created": None if m is None else m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+                    "date_updated": None if m is None else (m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated is not None else None)
                 }
-        except:
+        except Exception:
             return None
 
     @ns_legal.response(HTTPStatus.OK.value,"Salva dados de um cliente/representante/fornecedor",model=lgl_registry)
     @ns_legal.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
     @auth.login_required
-    def post(self,id:int)->bool:
+    def post(self,id:int):
         try:
             req = request.get_json()
-            cst:CmmLegalEntities = CmmLegalEntities.query.get(id)
-            cst.name         = req["name"]
-            cst.fantasy_name = req["fantasy_name"]
-            cst.id_city      = req["city"]["id"]
-            cst.taxvat       = req["taxvat"]
-            cst.address      = req["address"]
-            cst.postal_code  = req["postal_code"]
-            cst.neighborhood = req["neighborhood"]
-            cst.type         = req["type"]
-            cst.date_updated = datetime.now()
-            db.session.commit()
+            cst:CmmLegalEntities|None = CmmLegalEntities.query.get(id)
+            if cst is not None:
+                cst.name         = req["name"]
+                cst.fantasy_name = req["fantasy_name"]
+                cst.id_city      = req["city"]["id"]
+                cst.taxvat       = req["taxvat"]
+                cst.address      = req["address"]
+                cst.postal_code  = req["postal_code"]
+                cst.neighborhood = req["neighborhood"]
+                cst.type         = req["type"]
+                setattr(cst,"date_updated",datetime.now())
+                db.session.commit()
 
-            #limpa o que existe no grupo para nao gerar duplicacao de chave
-            db.session.execute(Delete(B2bCustomerGroupCustomers).where(B2bCustomerGroupCustomers.id_customer==id))
-            db.session.commit()
+                #limpa o que existe no grupo para nao gerar duplicacao de chave
+                db.session.execute(Delete(B2bCustomerGroupCustomers).where(B2bCustomerGroupCustomers.id_customer==id))
+                db.session.commit()
 
-            if req["agent"] is not None:
-                grp = db.session.execute(Select(B2bCustomerGroup.id).where(B2bCustomerGroup.id_representative==req["agent"])).first()
-                if grp is not None:
-                    grpc = B2bCustomerGroupCustomers()
-                    grpc.id_customer_group = grp.id
-                    grpc.id_customer = cst.id
-                    db.session.add(grpc)
-                    db.session.commit()
+                if req["agent"] is not None:
+                    grp = db.session.execute(Select(B2bCustomerGroup.id).where(B2bCustomerGroup.id_representative==req["agent"])).first()
+                    if grp is not None:
+                        grpc = B2bCustomerGroupCustomers()
+                        grpc.id_customer_group = grp.id
+                        grpc.id_customer = cst.id
+                        db.session.add(grpc)
+                        db.session.commit()
 
-            for contact in req["contacts"]:
-                if contact["id"] == 0:
-                    ct                 = CmmLegalEntityContact()
-                    ct.id_legal_entity = cst.id
-                    ct.name            = contact["name"]
-                    ct.contact_type    = contact["contact_type"]
-                    ct.value           = contact["value"]
-                    ct.is_default      = contact["is_default"]
-                    ct.is_whatsapp     = contact["is_whatsapp"]
-                    db.session.add(ct)
-                    db.session.commit()
-                else:
-                    ct              = CmmLegalEntityContact.query.get(contact["id"])
-                    ct.name         = contact["name"]
-                    ct.contact_type = contact["contact_type"]
-                    ct.value        = contact["value"]
-                    ct.is_default   = contact["is_default"]
-                    ct.is_whatsapp  = contact["is_whatsapp"]
-                    db.session.commit()
-            
-            _save_log(id,CustomerAction.DATA_UPDATED,'Registro alterado')
+                for contact in req["contacts"]:
+                    if contact["id"] == 0:
+                        ct                 = CmmLegalEntityContact()
+                        ct.id_legal_entity = cst.id
+                        ct.name            = contact["name"]
+                        ct.contact_type    = contact["contact_type"]
+                        ct.value           = contact["value"]
+                        ct.is_default      = contact["is_default"]
+                        ct.is_whatsapp     = contact["is_whatsapp"]
+                        db.session.add(ct)
+                        db.session.commit()
+                    else:
+                        ct:CmmLegalEntityContact|None = CmmLegalEntityContact.query.get(contact["id"])
+                        if ct is not None:
+                            ct.name         = contact["name"]
+                            ct.contact_type = contact["contact_type"]
+                            ct.value        = contact["value"]
+                            ct.is_default   = contact["is_default"]
+                            ct.is_whatsapp  = contact["is_whatsapp"]
+                            db.session.commit()
+                
+                _save_log(id,CustomerAction.DATA_UPDATED,'Registro alterado')
 
-            return id
+                return id
+            return 0
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -532,10 +541,10 @@ class EntityApi(Resource):
     @ns_legal.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
     @ns_legal.param("id","Id do registro")
     @auth.login_required
-    def delete(self,id:int)->bool:
+    def delete(self,id:int)->bool|dict:
         try:
             cst = CmmLegalEntities.query.get(id)
-            cst.trash = True
+            setattr(cst,"trash",True)
             db.session.commit()
             _save_log(id,CustomerAction.DATA_DELETED,'Registro arquivado')
             return True
@@ -554,7 +563,9 @@ class EntityCount(Resource):
     def get(self):
         try:
             stmt = Select(func.count(CmmLegalEntities.id).label("total")).select_from(CmmLegalEntities).where(CmmLegalEntities.type==request.args.get("type"))
-            return db.session.execute(stmt).first().total
+            result = db.session.execute(stmt).first()
+            total  = 0 if result is None or result.total is None else result.total
+            return total
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -571,15 +582,15 @@ class EntityOfStage(Resource):
     @ns_legal.param("query","Número de registros por página","query",type=str)
     @auth.login_required
     def get(self,id:int):
-        pag_num   = 1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size  = int(environ.get("F2B_PAGINATION_SIZE")) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_num   = 1 if request.args.get("page") is None else int(str(request.args.get("page")))
+        pag_size  = int(str(environ.get("F2B_PAGINATION_SIZE"))) if request.args.get("pageSize") is None else int(str(request.args.get("pageSize")))
 
         try:
             params = _get_params(request.args.get("query"))
-
-            direction = asc if hasattr(params,'order')==False else asc if params.order=='ASC' else desc
-            order_by  = 'id' if hasattr(params,'order_by')==False else params.order_by
-            search    = None if hasattr(params,"search")==False else params.search
+            if params is not None:
+                direction = asc if not hasattr(params,'order') else asc if params.order=='ASC' else desc
+                order_by  = 'id' if not hasattr(params,'order_by') else params.order_by
+                search    = None if not hasattr(params,"search") else params.search
 
             rquery = Select(
                 CmmLegalEntities.id,
@@ -609,7 +620,7 @@ class EntityOfStage(Resource):
 
             #_show_query(rquery)
 
-            if search!=None:
+            if search is not None:
                 rquery = rquery.where(
                     or_(
                         CmmCountries.name.like("%{}%".format(search)),
@@ -668,7 +679,7 @@ class EntityOfStage(Resource):
                         "neighborhood": m.neighborhood,
                         "type": m.type,
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                        "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
+                        "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated is not None else None
                     } for m in db.session.execute(rquery)]
                 }
         except exc.SQLAlchemyError as e:
@@ -725,12 +736,12 @@ class EntityOfStage(Resource):
                             CrmFunnelStageCustomer.id_funnel_stage==id
                         )
                     )
-                ).first().total
+                ).first()
 
-                if exist == 0:
+                if exist is None or exist.total == 0:
                     crm = CrmFunnelStageCustomer()
                     crm.id_customer = entity["id"]
-                    crm.id_funnel_stage = id
+                    setattr(crm,"id_funnel_stage",id)
                     db.session.add(crm)
             db.session.commit()
             return True
@@ -753,9 +764,9 @@ class EntityContact(Resource):
             for r in req:
                 if r["id"]==0:
                     ct = CmmLegalEntityContact()
-                    ct.id = 0
+                    setattr(ct,"id",0)
                 else:
-                    ct = CmmLegalEntityContact().query.get(r["id"])
+                    ct:CmmLegalEntityContact = CmmLegalEntityContact().query.get(r["id"]) # type: ignore
 
                 ct.id_legal_entity = r['id_legal_entity']
                 ct.name            = r['name']
@@ -803,11 +814,14 @@ class EntityHistory(Resource):
     @ns_legal.param("query","Texto para busca","query")
     @auth.login_required
     def get(self,id:int):
-        pag_num   = 1 if request.args.get("page") is None or request.args.get("page")==0 else int(request.args.get("page"))
-        pag_size  = int(environ.get("F2B_PAGINATION_SIZE")) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_num   = 1 if request.args.get("page") is None or request.args.get("page")==0 else int(str(request.args.get("page")))
+        pag_size  = int(str(environ.get("F2B_PAGINATION_SIZE"))) if request.args.get("pageSize") is None else int(str(request.args.get("pageSize")))
         search    = "" if request.args.get("query") is None else request.args.get("query")
         try:
             params = _get_params(search)
+            search = None
+            if params is not None:
+                search = params.search
 
             rquery = Select(CmmLegalEntityHistory.id,
                             CmmLegalEntityHistory.id_legal_entity,
@@ -816,8 +830,8 @@ class EntityHistory(Resource):
                             CmmLegalEntityHistory.date_created)\
                             .where(CmmLegalEntityHistory.id_legal_entity==id)
             
-            if hasattr(params,'search'):
-                rquery = rquery.where(CmmLegalEntityHistory.history.like('%{}%'.format(params.search)))
+            if search is not None:
+                rquery = rquery.where(CmmLegalEntityHistory.history.like('%{}%'.format(search)))
             
 
             pag = db.paginate(rquery,page=pag_num,per_page=pag_size)
@@ -852,14 +866,16 @@ class EntityHistory(Resource):
     def post(self,id:int):
         try:
             req = request.get_json()
-            hist = CmmLegalEntityHistory()
-            hist.action = CustomerAction.COMMENT_ADDED.value
-            hist.id_legal_entity = id
-            hist.history         = req
-            hist.date_created    = datetime.now()
-            db.session.add(hist)
-            db.session.commit()
-            return True
+            hist:CmmLegalEntityHistory = CmmLegalEntityHistory()
+            if hist is not None:
+                setattr(hist,"action",CustomerAction.COMMENT_ADDED.value)
+                setattr(hist,"id_legal_entity",id)
+                setattr(hist,"date_created",datetime.now())
+                hist.history = req
+                db.session.add(hist)
+                db.session.commit()
+                return True
+            return False
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,

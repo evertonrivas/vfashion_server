@@ -18,7 +18,7 @@ class Jamef(shipping.Shipping):
                 "Authorization": resp.json().token_type+" "+resp.json().access_token
             }
     
-    def tracking(self, _taxvat: str, _invoice: str, _invoice_serie: str = None, _cte: str = None, _code:str = None):
+    def tracking(self, _taxvat: str, _invoice: str, _invoice_serie: str|None = None, _cte: str|None = None, _code:str|None = None):
         self._get_header()
         try:
             resp = self.nav.post("https://developers.jamef.com.br/rastreamento/ver",{

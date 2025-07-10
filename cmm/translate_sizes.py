@@ -1,11 +1,12 @@
-from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
-from flask import request
-from models import CmmTranslateSizes, _get_params, db
-# from models import _show_query
-from sqlalchemy import Select, exc, desc, asc
 from auth import auth
 from os import environ
+from flask import request
+from http import HTTPStatus
+from models.helpers import db
+# from models import _show_query
+from sqlalchemy import Select, exc, desc, asc
+from models.tenant import CmmTranslateSizes, _get_params
 
 ns_size = Namespace("translate-sizes",description="Operações para manipular dados de tamanhos")
 
@@ -48,16 +49,17 @@ class CategoryList(Resource):
     @ns_size.param("order_dir","Direção da ordenação","query",enum=['ASC','DESC'])
     @auth.login_required
     def get(self):
-        pag_num  = 1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size = int(environ.get("F2B_PAGINATION_SIZE")) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_num  = 1 if request.args.get("page") is None else int(str(request.args.get("page")))
+        pag_size = int(str(environ.get("F2B_PAGINATION_SIZE"))) if request.args.get("pageSize") is None else int(str(request.args.get("pageSize")))
         query    = "" if request.args.get("query") is None else request.args.get("query")
         try:
             params = _get_params(query)
-            direction = asc if hasattr(params,'order')==False else asc if str(params.order).upper()=='ASC' else desc
-            order_by  = 'id' if hasattr(params,'order_by')==False else params.order_by
-            search    = None if hasattr(params,"search")==False else params.search
-            trash     = False if hasattr(params,'trash')==False else True
-            list_all  = False if hasattr(params,'list_all')==False else True
+            if params is not None:
+                direction = asc if not hasattr(params,'order') else asc if str(params.order).upper()=='ASC' else desc
+                order_by  = 'id' if not hasattr(params,'order_by') else params.order_by
+                search    = None if not hasattr(params,"search") else params.search
+                trash     = False if not hasattr(params,'trash') else True
+                list_all  = False if not hasattr(params,'list_all') else True
 
             rquery = Select(CmmTranslateSizes.id,
                             CmmTranslateSizes.new_size,
@@ -74,7 +76,7 @@ class CategoryList(Resource):
             # print(params)
             # _show_query(rquery)
 
-            if list_all==False:
+            if not list_all:
                 pag = db.paginate(rquery,page=pag_num,per_page=pag_size)
                 rquery = rquery.limit(pag_size).offset((pag_num - 1) * pag_size)
                 retorno = {
@@ -91,7 +93,7 @@ class CategoryList(Resource):
                         "old_size": m.old_size,
                         "name":m.name,
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                        "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
+                        "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated is not None else None
                     } for m in db.session.execute(rquery)]
                 }
             else:
@@ -101,7 +103,7 @@ class CategoryList(Resource):
                         "old_size": m.old_size,
                         "name":m.name,
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                        "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
+                        "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated is not None else None
                     } for m in db.session.execute(rquery)]
             return retorno
         except exc.SQLAlchemyError as e:
@@ -123,7 +125,7 @@ class CategoryList(Resource):
                 sz.name = size["name"]
                 sz.old_size = size["old_size"]
                 sz.new_size = size["new_size"]
-                sz.trash    = False
+                setattr(sz,"trash",False)
                 db.session.add(sz)
             db.session.commit()
             return True
@@ -137,12 +139,12 @@ class CategoryList(Resource):
     @ns_size.response(HTTPStatus.OK.value,"Exclui os dados de uma nova tradução de tamanho")
     @ns_size.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
     @auth.login_required
-    def delete(self)->bool:
+    def delete(self):
         try:
             req = request.get_json()
             for id in req["ids"]:
                 cor = CmmTranslateSizes.query.get(id)
-                cor.trash = req["toTrash"]
+                setattr(cor,"trash",req["toTrash"])
                 db.session.commit()
             return True
         except exc.SQLAlchemyError as e:
@@ -159,7 +161,18 @@ class CategoryApi(Resource):
     @auth.login_required
     def get(self,id:int):
         try:
-            return CmmTranslateSizes.query.get(id).to_dict()
+            req:CmmTranslateSizes|None = CmmTranslateSizes.query.get(id)
+            if req is not None:
+                return {
+                    "id": req.id,
+                    "new_size": req.new_size,
+                    "name": req.name,
+                    "old_size": req.old_size,
+                    "trash": req.trash,
+                    "date_created": req.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+                    "date_updated": None if req.date_updated is None else req.date_updated.strftime("%Y-%m-%d %H:%M:%S")
+                }
+            return None
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -170,20 +183,7 @@ class CategoryApi(Resource):
 
     @ns_size.response(HTTPStatus.OK.value,"Atualiza os dados de uma nova tradução de tamanho")
     @ns_size.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
-    @auth.login_required
-    def post(self,id:int):
-        try:
-            cor = CmmTranslateSizes.query.get(id)
-            cor.new_size = cor.hexcode if request.form.get("size_name") is None else request.form.get("size_name")
-            cor.size     = cor.color if request.form.get("size") is None else request.form.get("size")
-            db.session.commit() 
-        except exc.SQLAlchemyError as e:
-            return {
-                "error_code": e.code,
-                "error_details": e._message(),
-                "error_sql": e._sql_message()
-            }
-        
+    @auth.login_required      
     def post(self,id:int):
         try:
             req = request.get_json()
@@ -196,12 +196,14 @@ class CategoryApi(Resource):
                 db.session.commit()
                 return sz.id
             else:
-                sz = CmmTranslateSizes.query.get(id)
-                sz.name     = req["name"]
-                sz.old_size = req["old_size"]
-                sz.new_size = req["new_size"]
-                db.session.commit()
-                return True
+                sz:CmmTranslateSizes|None = CmmTranslateSizes.query.get(id)
+                if sz is not None:
+                    sz.name     = req["name"]
+                    sz.old_size = req["old_size"]
+                    sz.new_size = req["new_size"]
+                    db.session.commit()
+                    return True
+                return False
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,

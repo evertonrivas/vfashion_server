@@ -1,12 +1,14 @@
-from http import HTTPStatus
 from flask_restx import Resource,Namespace
+from auth import auth
+from os import environ
 from flask import request
-from models import CmmLegalEntities, CrmFunnel, CrmFunnelStageCustomer, _get_params, CrmFunnelStage, db, _save_log
+from http import HTTPStatus
+from models.helpers import db
 # from models import _show_query
 from sqlalchemy import Select, Update, desc, exc, and_, asc, or_
-from auth import auth
+from models.tenant import CmmLegalEntities, CrmFunnel, _save_log
 from f2bconfig import CrmFunnelType, CustomerAction, LegalEntityType
-from os import environ
+from models.tenant import CrmFunnelStageCustomer, _get_params, CrmFunnelStage
 
 
 ns_fun_stg = Namespace("funnel-stages",description="Operações para manipular estágios dos funis de clientes")
@@ -20,19 +22,20 @@ class FunnelStagesApi(Resource):
     @ns_fun_stg.param("query","Texto para busca","query")
     @auth.login_required
     def get(self):
-        pag_num  = 1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size = int(str(environ.get("F2B_PAGINATION_SIZE"))) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_num  = 1 if request.args.get("page") is None else int(str(request.args.get("page")))
+        pag_size = int(str(environ.get("F2B_PAGINATION_SIZE"))) if request.args.get("pageSize") is None else int(str(request.args.get("pageSize")))
         query    = "" if request.args.get("query") is None else request.args.get("query")
         try:
             params    = _get_params(query)
-            trash     = False if hasattr(params,'trash')==False else True
-            list_all  = False if hasattr(params,"list_all")==False else True
-            order_by  = "id" if hasattr(params,"order_by")==False else params.order_by
-            direction = desc if hasattr(params,"order_dir") == 'DESC' else asc
+            if params is not None:
+                trash     = False if not hasattr(params,'trash') else True
+                list_all  = False if not hasattr(params,"list_all") else True
+                order_by  = "id" if not hasattr(params,"order_by") else params.order_by
+                direction = desc if not hasattr(params,"order_dir") == 'DESC' else asc
 
-            filter_search = None if hasattr(params,"search")==False or params.search=="" else params.search
-            filter_funnel = None if hasattr(params,"funnel")==False else params.funnel
-            sale_funnel   = False if hasattr(params,"sales")==False else True
+                filter_search = None if not hasattr(params,"search") or params.search=="" else params.search
+                filter_funnel = None if not hasattr(params,"funnel") else params.funnel
+                sale_funnel   = False if not hasattr(params,"sales") else True
 
             rquery = Select(CrmFunnelStage.id,
                             CrmFunnelStage.id_funnel,
@@ -81,7 +84,7 @@ class FunnelStagesApi(Resource):
                         "color": m.color,
                         "order": m.order,
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                        "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
+                        "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated is not None else None
                     }for m in db.session.execute(rquery)]
                 }
             else:
@@ -95,7 +98,7 @@ class FunnelStagesApi(Resource):
                         "color": m.color,
                         "order": m.order,
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                        "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
+                        "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated is not None else None
                     }for m in db.session.execute(rquery)]
         except exc.SQLAlchemyError as e:
             return{
@@ -119,7 +122,7 @@ class FunnelStagesApi(Resource):
             stage.id_funnel  = req["id_funnel"]
             stage.name       = req["name"]
             stage.icon       = req["icon"]
-            stage.icon_color = icon_color
+            setattr(stage,"icon_color",icon_color)
             stage.color      = req["hex_color"]
             stage.order      = req["order"]
             db.session.add(stage)
@@ -216,7 +219,20 @@ class FunnelStageApi(Resource):
     @auth.login_required
     def get(self,id:int):
         try:
-            return CrmFunnelStage.query.get(id).to_dict()
+            reg:CrmFunnelStage|None = CrmFunnelStage.query.get(id)
+            if reg is not None:
+                return {
+                    "id": reg.id,
+                    "id_funnel": reg.id_funnel,
+                    "name": reg.name,
+                    "icon": reg.icon,
+                    "icon_color": reg.icon_color,
+                    "color": reg.color,
+                    "order": reg.order,
+                    "date_created": reg.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+                    "date_updated": None if reg.date_updated is not None else reg.date_updated.strftime("%Y-%m-%d %H:%M:%S"),
+                    "trash": reg.trash
+                }
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -241,21 +257,22 @@ class FunnelStageApi(Resource):
             icon_color = "#"+c1+c2+c3
 
             if id > 0:
-                stage:CrmFunnelStage = CrmFunnelStage.query.get(id)
-                stage.id_funnel  = req["id_funnel"]
-                stage.name       = req["name"]
-                stage.icon       = req["icon"]
-                stage.icon_color = icon_color
-                stage.color      = req["hex_color"]
-                stage.order      = req["order"]
-                db.session.commit()
-                return stage.id
+                stage:CrmFunnelStage|None = CrmFunnelStage.query.get(id)
+                if stage is not None:
+                    stage.id_funnel  = req["id_funnel"]
+                    stage.name       = req["name"]
+                    stage.icon       = req["icon"]
+                    setattr(stage,"icon_color",icon_color)
+                    stage.color      = req["hex_color"]
+                    stage.order      = req["order"]
+                    db.session.commit()
+                    return stage.id
             else:
                 stage = CrmFunnelStage()
                 stage.id_funnel  = req["id_funnel"]
                 stage.name       = req["name"]
                 stage.icon       = req["icon"]
-                stage.icon_color = icon_color
+                setattr(stage,"icon_color",icon_color)
                 stage.color      = req["hex_color"]
                 stage.order      = req["order"]
                 db.session.add(stage)
@@ -277,9 +294,9 @@ class FunnelStageCustomer(Resource):
 
             customer_stage = CrmFunnelStageCustomer.query.filter(CrmFunnelStageCustomer.id_customer==id_customer).one()
             customer_stage.id_funnel_stage = new_stage
-            stage = db.session.execute(Select(CrmFunnelStage.name).where(CrmFunnelStage.id==new_stage)).first().name
+            stage = db.session.execute(Select(CrmFunnelStage.name).where(CrmFunnelStage.id==new_stage)).first()
             db.session.commit()
-            _save_log(id_customer,CustomerAction.MOVE_CRM_FUNNEL,'Movido para o estágio '+stage)
+            _save_log(int(str(id_customer)),CustomerAction.MOVE_CRM_FUNNEL,'Movido para o estágio '+(stage.name if stage is not None else ''))
 
             return True
         except exc.SQLAlchemyError as e:
@@ -300,8 +317,8 @@ class FunnelStageCustomer(Resource):
                     Update(CrmFunnelStageCustomer).values(id_funnel_stage=req["stage"]).where(CrmFunnelStageCustomer.id_customer==customer)
                 )
                 db.session.commit()
-                stage = db.session.execute(Select(CrmFunnelStage.name).where(CrmFunnelStage.id==req['stage'])).first().name
-                _save_log(customer,CustomerAction.MOVE_CRM_FUNNEL,'Movido para o estágio '+stage)
+                stage = db.session.execute(Select(CrmFunnelStage.name).where(CrmFunnelStage.id==req['stage'])).first()
+                _save_log(customer,CustomerAction.MOVE_CRM_FUNNEL,'Movido para o estágio '+(stage.name if stage is not None else ''))
                 db.session.commit()
             return True
         except exc.SQLAlchemyError as e:
@@ -333,18 +350,26 @@ class FunnelStageNotification(Resource):
         try:
             pass
         except exc.SQLAlchemyError as e:
-            pass
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
     
     def post(self):
         try:
             pass
-        except Exception as e:
+        except Exception:
             pass
 
     def delete(self):
         try:
             pass
         except exc.SQLAlchemyError as e:
-            pass
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
 
 ns_fun_stg.add_resource(FunnelStageCustomer,'/notification')

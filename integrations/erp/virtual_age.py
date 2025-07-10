@@ -1,11 +1,14 @@
-from requests import RequestException
-from models import CmmMeasureUnit,CmmLegalEntities,CmmLegalEntityContact,CmmProducts,CmmProductsCategories,CmmCities,CmmStateRegions
-# from models import _show_query
-from sqlalchemy import Insert,Select, Update, and_,or_,exc
-from integrations.erp import erp
-from time import sleep
 import json
+from time import sleep
 from os import environ
+# from models import _show_query
+from integrations.erp import erp
+from requests import RequestException
+from models.tenant import CmmStateRegions, CmmCategories
+from models.tenant import CmmProductsCategories,CmmCities
+from models.tenant import CmmMeasureUnit,CmmLegalEntities
+from sqlalchemy import Insert,Select, Update, and_,or_,exc
+from models.tenant import CmmLegalEntityContact,CmmProducts
 
 class VirtualAge(erp.ERP):
     token_type = ''
@@ -17,11 +20,11 @@ class VirtualAge(erp.ERP):
     def _get_header(self,is_json:bool=True):
         return {
             "Authorization": self.token_type+' '+self.token_access,
-            "Content-Type": "application/json" if is_json==True else "text/plain"
+            "Content-Type": "application/json" if is_json else "text/plain"
         }
 
     def __get_token(self):
-        req = self.nav.post(environ.get("F2B_VIRTUALAGE_URL")+'/api/totvsmoda/authorization/v2/token',data={
+        req = self.nav.post(str(environ.get("F2B_VIRTUALAGE_URL"))+'/api/totvsmoda/authorization/v2/token',data={
             "grant_type"   : environ.get("F2B_VIRTUALAGE_GRANT_TYPE"),
             "client_id"    : environ.get("F2B_VIRTUALAGE_CLIENT_ID"),
             "client_secret": environ.get("F2B_VIRTUALAGE_CLIENT_SECRET"),
@@ -41,7 +44,7 @@ class VirtualAge(erp.ERP):
         has_next = True
         act_page = 1
         while has_next:
-            req = self.nav.post(environ.get("F2B_VIRTUALAGE_URL")+'/api/totvsmoda/product/v2/products/search',
+            req = self.nav.post(str(environ.get("F2B_VIRTUALAGE_URL"))+'/api/totvsmoda/product/v2/products/search',
                                 data={
                                     "filter":{
                                         "change":{
@@ -62,8 +65,8 @@ class VirtualAge(erp.ERP):
                 for p in data.items:
                     with self.dbconn.connect() as con:
                         exist = con.execute(Select(CmmProducts).where(CmmProducts.prodCode==p.productCode)).first()
-                        if exist!=None:
-                            if p.isActive==True:                                
+                        if exist is not None:
+                            if not p.isActive:                                
                                 result = con.execute(Insert(CmmProducts).values(
                                     prodCode=p.productCode,
                                     barCode=p.productSku,
@@ -80,8 +83,10 @@ class VirtualAge(erp.ERP):
                                     id_model=0
                                 ))
                                 con.commit()
+
+                                inserted_id = result.inserted_primary_key[0] if hasattr(result, "inserted_primary_key") and result.inserted_primary_key else None
                                 
-                                self.__save_product_images(result.inserted_primary_key[0])
+                                self.__save_product_images(int(str(inserted_id)))
                 has_next = data.hasNext
                 act_page += 1
                 sleep(1)
@@ -89,7 +94,7 @@ class VirtualAge(erp.ERP):
                 has_next = False
 
     def __save_product_images(self,id_product:int):
-        req = self.nav.post(environ.get("F2B_VIRTUALAGE_URL")+'/api/totvsmoda/image/v2/product/search',
+        req = self.nav.post(str(environ.get("F2B_VIRTUALAGE_URL"))+'/api/totvsmoda/image/v2/product/search',
                              data={
                                 "filter": {
                                     "productCodeList": [
@@ -101,9 +106,9 @@ class VirtualAge(erp.ERP):
                                 },headers=self._get_header())
         if req.status_code==200:
             data = self._as_object(req)
-            if data.items!=None:
-                if data.items[0]!=None:
-                    if data.items[0].images!=None:
+            if data.items is not None:
+                if data.items[0] is not None:
+                    if data.items[0].images is not None:
                         return data.items[0].images
         return None
 
@@ -112,7 +117,7 @@ class VirtualAge(erp.ERP):
         act_page = 1
         #faz um looping infinito por causa da paginacao de resultados
         while has_next:
-            req = self.nav.get(environ.get("F2B_VIRTUALAGE_URL")+'/api/totvsmoda/product/v2/category',
+            req = self.nav.get(str(environ.get("F2B_VIRTUALAGE_URL"))+'/api/totvsmoda/product/v2/category',
                                data={
                                     "page": act_page,
                                     "pageSize": 100
@@ -128,8 +133,10 @@ class VirtualAge(erp.ERP):
                     #conecta o bd
                     with self.dbconn.connect() as con:
                         #verifica se o registro ja existe
-                        exist = con.execute(Select(CmmProductsCategories).where(CmmProductsCategories.orign_id==it.code)).first()
-                        if exist!=None:
+                        exist = con.execute(Select(CmmProductsCategories)\
+                                .join(CmmCategories,CmmCategories.id==CmmProductsCategories.id_category)\
+                                .where(CmmCategories.origin_id==it.code)).first()
+                        if exist is not None:
                             #so irah salvar o que for categoria ou subcategoria
                             if it.categoryType==1 or it.categoryType==2:
                                 con.execute(Insert(CmmProductsCategories).values(name=it.name,id_parent=it.parentCategoryCode,origin_id=it.code))
@@ -164,7 +171,7 @@ class VirtualAge(erp.ERP):
                         "page" : act_page
                     }
 
-                req = self.nav.post(environ.get("F2B_VIRTUALAGE_URL")+'/api/totvsmoda/person/v2/representatives/search',
+                req = self.nav.post(str(environ.get("F2B_VIRTUALAGE_URL"))+'/api/totvsmoda/person/v2/representatives/search',
                                     data=json.dumps(filter),
                                     headers=self._get_header()
                                     )
@@ -178,7 +185,7 @@ class VirtualAge(erp.ERP):
                             #verifica se ja existe cadastro importado ou se ja tem cadastro do CNPJ
                             exist = conn.execute(Select(CmmLegalEntities).where(or_(CmmLegalEntities.origin_id==it.code,CmmLegalEntities.taxvat==it.cpfCnpj))).first()
                             #se nao existir ira cadastrar
-                            if exist==None:
+                            if exist is None:
                                 res = conn.execute(Insert(CmmLegalEntities).values(
                                     origin_id    = it.code,
                                     name         = it.name,
@@ -194,14 +201,16 @@ class VirtualAge(erp.ERP):
 
                                 #importa os emails do cadastro
                                 for em in it.emails:
-                                    self.__save_contact(conn,em,"E",res.inserted_primary_key[0])
+                                    inserted_id = res.inserted_primary_key[0] if hasattr(res, "inserted_primary_key") and res.inserted_primary_key else None
+                                    self.__save_contact(conn,em,"E",inserted_id)
 
                                 #importa os telefones do cadastro
                                 for ph in it.phones:
-                                    self.__save_contact(conn,ph,"P",res.inserted_primary_key[0])
+                                    inserted_id = res.inserted_primary_key[0] if hasattr(res, "inserted_primary_key") and res.inserted_primary_key else None
+                                    self.__save_contact(conn,ph,"P",inserted_id)
 
                                 #importa os clientes do representante
-                                if it.customers!=None:
+                                if it.customers is not None:
                                     for cs in it.customers:
                                         self.get_customer(False,cs.cpfCnpj)
                             else:
@@ -219,17 +228,17 @@ class VirtualAge(erp.ERP):
                                 conn.commit()
                                 for em in it.emails:
                                     exist = conn.execute(Select(CmmLegalEntityContact).where(CmmLegalEntityContact.value==em.email)).first()
-                                    if exist==None:
-                                        self.__save_contact(conn,em,"E",exist.id)
+                                    if exist is not None:
+                                        self.__save_contact(conn,em,"E",(0 if exist is not None else exist.id))
                                 
                                 for ph in it.phones:
                                     number = str(ph.number).replace(" ","").replace("(","").replace(")","").replace("-","")
                                     exist = conn.execute(Select(CmmLegalEntityContact).where(CmmLegalEntityContact.value==number))
-                                    if exist==None:
-                                        self.__save_contact(conn,ph,"P",exist.id)
+                                    if exist is not None:
+                                        self.__save_contact(conn,ph,"P",(0 if exist is not None else exist.id))
                                 
                                 #importa os clientes do representante
-                                if it.customers!=None:
+                                if it.customers is not None:
                                     for cs in it.customers:
                                         self.get_customer(False,cs.cpfCnpj)
                 else:
@@ -265,7 +274,7 @@ class VirtualAge(erp.ERP):
             has_next = True
             while has_next:
 
-                if all==False:
+                if not all:
                     filter = {
                         "filter":{
                             "isCustomer": True,
@@ -293,14 +302,14 @@ class VirtualAge(erp.ERP):
                         "pageSize": 500
                     }
 
-                req = self.nav.post(environ.get("F2B_VIRTUALAGE_URL")+'/api/totvsmoda/person/v2/legal-entities/search',headers=self._get_header(),data=json.dumps(filter))
+                req = self.nav.post(str(environ.get("F2B_VIRTUALAGE_URL"))+'/api/totvsmoda/person/v2/legal-entities/search',headers=self._get_header(),data=json.dumps(filter))
                 if req.status_code==200:
                     data = self._as_object(req)
                     for it in data.items:
                         with self.dbconn.connect() as conn:
                             clear_cnpj = str(it.cnpj).replace(" ","").replace("/","").replace("-","").replace(".","")
                             exist = conn.execute(Select(CmmLegalEntities).where(CmmLegalEntities.taxvat==clear_cnpj)).first()
-                            if exist==None:
+                            if exist is not None:
                                 resp = conn.execute(Insert(CmmLegalEntities).values(
                                     origin_id = it.code,
                                     name = it.name,
@@ -316,11 +325,13 @@ class VirtualAge(erp.ERP):
 
                                 #importa os emails do cadastro
                                 for em in it.emails:
-                                    self.__save_contact(conn,em,"E",resp.inserted_primary_key[0])
+                                    inserted_id = resp.inserted_primary_key[0] if hasattr(resp, "inserted_primary_key") and resp.inserted_primary_key else None
+                                    self.__save_contact(conn,em,"E",inserted_id)
 
                                 #importa os telefones do cadastro
                                 for ph in it.phones:
-                                    self.__save_contact(conn,ph,"P",resp.inserted_primary_key[0])
+                                    inserted_id = resp.inserted_primary_key[0] if hasattr(resp, "inserted_primary_key") and resp.inserted_primary_key else None
+                                    self.__save_contact(conn,ph,"P",inserted_id)
                             else:
                                 resp = conn.execute(Update(CmmLegalEntities).values(
                                     origin_id = it.code,
@@ -336,13 +347,13 @@ class VirtualAge(erp.ERP):
 
                                 for em in it.emails:
                                         exist = conn.execute(Select(CmmLegalEntityContact).where(CmmLegalEntityContact.value==em.email)).first()
-                                        if exist==None:
+                                        if exist is not None:
                                             self.__save_contact(conn,em,"E",exist.id)
                                     
                                 for ph in it.phones:
                                     number = str(ph.number).replace(" ","").replace("(","").replace(")","").replace("-","")
-                                    exist = conn.execute(Select(CmmLegalEntityContact).where(CmmLegalEntityContact.value==number))
-                                    if exist==None:
+                                    exist = conn.execute(Select(CmmLegalEntityContact).where(CmmLegalEntityContact.value==number)).first()
+                                    if exist is not None:
                                         self.__save_contact(conn,ph,"P",exist.id)
 
                 else:
@@ -376,7 +387,7 @@ class VirtualAge(erp.ERP):
         pass
 
     def get_invoice(self,_taxvat:str):
-        req = self.nav.post(environ.get("F2B_VIRTUALAGE_URL")+'/api/totvsmoda/fiscal/v2/invoices/search',
+        req = self.nav.post(str(environ.get("F2B_VIRTUALAGE_URL"))+'/api/totvsmoda/fiscal/v2/invoices/search',
                       data={
                         "filter": {
                             "branchCodeList": environ.get("F2B_VIRTUALAGE_ACTIVE_COMPANIES"),
@@ -393,6 +404,7 @@ class VirtualAge(erp.ERP):
                       headers=self._get_header())
         if req.status_code==200:
             data = self._as_object(req)
+            return data
             
         return None
 
@@ -401,14 +413,14 @@ class VirtualAge(erp.ERP):
             has_next = True
             act_page = 1
             while has_next:
-                req = self.nav.get(environ.get("F2B_VIRTUALAGE_URL")+'/api/totvsmoda/product/v2/measurement-unit',
+                req = self.nav.get(str(environ.get("F2B_VIRTUALAGE_URL"))+'/api/totvsmoda/product/v2/measurement-unit',
                             headers=self._get_header())
                 if req.status_code==200:
                     data = self._as_object(req)
                     with self.dbconn.connect() as con:
                         for d in data.items:
                             exist = con.execute(Select(CmmMeasureUnit).where(CmmMeasureUnit.code==d.code)).first()
-                            if exist!=None:
+                            if exist is not None:
                                 con.execute(Insert(CmmMeasureUnit).values(code=d.code,description=d.description))
                                 con.commit()
                 else:
@@ -416,7 +428,7 @@ class VirtualAge(erp.ERP):
                 has_next = data.hasNext
                 act_page += 1
             return True
-        except RequestException as e:
+        except RequestException:
             #print(e.strerror)
             return False
         

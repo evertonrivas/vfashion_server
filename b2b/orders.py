@@ -1,18 +1,19 @@
-from http import HTTPStatus
+import calendar
 import importlib
-from flask_restx import Resource,Namespace,fields
-from flask import request
-from models import B2bCustomerGroup, B2bCustomerGroupCustomers, B2bProductStock, B2bTarget, CmmProducts, CmmTranslateColors
-from models import B2bCartShopping, B2bOrders,B2bOrdersProducts, B2bPaymentConditions, CmmLegalEntities
-from models import CmmTranslateSizes, CmmUserEntity, CmmUsers, FprDevolution, _save_log, db,_get_params
-from sqlalchemy import Update, and_, exc,Select,Delete,asc,desc,func
 import simplejson
 from auth import auth
-from f2bconfig import CustomerAction,DevolutionStatus, OrderStatus
-from decimal import Decimal
-from datetime import datetime
-import calendar
 from os import environ
+from flask import request
+from http import HTTPStatus
+from decimal import Decimal
+from models.helpers import db
+from datetime import datetime
+from flask_restx import Resource,Namespace,fields
+from f2bconfig import CustomerAction, DevolutionStatus, OrderStatus
+from sqlalchemy import Update, and_, exc, Select, Delete, asc, desc, func
+from models.tenant import B2bCartShopping, B2bOrders,B2bOrdersProducts, B2bPaymentConditions, CmmLegalEntities
+from models.tenant import CmmTranslateSizes, CmmUserEntity, CmmUsers, FprDevolution, _save_log, _get_params
+from models.tenant import B2bCustomerGroup, B2bCustomerGroupCustomers, B2bProductStock, B2bTarget, CmmProducts, CmmTranslateColors
 
 ns_order = Namespace("orders",description="Operações para manipular dados de pedidos")
 
@@ -69,20 +70,21 @@ class OrdersList(Resource):
     @ns_order.param("query","Texto para busca","query")
     @auth.login_required
     def get(self):
-        pag_num  =  1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size = int(str(environ.get("F2B_PAGINATION_SIZE"))) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_num  =  1 if request.args.get("page") is None else int(str(request.args.get("page")))
+        pag_size = int(str(environ.get("F2B_PAGINATION_SIZE"))) if request.args.get("pageSize") is None else int(str(request.args.get("pageSize")))
         query   = "" if request.args.get("query") is None else request.args.get("query")
 
         try:
-            params    = _get_params(query)
-            direction = asc if hasattr(params,'order')==False else asc if str(params.order).upper()=='ASC' else desc
-            order_by  = 'id' if hasattr(params,'order_by')==False else params.order_by
-            search    = None if hasattr(params,"search")==False else params.search
-            trash     = True if hasattr(params,'active')==False else False #foi invertido
-            list_all  = False if hasattr(params,'list_all')==False else True
+            params    = _get_params(str(query))
+            if params is not None:
+                direction = asc if not hasattr(params,'order') else asc if str(params.order).upper()=='ASC' else desc
+                order_by  = 'id' if not hasattr(params,'order_by') else params.order_by
+                search    = None if not hasattr(params,"search") else params.search
+                trash     = True if not hasattr(params,'active') else False #foi invertido
+                list_all  = False if not hasattr(params,'list_all') else True
 
 
-            if search!=None:
+            if search is not None:
 
                 #pensar nos filtros para essa listagem
                 rquery = B2bOrders.query.paginate(page=pag_num,per_page=pag_size)
@@ -141,20 +143,20 @@ class OrdersList(Resource):
                 order = B2bOrders()
                 order.id_customer          = customer
                 #order.make_online         = req['make_online']
-                order.id_payment_condition = int(req['id_payment_condition'])
+                setattr(order,"id_payment_condition",int(req['id_payment_condition']))
                 order.installment_value    = req['installment_value']
                 order.installments         = req['installments']
-                order.date   = datetime.now()
+                setattr(order,"date",datetime.now())
 
                 # se o usuario for lojista faz o status conforme a necessidade de aprovacao
                 # caso contrario o pedido entra como processando
                 if req["user_type"]=='L' or req["user_type"]=='I':
-                    order.status = OrderStatus.ANALIZING.value if need_approvement == 1 else OrderStatus.PROCESSING.value
+                    setattr(order,"status",(OrderStatus.ANALIZING.value if need_approvement == 1 else OrderStatus.PROCESSING.value))
                 else:
-                    order.status = OrderStatus.PROCESSING.value
+                    setattr(order,"status",OrderStatus.PROCESSING.value)
                 order.total_value          = req['total_value']
                 order.total_itens          = req['total_itens']
-                order.trash                = False
+                setattr(order,"trash",False)
                 db.session.add(order)
                 db.session.commit()
 
@@ -168,8 +170,8 @@ class OrdersList(Resource):
                     prod.id_size    = cart.id_size
                     prod.price      = cart.price
                     prod.quantity   = cart.quantity
-                    prod.discount   = 0
-                    prod.discount_percentage = 0
+                    setattr(prod,"discount",0)
+                    setattr(prod,"discount_percentage",0)
                     db.session.add(prod)
                 
                 db.session.commit()
@@ -245,26 +247,26 @@ class OrderApi(Resource):
             return {
                 "id": id,
                 "customer": {
-                    "id": order.id_customer,
-                    "name": order.fantasy_name,
+                    "id": 0 if order is None else order.id_customer,
+                    "name": "" if order is None else order.fantasy_name,
                 },
                 "payment_condition": {
-                    "id": order.id_payment_condition,
-                    "name": order.payment_condition
+                    "id": 0 if order is None else order.id_payment_condition,
+                    "name": "" if order is None else order.payment_condition
                 },
-                "total_value": str(order.total_value),
-                "total_itens": str(order.total_itens),
-                "installments": str(order.installments),
-                "installments_value": str(order.installment_value),
-                "date": order.date.strftime("%Y-%m-%d"),
-                "status": order.status,
-                "integration_number": None if order.integration_number is None else str(order.integration_number),
-                "track_code": None if order.track_code is None else order.track_code,
-                "track_company": None if order.track_company is None else order.track_company,
-                "invoice_number": None if order.invoice_number is None else str(order.invoice_number),
-                "invoice_serie": None if order.invoice_serie is None else str(order.invoice_serie),
-                "date_created": order.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                "date_updated": None if order.date_updated is None else order.date_updated.strftime("%Y-%m-%d %H:%M:%S"),
+                "total_value": 0 if order is None else str(order.total_value),
+                "total_itens": 0 if order is None else str(order.total_itens),
+                "installments": 0 if order is None else str(order.installments),
+                "installments_value": 0 if order is None else str(order.installment_value),
+                "date": "" if order is None else order.date.strftime("%Y-%m-%d"),
+                "status": "" if order is None else order.status,
+                "integration_number": None if order is None else (None if order.integration_number is None else str(order.integration_number)),
+                "track_code": None if order is None else (None if order.track_code is None else order.track_code),
+                "track_company": None if order is None else (None if order.track_company is None else order.track_company),
+                "invoice_number": None if order is None else (None if order.invoice_number is None else str(order.invoice_number)),
+                "invoice_serie": None if order is None else (None if order.invoice_serie is None else str(order.invoice_serie)),
+                "date_created": "" if order is None else order.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+                "date_updated": None if order is None else (None if order.date_updated is None else order.date_updated.strftime("%Y-%m-%d %H:%M:%S")),
                 "products": [{
                     "id_order_product": str(m.id_product)+'_'+str(m.id_color)+'_'+str(m.id_size),
                     "id_product": m.id_product,
@@ -344,15 +346,15 @@ class OrderApi(Resource):
                             db.session.commit()
             
             #atualiza as informacoes de cabecalho do produto
-            order:B2bOrders = B2bOrders.query.get(id)
-            order.total_itens = total_itens
-            order.total_value = total_value
-            order.installment_value = total_value/order.installments
+            order:B2bOrders = B2bOrders.query.get(id) # type: ignore
+            setattr(order,"total_itens",total_itens)
+            setattr(order,"total_value",total_value)
+            setattr(order,"installment_value",(total_value/order.installments))
             order.status = req["status"]
             db.session.commit()
 
             _save_log(
-                order.id_customer,
+                order.id_customer, # type: ignore
                 CustomerAction.ORDER_DELETED if req["status"]==OrderStatus.REJECTED else CustomerAction.ORDER_UPDATED,
                 'Pedido '+('excluído' if req["status"]==OrderStatus.REJECTED else 'atualizado')+' ('+str('{:010d}'.format(order.id))+') - em '+datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
 
@@ -367,17 +369,21 @@ class OrderApi(Resource):
     @ns_order.response(HTTPStatus.OK.value,"Exclui os dados de um pedido")
     @ns_order.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
     @auth.login_required
-    def delete(self,id:int)->bool|dict:
+    def delete(self,id:int):
         try:
             req   = request.get_json()
-            order:B2bOrders = B2bOrders.query.get(id)
-            order.trash = True
+            order:B2bOrders = B2bOrders.query.get(id) # type: ignore
+            setattr(order,"trash",True)
             db.session.commit()
             if (req["id_customer"]!=0):
-                _save_log(req['id_customer'],CustomerAction.ORDER_DELETED,'Pedido ('+id+') cancelado pelo cliente em '+datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
+                _save_log(req['id_customer'],CustomerAction.ORDER_DELETED,'Pedido ('+str(id)+') cancelado pelo cliente em '+datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
             else:
-                legal = CmmLegalEntities.query.get(req["id_representative"])
-                _save_log(order.id_customer,CustomerAction.ORDER_DELETED,'Pedido ('+id+') cancelado pelo representante ('+legal.name+') em '+datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
+                legal:CmmLegalEntities = CmmLegalEntities.query.get(req["id_representative"]) # type: ignore
+                _save_log(
+                    order.id_customer, # type: ignore
+                    CustomerAction.ORDER_DELETED,
+                    'Pedido ('+str(id)+') cancelado pelo representante ('+str(legal.name)+') em '+datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+                    )
             return True
         except exc.SQLAlchemyError as e:
             return {
@@ -395,17 +401,18 @@ class HistoryOrderList(Resource):
     @ns_order.param("query","Texto para busca","query")
     @auth.login_required
     def get(self,id:int):
-        pag_num   = 1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size  = int(environ.get("F2B_PAGINATION_SIZE")) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_num   = 1 if request.args.get("page") is None else int(str(request.args.get("page")))
+        pag_size  = int(str(environ.get("F2B_PAGINATION_SIZE"))) if request.args.get("pageSize") is None else int(str(request.args.get("pageSize")))
         query     = "" if request.args.get("query") is None else request.args.get("query")
         try:
 
-            params = _get_params(query)
-            order_by  = "id" if hasattr(params,"order_by")==False else params.order_by
-            direction = asc if hasattr(params,"order_dir")==False else desc if str(params.order_by).upper()=='DESC' else asc
-            list_all  = False if hasattr(params,"list_all")==False else True
-            status    = None if hasattr(params,"status")==False else params.status
-            no_devolution = False if hasattr(params,"no_devolution")==False else True
+            params = _get_params(str(query))
+            if params is not None:
+                order_by  = "id" if not hasattr(params,"order_by") else params.order_by
+                direction = asc if not hasattr(params,"order_dir") else desc if str(params.order_by).upper()=='DESC' else asc
+                list_all  = False if not hasattr(params,"list_all") else True
+                status    = None if not hasattr(params,"status") else params.status
+                no_devolution = False if not hasattr(params,"no_devolution") else True
 
             stmt = Select(
                           B2bOrders.id.label("id_order"),
@@ -434,9 +441,10 @@ class HistoryOrderList(Resource):
                     Select(CmmUsers.type)\
                     .join(CmmUserEntity,CmmUserEntity.id_user==CmmUsers.id)\
                     .where(CmmUserEntity.id_entity==id)
-                ).first().type
-                if access!='A' and access!='L':
-                    stmt = stmt.where(B2bOrders.id_customer==id)
+                ).first()
+                if access is not None:
+                    if access.type!='A' and access.type!='L':
+                        stmt = stmt.where(B2bOrders.id_customer==id)
 
             if status is not None:
                 stmt = stmt.where(B2bOrders.status==status)
@@ -448,7 +456,7 @@ class HistoryOrderList(Resource):
 
             # _show_query(stmt)
             
-            if list_all==False:
+            if not list_all:
                 pag = db.paginate(stmt,page=pag_num,per_page=pag_size)
                 stmt = stmt.limit(pag_size).offset((pag_num - 1) * pag_size)
 
@@ -474,7 +482,7 @@ class HistoryOrderList(Resource):
                         "status": r.status,
                         "integration_number": r.integration_number,
                         "invoice_number": r.invoice_number,
-                        "track": (None if int(environ.get("F2B_TRACK_ORDER"))==0 else self.__getTrack(r.taxvat,r.invoice_number,r.invoice_serie,r.track_company,r.track_code) ),
+                        "track": (None if int(str(environ.get("F2B_TRACK_ORDER")))==0 else self.__getTrack(r.taxvat,r.invoice_number,r.invoice_serie,r.track_company,r.track_code) ),
                         "date_created": r.date_created.strftime("%d/%m/%Y %H:%M:%S")
                     }for r in db.session.execute(stmt)]
                 }
@@ -493,7 +501,7 @@ class HistoryOrderList(Resource):
                         "status": r.status,
                         "integration_number": r.integration_number,
                         "invoice_number": r.invoice_number,
-                        "track": (None if int(environ.get("F2B_TRACK_ORDER"))==0 else self.__getTrack(r.taxvat,r.invoice_number,r.invoice_serie,r.track_company,r.track_code) ),
+                        "track": (None if int(str(environ.get("F2B_TRACK_ORDER")))==0 else self.__getTrack(r.taxvat,r.invoice_number,r.invoice_serie,r.track_company,r.track_code) ),
                         "date_created": r.date_created.strftime("%d/%m/%Y %H:%M:%S")
                     }for r in db.session.execute(stmt)]
         except exc.SQLAlchemyError as e:
@@ -504,11 +512,6 @@ class HistoryOrderList(Resource):
             }
     
     def __getTrack(self,_cnpj:str,_nf:int,_nf_serie:int,_emp:str,_code:str):
-        opts = {
-            "taxvat": _cnpj,
-            "invoice": _nf,
-            "invoice_serie": _nf_serie
-        }
 
         class_name = str(_emp).lower().replace("_","").title().replace(" ","")
         SHIPPING = getattr(
@@ -567,8 +570,9 @@ class HistoryOrderApi(Resource):
                     )
                 )
             
-            total = db.session.execute(stmt).first().total
-            return 0 if total is None else total
+            result = db.session.execute(stmt).first()
+            total  = 0 if result is None or result.total is None else result.total
+            return total
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -609,8 +613,10 @@ class HistoryOrderApi(Resource):
                         B2bOrders.date.between(date_start,date_end)
                     )
                 )
-            total = db.session.execute(stmt).first().total
-            return 0 if total is None else str(total)
+            result = db.session.execute(stmt).first()
+            total  = 0 if result is None or result.total is None else result.total
+
+            return total
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,

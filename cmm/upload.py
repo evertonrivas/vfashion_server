@@ -1,16 +1,17 @@
-from http import HTTPStatus
-import importlib
-from flask_restx import Resource,Namespace
-from flask import request
-from sqlalchemy import Select, Update, desc, exc, asc,Delete, func
-from werkzeug import exceptions
-from auth import auth
-from f2bconfig import CustomerAction
-from datetime import datetime
-import filetype
-from models import db, _save_log, CmmLegalEntities, CmmLegalEntityFile, CmmProductsImages
-# from models import _show_query
 import os
+import filetype
+import importlib
+from auth import auth
+from flask import request
+from http import HTTPStatus
+from datetime import datetime
+from models.helpers import db
+# from models import _show_query
+from werkzeug import exceptions
+from f2bconfig import CustomerAction
+from flask_restx import Resource,Namespace
+from sqlalchemy import Select, Update,Delete, func
+from models.tenant import _save_log, CmmLegalEntities, CmmLegalEntityFile, CmmProductsImages
 
 ns_upload = Namespace("upload",description="Operações para manipular upload de dados")
 
@@ -27,21 +28,21 @@ class UploadApi(Resource):
             files = []
             fileCount = 1
             fpath = str(os.environ.get("F2B_APP_PATH"))+'assets/'
-            for file in request.files.getlist('files[]'):
-                parts = str(file.filename).split(".")
+            for ufile in request.files.getlist('files[]'):
+                parts = str(ufile.filename).split(".")
                 ext = parts[len(parts)-1]
                 if ext=='pdf':
-                    ffolder = 'pdf/'
+                    ffolder = "pdf/"
                 elif ext=='doc' or ext=='docx' or ext=='xls' or ext=='xlsx' or ext=='ppt' or ext=='pptx':
-                    ffolder = 'docs/'
+                    ffolder = "docs/"
                 elif ext=='txt' or ext=='html' or ext=='rtl' or ext=='csv':
-                    ffolder = 'docs/'
+                    ffolder = "docs/"
                 elif ext=='png' or ext=='jpeg' or ext=='jpg' or ext=='bmp' or ext=='gif' or ext=='svg' or ext=='tiff':
-                    ffolder = 'images/'
+                    ffolder = "images/"
                 elif ext=='cer' or ext=='p7b' or ext=='pfx' or ext=='p12':
-                    ffolder = 'certs/'
+                    ffolder = "certs/"
                 else:
-                    ffolder = 'unclassified/'
+                    ffolder = "unclassified/"
 
 
                 #busca as informacoes de cliente para salvar o arquivo
@@ -51,13 +52,13 @@ class UploadApi(Resource):
                     #salva o arquivo com outro nome
                     newFileName = entity.taxvat+"_"+str(fileCount)+"_"+datetime.now().strftime("%Y%m%d-%H%M%S")+"."+ext
                     files.append(newFileName)
-                    file.save(fpath+ffolder+newFileName)
+                    ufile.save(fpath+ffolder+newFileName)
 
                     #salva os dados do arquivo no cadastro do cliente
-                    file = CmmLegalEntityFile()
-                    file.id_legal_entity = id
-                    file.content_type = 'Arquivo '+ext if filetype.guess_mime(fpath+ffolder+newFileName) is None else filetype.guess_mime(fpath+ffolder+newFileName)
-                    file.folder = ffolder
+                    file:CmmLegalEntityFile = CmmLegalEntityFile()
+                    setattr(file,"id_legal_entity",id)
+                    setattr(file,"content_type",('Arquivo '+ext if filetype.guess_mime(fpath+ffolder+newFileName) is None else filetype.guess_mime(fpath+ffolder+newFileName)))
+                    setattr(file,"folder",ffolder)
                     file.name = newFileName
                     db.session.add(file)
                     db.session.commit()
@@ -90,7 +91,7 @@ class UploadApi(Resource):
                     db.session.commit()
                     _save_log(file.id_legal_entity,CustomerAction.FILE_DETTACHED,'Removido o arquivo '+file.name)
                 return True
-        except exceptions.HTTPException as e:
+        except exceptions.HTTPException:
             return False
         
 
@@ -202,12 +203,12 @@ class UploadProduct(Resource):
             i = 0 
             for f in files:
                 fUrl = str(os.environ.get("F2B_APP_URL"))+"assets/images/"+f if os.environ.get("F2B_COMPANY_UPLOAD_IMAGE")=="local" else ""+f
-                exist = db.session.execute(Select(func.count(CmmProductsImages.id).label("total")).where(CmmProductsImages.img_url==fUrl)).first().total
+                exist = db.session.execute(Select(func.count(CmmProductsImages.id).label("total")).where(CmmProductsImages.img_url==fUrl)).first()
                 # so irah incluir se a imagem nao existir
-                if exist == 0:
+                if exist is None or exist.total == 0:
                     img = CmmProductsImages()
-                    img.img_default = True if i == 0 else False
-                    img.id_product = id
+                    setattr(img,"img_default",(True if i == 0 else False))
+                    setattr(img,"id_product",id)
                     img.img_url = fUrl
                     db.session.add(img)
                 db.session.commit()
@@ -224,6 +225,6 @@ class UploadProductReturn(Resource):
     def get(self):
         try:
             pass
-        except Exception as e:
+        except Exception:
             pass
 ns_upload.add_resource(UploadProductReturn,'/products/')

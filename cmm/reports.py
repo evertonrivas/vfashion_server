@@ -1,17 +1,17 @@
+import os
 import base64
 import datetime
 import decimal
-from http import HTTPStatus
-import json
-import os
-from flask_restx import Resource,Namespace
-from flask import request
-from models import CmmReport, _get_params ,db
-# from models import _show_query
-from common import _format_action, _gen_report
-from sqlalchemy import Select, text, desc, exc, asc, func, or_
 from auth import auth
 from os import environ
+from flask import request
+from http import HTTPStatus
+from models.helpers import db
+# from models import _show_query
+from flask_restx import Resource,Namespace
+from common import _format_action, _gen_report
+from models.tenant import CmmReport, _get_params
+from sqlalchemy import Select, text, desc, exc, asc, or_
 
 ns_report = Namespace("reports",description="Operações para manipular dados de relatórios")
 
@@ -24,19 +24,20 @@ class ReportsApi(Resource):
     @ns_report.param("query","Texto para busca","query")
     @auth.login_required
     def get(self):
-        pag_num  = 1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size = int(str(environ.get("F2B_PAGINATION_SIZE"))) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_num  = 1 if request.args.get("page") is None else int(str(request.args.get("page")))
+        pag_size = int(str(environ.get("F2B_PAGINATION_SIZE"))) if request.args.get("pageSize") is None else int(str(request.args.get("pageSize")))
         query    = "" if request.args.get("query") is None else request.args.get("query")
 
         try:
             params = _get_params(query)
-            direction = asc if hasattr(params,'order')==False else asc if str(params.order).upper()=='ASC' else desc
-            order_by  = 'id' if hasattr(params,'order_by')==False else params.order_by
-            search    = None if hasattr(params,"search")==False else params.search
-            trash     = False if hasattr(params,'trash')==False else True
-            list_all  = False if hasattr(params,'list_all')==False else True
+            if params is not None:
+                direction = asc if not hasattr(params,'order') else asc if str(params.order).upper()=='ASC' else desc
+                order_by  = 'id' if not hasattr(params,'order_by') else params.order_by
+                search    = None if not hasattr(params,"search") else params.search
+                trash     = False if not hasattr(params,'trash') else True
+                list_all  = False if not hasattr(params,'list_all') else True
 
-            filter_cat = None if hasattr(params,"category")==False else int(params.category)
+                filter_cat = None if not hasattr(params,"category") else int(params.category)
 
             rquery = Select(CmmReport.id,
                             CmmReport.name,
@@ -55,7 +56,7 @@ class ReportsApi(Resource):
                     )
                 )
                             
-            if list_all==False:
+            if not list_all:
                 pag = db.paginate(rquery,page=pag_num,per_page=pag_size)
                 rquery = rquery.limit(pag_size).offset((pag_num - 1) * pag_size)
                 return {
@@ -107,26 +108,36 @@ class ReportsApi(Resource):
             date_start    = None
             date_end      = None
 
-            report:CmmReport = CmmReport.query.get(req["report"])
+            report:CmmReport|None = CmmReport.query.get(req["report"])
             for param in req["params"]:
-                if "id_cities" in param and len(param["id_cities"]) > 0:               cities        = param["id_cities"]
-                if "id_state_regions" in param and len(param["id_state_regions"]) > 0: state_regions = param["id_state_regions"]
-                if "id_countries" in param and len(param["id_countries"]) > 0:         countries     = param["id_countries"]
-                if "id_funnels" in param and param["id_funnels"] != 0:                 funnel        = param["id_funnels"]
-                if "id_categories" in param and len(param["id_categories"]) > 0:       categories    = param["id_categories"]
-                if "id_entities" in param and len(param["id_entities"]) > 0:           entities      = param["id_entities"]
-                if "id_models" in param and len(param["id_models"]) > 0:               models        = param["id_models"]
-                if "id_types" in param and len(param["id_types"]) > 0:                 types         = param["id_types"]
-                if "id_status_devol" in param and len(param["id_status_devol"]) > 0:   status_devol  = param["id_status_devol"]
-                if "id_status_order" in param and len(param["id_status_order"]) > 0:   status_order  = param["id_status_order"]
+                if "id_cities" in param and len(param["id_cities"]) > 0:
+                    cities = param["id_cities"]
+                if "id_state_regions" in param and len(param["id_state_regions"]) > 0:
+                    state_regions = param["id_state_regions"]
+                if "id_countries" in param and len(param["id_countries"]) > 0:
+                    countries= param["id_countries"]
+                if "id_funnels" in param and param["id_funnels"] != 0:
+                    funnel = param["id_funnels"]
+                if "id_categories" in param and len(param["id_categories"]) > 0:
+                    categories = param["id_categories"]
+                if "id_entities" in param and len(param["id_entities"]) > 0:
+                    entities = param["id_entities"]
+                if "id_models" in param and len(param["id_models"]) > 0:
+                    models = param["id_models"]
+                if "id_types" in param and len(param["id_types"]) > 0:
+                    types = param["id_types"]
+                if "id_status_devol" in param and len(param["id_status_devol"]) > 0:
+                    status_devol  = param["id_status_devol"]
+                if "id_status_order" in param and len(param["id_status_order"]) > 0:
+                    status_order  = param["id_status_order"]
                 if "date_start" in param: 
                     date_start = param["date_start"]
                     date_end = param["date_end"]
 
 
             #montagem da query master
-            mqry = report.master_query
-            mwhere = str(report.master_where)
+            mqry = report.master_query if report is not None else None
+            mwhere = str(report.master_where if report is not None else None)
             if len(cities) > 0 or len(state_regions) > 0 or len(countries) > 0:
                 if len(cities) > 0:
                     mwhere = mwhere.replace("%1",",".join(str(city) for city in cities)).replace("%2","0").replace("%3","0")
@@ -135,25 +146,33 @@ class ReportsApi(Resource):
                 elif len(countries) > 0:
                     mwhere = mwhere.replace("%1","0").replace("%2","0").replace("%3",",".join( str(country) for country in countries ))
 
-            if funnel is not None: mwhere = mwhere.replace("%1",str(funnel))
-            if len(categories) > 0: mwhere = mwhere.replace("%1",",".join(categories))
-            if len(entities) > 0:   mwhere = mwhere.replace("%1",",".join(str(x) for x in entities))
-            if len(models) > 0:     mwhere = mwhere.replace("%1",",".join(str(x) for x in models))
-            if len(types) > 0:      mwhere = mwhere.replace("%1",",".join(str(x) for x in types))
-            if len(status_devol)>0: mwhere = mwhere.replace("%1",",".join(str(x) for x in status_devol))
-            if len(status_order)>0: mwhere = mwhere.replace("%1",",".join(str(x) for x in status_order))
-            if date_start is not None and date_end is not None: mwhere = str(mwhere).replace("%1","'"+date_start+"'").replace("%2","'"+date_end+"'")
+            if funnel is not None: 
+                mwhere = mwhere.replace("%1",str(funnel))
+            if len(categories) > 0: 
+                mwhere = mwhere.replace("%1",",".join(categories))
+            if len(entities) > 0:
+                mwhere = mwhere.replace("%1",",".join(str(x) for x in entities))
+            if len(models) > 0:
+                mwhere = mwhere.replace("%1",",".join(str(x) for x in models))
+            if len(types) > 0:
+                mwhere = mwhere.replace("%1",",".join(str(x) for x in types))
+            if len(status_devol)>0:
+                mwhere = mwhere.replace("%1",",".join(str(x) for x in status_devol))
+            if len(status_order)>0:
+                mwhere = mwhere.replace("%1",",".join(str(x) for x in status_order))
+            if date_start is not None and date_end is not None:
+                mwhere = str(mwhere).replace("%1","'"+date_start+"'").replace("%2","'"+date_end+"'")
 
             if mwhere.find("%")>-1:
                 mwhere = ""
-            mqry += " "+mwhere
+            mqry += " "+mwhere # type: ignore
 
             body = []
             mstr = ""
-            for data_master in db.session.execute(text(mqry)):
+            for data_master in db.session.execute(text(mqry)): # type: ignore
                 row = []
                 i = 0
-                for field_master in str(report.master_fields).split(","):
+                for field_master in str(report.master_fields).split(","): # type: ignore
                     master_type = type(data_master[i])
                     if master_type is datetime.date:
                         row.append("\""+field_master+"\" : \""+data_master[i].strftime("%d/%m/%Y")+"\"")
@@ -166,7 +185,7 @@ class ReportsApi(Resource):
                     else:
                         row.append("\""+field_master+"\" : \""+("" if data_master[i] is None else data_master[i])+"\"")
 
-                    if report.child_query is not None:
+                    if report is not None and report.child_query is not None:
                         if field_master=="id":
                             crow = self.__mount_child(report,data_master[i])
                             row.append("\"child\" : ["+",".join(crow)+"]")
@@ -176,23 +195,23 @@ class ReportsApi(Resource):
                 nrow = eval(mstr)
                 body.append(nrow)
 
-            if _gen_report(
-                report.file_model,
+            if not _gen_report(
+                ("" if report is None else report.file_model), # type: ignore
                 {
-                    "title": report.title,
+                    "title": "" if report is None else report.title,
                     "body": body,
                     "footer": ""
                 }
-            )==False:
+            ):
                 return False
             
-            with open(environ.get("F2B_APP_PATH")+'assets/pdf/'+str(report.file_model).replace(".html","")+".pdf","rb") as pdf:
+            with open(str(environ.get("F2B_APP_PATH"))+'assets/pdf/'+str(report.file_model if report is not None else "").replace(".html","")+".pdf","rb") as pdf:
                 content = base64.b64encode(pdf.read()).decode("utf-8")
                 pdf.close()
                 return {
-                    "name": str(report.file_model).replace(".html","")+".pdf",
+                    "name": str(report.file_model if report is not None else "").replace(".html","")+".pdf",
                     "type": "application/pdf",
-                    "size": os.path.getsize(environ.get("F2B_APP_PATH")+"assets/pdf/"+str(report.file_model).replace(".html","")+".pdf"),
+                    "size": os.path.getsize(str(environ.get("F2B_APP_PATH"))+"assets/pdf/"+str(report.file_model if report is not None else "").replace(".html","")+".pdf"),
                     "content": content,
                 }
         except exc.SQLAlchemyError as e:
@@ -205,7 +224,7 @@ class ReportsApi(Resource):
     def __mount_child(self,report:CmmReport,id:int):
         cqry = report.child_query+" "+str(report.child_where).replace("%1",str(id))
         crow = []
-        for data_child in db.session.execute(text(cqry)):
+        for data_child in db.session.execute(text(cqry)): # type: ignore
             cdata = []
             c = 0
             for field_child in str(report.child_fileds).split(","):
@@ -238,28 +257,28 @@ class ReportsApi(Resource):
     def __mount_last(self,report:CmmReport,id:int):
         lqry = report.last_query+" "+str(report.last_where).replace("%1",str(id))
         lrow = []
-        for data_last in db.session.execute(text(lqry)):
+        for data_last in db.session.execute(text(lqry)): # type: ignore
             ldata = []
-            l = 0
+            line = 0
             for field_last in str(report.last_fileds).split(","):
-                last_type = type(data_last[l])
+                last_type = type(data_last[line])
                 if last_type is datetime.date:
-                    ldata.append("\""+field_last+"\" : \""+data_last[l].strftime("%d/%m/%Y")+"\"")
+                    ldata.append("\""+field_last+"\" : \""+data_last[line].strftime("%d/%m/%Y")+"\"")
                 elif last_type is datetime.datetime:
-                    ldata.append("\""+field_last+"\" : \""+data_last[l].strftime("%d/%m/%Y %H:%M")+"\"")
+                    ldata.append("\""+field_last+"\" : \""+data_last[line].strftime("%d/%m/%Y %H:%M")+"\"")
                 elif last_type is int:
-                    ldata.append("\""+field_last+"\" : \""+str(data_last[l])+"\"")
+                    ldata.append("\""+field_last+"\" : \""+str(data_last[line])+"\"")
                 elif last_type is float:
-                    ldata.append("\""+field_last+"\" : \""+str(data_last[l])+"\"")
+                    ldata.append("\""+field_last+"\" : \""+str(data_last[line])+"\"")
                 elif last_type is decimal.Decimal:
-                    ldata.append("\""+field_last+"\" : \""+str(data_last[l]).replace(".",",")+"\"")
+                    ldata.append("\""+field_last+"\" : \""+str(data_last[line]).replace(".",",")+"\"")
                 else:
                     if field_last=="action":
-                        ldata.append("\""+field_last+"\" : \""+_format_action(data_last[l])+"\"")
+                        ldata.append("\""+field_last+"\" : \""+_format_action(data_last[line])+"\"")
                     else:
-                        ldata.append("\""+field_last+"\" : \""+("" if data_last[l] is None else data_last[l])+"\"")
+                        ldata.append("\""+field_last+"\" : \""+("" if data_last[line] is None else data_last[line])+"\"")
         
-                l += 1
+                line += 1
             lrow.append("{"+",".join(ldata)+"}")
         return lrow
 
@@ -269,9 +288,9 @@ class ReporApi(Resource):
         try:
             report = CmmReport.query.get(id)
             return {
-                "id": report.id,
-                "name": report.name,
-                "filters": (report.filters).split(",")
+                "id": 0 if report is None else report.id,
+                "name": None if report is None else report.name,
+                "filters": (report.filters if report is not None else "").split(",")
             }
         except exc.SQLAlchemyError as e:
             return {

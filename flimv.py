@@ -1,6 +1,6 @@
 from datetime import datetime
 from sqlalchemy import Insert, Select, Update, and_, create_engine, distinct, func, tuple_
-from models import B2bCollection, B2bOrdersProducts, CmmLegalEntities, CmmProducts, CmmProductsGridDistribution, FprDevolution, FprDevolutionItem, B2bOrders, ScmFlimvResult
+from models.public import B2bCollection, B2bOrdersProducts, CmmLegalEntities, CmmProducts, CmmProductsGridDistribution, FprDevolution, FprDevolutionItem, B2bOrders, ScmFlimvResult
 # from models import _show_query
 from dotenv import load_dotenv
 from os import environ,path

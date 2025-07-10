@@ -1,11 +1,12 @@
-from http import HTTPStatus
-from flask_restx import Resource,Namespace,fields
-from flask import request
-from models import CmmCategories, _get_params, db
-# from models import _show_query
-from sqlalchemy import Select, exc, asc, desc
 from auth import auth
 from os import environ
+from flask import request
+from http import HTTPStatus
+from models.helpers import db
+# from models import _show_query
+from sqlalchemy import Select, exc, asc, desc
+from flask_restx import Resource,Namespace,fields
+from models.tenant import CmmCategories, _get_params
 
 ns_cat  = Namespace("products-category",description="Operações para manipular dados de categorias de produtos")
 
@@ -45,20 +46,21 @@ class CategoryList(Resource):
     @ns_cat.param("query","Texto para busca","query")
     @auth.login_required
     def get(self):
-        pag_num  = 1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size = int(environ.get("F2B_PAGINATION_SIZE")) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_num  = 1 if request.args.get("page") is None else int(str(request.args.get("page")))
+        pag_size = int(str(environ.get("F2B_PAGINATION_SIZE"))) if request.args.get("pageSize") is None else int(str(request.args.get("pageSize")))
         query    = "" if request.args.get("query") is None else request.args.get("query")
 
         try:
             params = _get_params(query)
-            direction = asc if hasattr(params,'order')==False else asc if str(params.order).upper()=='ASC' else desc
-            order_by  = 'id' if hasattr(params,'order_by')==False else params.order_by
-            search    = None if hasattr(params,"search")==False else params.search
-            trash     = False if hasattr(params,'trash')==False else True
-            list_all  = False if hasattr(params,'list_all')==False else True
+            if params is not None:
+                direction = asc if not hasattr(params,'order') else asc if str(params.order).upper()=='ASC' else desc
+                order_by  = 'id' if not hasattr(params,'order_by') else params.order_by
+                search    = None if not hasattr(params,"search") else params.search
+                trash     = False if not hasattr(params,'trash') else True
+                list_all  = False if not hasattr(params,'list_all') else True
 
-            filter_just_parent = None if hasattr(params,'just_parent')==False else True
-            filter_just_child  = None if hasattr(params,"just_child")==False else True
+                filter_just_parent = None if not hasattr(params,'just_parent') else True
+                filter_just_child  = None if not hasattr(params,"just_child") else True
             
             rquery = Select(CmmCategories.id,
                             CmmCategories.origin_id,
@@ -72,13 +74,13 @@ class CategoryList(Resource):
             if search is not None:
                 rquery = rquery.where(CmmCategories.name.like("%{}%".format(search)))
 
-            if filter_just_parent==True:
+            if filter_just_parent:
                 rquery = rquery.where(CmmCategories.id_parent.is_(None))
 
-            if filter_just_child==True:
+            if filter_just_child:
                 rquery = rquery.where(CmmCategories.id_parent.is_not(None))
 
-            if list_all==False:
+            if not list_all:
                 pag = db.paginate(rquery,page=pag_num,per_page=pag_size)
                 rquery = rquery.limit(pag_size).offset((pag_num - 1) * pag_size)
                 retorno = {
@@ -124,7 +126,7 @@ class CategoryList(Resource):
             req = request.get_json()
             cat = CmmCategories()
             cat.name = req["name"]
-            cat.id_parent = int(req["id_parent"]) if req["id_parent"] is not None else None
+            setattr(cat,"id_parent",(int(req["id_parent"]) if req["id_parent"] is not None else None))
             db.session.add(cat)
             db.session.commit()
             return cat.id
@@ -138,12 +140,12 @@ class CategoryList(Resource):
     @ns_cat.response(HTTPStatus.OK.value,"Exclui os dados de uma categoria")
     @ns_cat.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
     @auth.login_required
-    def delete(self)->bool:
+    def delete(self):
         try:
             req = request.get_json()
             for id in req["ids"]:
                 cat = CmmCategories.query.get(id)
-                cat.trash = req["toTrash"]
+                setattr(cat,"trash",req["toTrash"])
                 db.session.commit()
             return True
         except exc.SQLAlchemyError as e:
@@ -160,7 +162,18 @@ class CategoryApi(Resource):
     @auth.login_required
     def get(self,id:int):
         try:
-            return CmmCategories.query.get(id).to_dict()
+            reg:CmmCategories|None = CmmCategories.query.get(id)
+            if reg is not None:
+                return {
+                    "id": reg.id,
+                    "origin_id": reg.origin_id,
+                    "name": reg.name,
+                    "id_parent": reg.id_parent,
+                    "date_created": reg.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+                    "date_updated": reg.date_updated.strftime("%Y-%m-%d %H:%M:%S") if reg.date_updated is not None else None,
+                    "trash": reg.trash
+                }
+            return None
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -175,11 +188,13 @@ class CategoryApi(Resource):
     def post(self,id:int):
         try:
             req = request.get_json()
-            cat = CmmCategories.query.get(id)
-            cat.name      = req["name"]
-            cat.id_parent = int(req["id_parent"]) if req["id_parent"] is not None else None
-            db.session.commit()
-            return True
+            cat:CmmCategories|None = CmmCategories.query.get(id)
+            if cat is not None:
+                cat.name = req["name"]
+                setattr(cat,"id_parent",(int(req["id_parent"]) if req["id_parent"] is not None else None))
+                db.session.commit()
+                return True
+            return False
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,

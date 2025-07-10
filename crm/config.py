@@ -1,7 +1,7 @@
 from http import HTTPStatus
 from flask_restx import Resource,Namespace
 from flask import request
-from models import CrmConfig, db
+from models.tenant import CrmConfig, db
 # from models import _show_query
 import json
 from sqlalchemy import Select, exc
@@ -41,11 +41,11 @@ class CollectionList(Resource):
         try:
             req = request.get_json()
             for k in req:
-                cfg_id = db.session.execute(Select(CrmConfig.id).where(CrmConfig.cfg_name==k)).first().id
-                cfg:CrmConfig = CrmConfig.query.get(cfg_id)
-                cfg.cfg_value = req[k]
-                db.session.commit()
-
+                cfg_id = db.session.execute(Select(CrmConfig.id).where(CrmConfig.cfg_name==k)).first()
+                cfg:CrmConfig|None = CrmConfig.query.get(cfg_id.id if cfg_id is not None else 0)
+                if cfg is not None:
+                    cfg.cfg_value = req[k]
+                    db.session.commit()
             return True
         except exc.SQLAlchemyError as e:
             return {

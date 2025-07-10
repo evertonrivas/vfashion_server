@@ -5,7 +5,7 @@ import importlib
 from datetime import datetime
 from flimv import Flimv
 import csv
-from models import CmmLegalEntityImport, CmmProductsImport
+from models.public import CmmLegalEntityImport, CmmProductsImport
 from sqlalchemy import Insert, create_engine
 import logging
 

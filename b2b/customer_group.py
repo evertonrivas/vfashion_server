@@ -1,12 +1,13 @@
-from http import HTTPStatus
-from flask_restx import Resource,Namespace,fields
-from flask import request
-from models import B2bCustomerGroup,B2bCustomerGroupCustomers, B2bOrders, CmmLegalEntities, _get_params, db
-# from models import _show_query
-from sqlalchemy import Delete, Select, exc,and_,desc,asc, func
 from auth import auth
-from f2bconfig import OrderStatus
 from os import environ
+from flask import request
+from http import HTTPStatus
+from models.helpers import db
+# from models import _show_query
+from f2bconfig import OrderStatus
+from flask_restx import Resource,Namespace,fields
+from sqlalchemy import Delete, Select, exc,and_,desc,asc, func
+from models.tenant import B2bCustomerGroup,B2bCustomerGroupCustomers, B2bOrders, CmmLegalEntities, _get_params
 
 ns_customer_g = Namespace("customer-group",description="Operações para manipular dados de grupos de clientes")
 
@@ -52,19 +53,20 @@ class CollectionList(Resource):
     @ns_customer_g.param("query","Texto para busca","query")
     @auth.login_required
     def get(self):
-        pag_num  = 1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size = int(environ.get("F2B_PAGINATION_SIZE")) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_num  = 1 if request.args.get("page") is None else int(str(request.args.get("page")))
+        pag_size = int(str(environ.get("F2B_PAGINATION_SIZE"))) if request.args.get("pageSize") is None else int(str(request.args.get("pageSize")))
         query = "" if request.args.get("query") is None else request.args.get("query")
 
         try:
-            params = _get_params(query)
-            direction = asc if hasattr(params,'order')==False else asc if str(params.order).upper()=='ASC' else desc
-            order_by = 'id' if hasattr(params,'order_by')==False else params.order_by
-            search = None if hasattr(params,"search")==False else params.search
-            trash = False if hasattr(params,'active')==False else True
-            list_all = False if hasattr(params,'list_all')==False else True
+            params = _get_params(str(query))
+            if params is not None:
+                direction = asc if not hasattr(params,'order') else asc if str(params.order).upper()=='ASC' else desc
+                order_by = 'id' if not hasattr(params,'order_by') else params.order_by
+                search = None if not hasattr(params,"search") else params.search
+                trash = False if not hasattr(params,'active') else True
+                list_all = False if not hasattr(params,'list_all') else True
 
-            filter_need_approvement = None if hasattr(params,"need_approvement")==False else False if params.need_approvement==0 else True
+                filter_need_approvement = None if not hasattr(params,"need_approvement") else False if params.need_approvement==0 else True
 
             rquery = Select(B2bCustomerGroup.id,
                             B2bCustomerGroup.name,
@@ -83,7 +85,7 @@ class CollectionList(Resource):
             if filter_need_approvement is not None:
                 rquery = rquery.where(B2bCustomerGroup.need_approvement==filter_need_approvement)
 
-            if list_all==False:
+            if not list_all:
                 pag = db.paginate(rquery,page=pag_num,per_page=pag_size)
                 rquery = rquery.limit(pag_size).offset((pag_num - 1) * pag_size)
 
@@ -127,13 +129,13 @@ class CollectionList(Resource):
     @ns_customer_g.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar registro!")
     @ns_customer_g.doc(body=grp_model)
     @auth.login_required
-    def post(self)->int:
+    def post(self):
         try:
             req = request.get_json()
             grp = B2bCustomerGroup()
             grp.name = req["name"]
-            grp.id_representative = None if req["id_representative"]=="null" or req["id_representative"]=="undefined" or req["id_representative"] is None else int(req["id_representative"])
-            grp.need_approvement = int(req["need_approvement"])
+            setattr(grp,"id_representative",(None if req["id_representative"]=="null" or req["id_representative"]=="undefined" or req["id_representative"] is None else int(req["id_representative"])))
+            setattr(grp,"need_approvement",int(req["need_approvement"]))
             db.session.add(grp)
             db.session.commit()
 
@@ -148,12 +150,12 @@ class CollectionList(Resource):
     @ns_customer_g.response(HTTPStatus.OK.value,"Exclui os dados de uma coleção")
     @ns_customer_g.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
     @auth.login_required
-    def delete(self)->bool:
+    def delete(self):
         try:
             req = request.get_json()
             for id in req["ids"]:
                 grp = B2bCustomerGroup.query.get(id)
-                grp.trash = True
+                setattr(grp,"trash",True)
                 db.session.commit()
             return True
         except exc.SQLAlchemyError as e:
@@ -172,13 +174,12 @@ class CollectionApi(Resource):
     def get(self,id:int):
         try:
             cquery = B2bCustomerGroup.query.get(id)
-            squery = B2bCustomerGroupCustomers.query.filter(B2bCustomerGroupCustomers.id_customer_group == id)
 
             return {
-                "id": cquery.id,
-                "name": cquery.name,
-                "id_representative": cquery.id_representative,
-                "need_approvement": cquery.need_approvement
+                "id": 0 if cquery is None else cquery.id,
+                "name": "" if cquery is None else cquery.name,
+                "id_representative": 0 if cquery is None else cquery.id_representative,
+                "need_approvement": False if cquery is None else cquery.need_approvement
             }
         except exc.SQLAlchemyError as e:
             return {
@@ -191,13 +192,13 @@ class CollectionApi(Resource):
     @ns_customer_g.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
     @ns_customer_g.doc(body=grp_model)
     @auth.login_required
-    def post(self,id:int)->bool:
+    def post(self,id:int):
         try:
             req = request.get_json()
-            grp:B2bCustomerGroup = B2bCustomerGroup.query.get(id)
+            grp:B2bCustomerGroup = B2bCustomerGroup.query.get(id) # type: ignore
             grp.name = req["name"]
-            grp.id_representative = None if req["id_representative"]=="null" or req["id_representative"]=="undefined" or req["id_representative"] is None else int(req["id_representative"])
-            grp.need_approvement = int(req["need_approvement"])
+            setattr(grp,"id_representative",(None if req["id_representative"]=="null" or req["id_representative"]=="undefined" or req["id_representative"] is None else int(req["id_representative"])))
+            setattr(grp,"need_approvement",int(req["need_approvement"]))
             db.session.add(grp)
             db.session.commit()
 
@@ -224,8 +225,8 @@ class CollectionApi(Resource):
             db.session.commit()
 
             for id_customer in req["ids"]:
-                grp = B2bCustomerGroupCustomers()
-                grp.id_customer_group = id
+                grp:B2bCustomerGroupCustomers = B2bCustomerGroupCustomers() # type: ignore
+                setattr(grp,"id_customer_group",id)
                 grp.id_customer = id_customer
                 db.session.add(grp)
                 db.session.commit()
@@ -244,14 +245,15 @@ class CustomersApi(Resource):
     @ns_customer_g.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_customer_g.param("query","Texto para busca","query")
     def get(self):
-        pag_num =  1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size = int(environ.get("F2B_PAGINATION_SIZE")) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_num =  1 if request.args.get("page") is None else int(str(request.args.get("page")))
+        pag_size = int(str(environ.get("F2B_PAGINATION_SIZE"))) if request.args.get("pageSize") is None else int(str(request.args.get("pageSize")))
         query = "" if request.args.get("query") is None else request.args.get("query")
 
         try:
             #filter_id_group
-            params = _get_params(query)
-            filter_id_group = None if hasattr(params,'id_group')==False else params.id_group
+            params = _get_params(str(query))
+            if params is not None:
+                filter_id_group = None if not hasattr(params,'id_group') else params.id_group
 
             # print(filter_id_group)
 
@@ -300,9 +302,10 @@ class CustomerRepresentative(Resource):
             .join(B2bCustomerGroupCustomers,B2bCustomerGroupCustomers.id_customer_group==B2bCustomerGroup.id)\
             .where(B2bCustomerGroup.id_representative==id)
 
-            total = db.session.execute(stmt).first().total
+            result = db.session.execute(stmt).first()
+            total  = 0 if result is None or result.total is None else result.total
 
-            return 0 if total is None else total
+            return total
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -324,9 +327,10 @@ class CustomerRepresentative(Resource):
                 )
             )
 
-            total = db.session.execute(stmt).first().total 
+            result = db.session.execute(stmt).first()
+            total  = 0 if result is None or result.total is None else result.total
 
-            return 0 if total is None else total
+            return total
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -348,9 +352,10 @@ class CustomerRepresentative(Resource):
                 )
             )
 
-            total = db.session.execute(stmt).first().total 
+            result = db.session.execute(stmt).first()
+            total  = 0 if result is None or result.total is None else result.total
 
-            return 0 if total is None else total
+            return total
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,

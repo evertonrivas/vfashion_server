@@ -1,14 +1,19 @@
-from datetime import datetime
-from decimal import Decimal
-from http import HTTPStatus
-from flask_restx import Resource,Namespace,fields
-from flask import request
 import simplejson
-from models import B2bBrand, B2bCartShopping, B2bCollection, B2bProductStock, B2bTablePrice, B2bTablePriceProduct, CmmCategories, CmmMeasureUnit, CmmProducts, CmmProductsCategories, CmmProductsGrid, CmmProductsGridDistribution, CmmProductsGridSizes, CmmProductsImages, CmmProductsModels, CmmProductsTypes, CmmTranslateColors, CmmTranslateSizes, ScmEvent, _get_params, db
-# from models import _show_query
-from sqlalchemy import Delete, Select, and_, exc, or_, desc, asc
 from auth import auth
 from os import environ
+from flask import request
+from decimal import Decimal
+from http import HTTPStatus
+from datetime import datetime
+from models.helpers import db
+# from models import _show_query
+from flask_restx import Resource,Namespace,fields
+from sqlalchemy import Delete, Select, and_, exc, or_, desc, asc
+from models.tenant import B2bBrand, B2bCartShopping, B2bCollection, B2bProductStock
+from models.tenant import CmmTranslateColors, CmmTranslateSizes, ScmEvent, _get_params
+from models.tenant import B2bTablePrice, B2bTablePriceProduct, CmmCategories, CmmMeasureUnit
+from models.tenant import CmmProducts, CmmProductsCategories, CmmProductsGrid, CmmProductsGridDistribution 
+from models.tenant import CmmProductsGridSizes, CmmProductsImages, CmmProductsModels, CmmProductsTypes
 
 ns_stock = Namespace("product-stock",description="Operações para manipular dados de estoques de produtos")
 
@@ -85,30 +90,25 @@ class ProductStockList(Resource):
     @ns_stock.param("order_dir","Direção da ordenação","query",enum=['ASC','DESC'])
     @auth.login_required
     def get(self):
-        pag_num    = 1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size   = int(environ.get("F2B_PAGINATION_SIZE")) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_num    = 1 if request.args.get("page") is None else int(str(request.args.get("page")))
+        pag_size   = int(str(environ.get("F2B_PAGINATION_SIZE"))) if request.args.get("pageSize") is None else int(str(request.args.get("pageSize")))
         query      = "" if request.args.get("query") is None else request.args.get("query")
 
-        
-        # search     = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
-        # list_all   = False if request.args.get("list_all") is None else True
-        # order_by   = "id" if request.args.get("order_by") is None else request.args.get("order_by")
-        # direction  = desc if request.args.get("order_dir") == 'DESC' else asc
-
         try:
-            params    = _get_params(query)
-            trash     = False if hasattr(params,"trash")==False else True
-            order_by  = "id" if hasattr(params,"order_by")==False else params.order_by
-            direction = asc if hasattr(params,"order")==False else asc if str(params.order).lower()=="asc" else desc
-            search    = None if hasattr(params,"search")==False else params.search
-            list_all  = False if hasattr(params,"list_all")==False else True
+            params    = _get_params(str(query))
+            if params is not None:
+                trash     = False if not hasattr(params,"trash") else True
+                order_by  = "id" if not hasattr(params,"order_by") else params.order_by
+                direction = asc if not hasattr(params,"order") else asc if str(params.order).lower()=="asc" else desc
+                search    = None if not hasattr(params,"search") else params.search
+                list_all  = False if not hasattr(params,"list_all") else True
 
-            filter_brand    = None if hasattr(params,"brand")==False else params.brand
-            filter_collect  = None if hasattr(params,"collection")==False else params.collection
-            filter_category = None if hasattr(params,"category")==False else params.category
-            filter_model    = None if hasattr(params,"model")==False else params.model
-            filter_type     = None if hasattr(params,"type")==False else params.type
-            filter_color    = None if hasattr(params,"color")==False else params.color
+                filter_brand    = None if not hasattr(params,"brand") else params.brand
+                filter_collect  = None if not hasattr(params,"collection") else params.collection
+                filter_category = None if not hasattr(params,"category") else params.category
+                filter_model    = None if not hasattr(params,"model") else params.model
+                filter_type     = None if not hasattr(params,"type") else params.type
+                filter_color    = None if not hasattr(params,"color") else params.color
 
             pquery = Select(B2bProductStock.id_product,
                         CmmProductsGrid.id.label("id_grid"),
@@ -182,7 +182,7 @@ class ProductStockList(Resource):
             
             # _show_query(pquery)
 
-            if list_all==False:
+            if not list_all:
                 pag = db.paginate(pquery,page=pag_num,per_page=pag_size)
                 pquery = pquery.limit(pag_size).offset((pag_num -1) * pag_size)
 
@@ -245,19 +245,19 @@ class ProductStockList(Resource):
     @ns_stock.param("received_days","Dias para recebimento","formData",type=int,required=True)
     @ns_stock.param("installments","Número de parcelas","formData",type=int,required=True)
     @auth.login_required
-    def post(self)->int:
+    def post(self):
         try:
             req = request.get_json()
 
-            stock = B2bProductStock()
-            stock.id_product = int(request.form.get("id_product"))
-            stock.id_color      = request.form.get("id_color")
-            stock.id_size       = request.form.get("id_size")
-            stock.quantity   = int(request.form.get("quantity"))
-            stock.ilimited    = bool(request.form.get("ilimited"))
+            stock:B2bProductStock = B2bProductStock() # type: ignore
+            stock.id_product = req["id_product"]
+            stock.id_color   = req["id_color"]
+            stock.id_size    = req["id_size"]
+            stock.quantity   = req["quantity"]
+            stock.ilimited   = req["ilimited"]
             db.session.add(stock)
             db.session.commit()
-            return stock.id
+            return True
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -265,7 +265,7 @@ class ProductStockList(Resource):
                 "error_sql": e._sql_message()
             }
 
-    def patch(self)->bool:
+    def patch(self):
         try:
             req = request.get_json()
             # varre cada um dos produtos
@@ -274,20 +274,20 @@ class ProductStockList(Resource):
                     for size in req["grid"]:
                         stk = B2bProductStock.query.get((id_product,id_color,size["id"]))
                         if stk is not None:
-                            stk.quantity = None if req["ilimited"]==True or req["ilimited"]=="true" else size["value"]
-                            stk.ilimited = True if req["ilimited"]==True or req["ilimited"]=="true" else False
+                            stk.quantity = None if req["ilimited"] or req["ilimited"]=="true" else size["value"]
+                            stk.ilimited = True if req["ilimited"] or req["ilimited"]=="true" else False
                             db.session.commit()
                         else:
                             stk = B2bProductStock()
                             stk.id_product = id_product
                             stk.id_color   = id_color
                             stk.id_size    = size["id"]
-                            stk.quantity   = None if req["ilimited"]==True or req["ilimited"]=="true" else size["value"]
-                            stk.ilimited   = True if req["ilimited"]==True or req["ilimited"]=="true" else False
+                            setattr(stk,"quantity",(None if req["ilimited"] or req["ilimited"]=="true" else size["value"]))
+                            setattr(stk,"ilimited",(True if req["ilimited"] or req["ilimited"]=="true" else False))
                             db.session.add(stk)
                             db.session.commit()
 
-                        if req["remove"]==True or req["remove"]=="true":
+                        if req["remove"] or req["remove"]=="true":
                             db.session.execute(Delete(B2bProductStock).where(
                                 and_(
                                     B2bProductStock.id_product==id_product,
@@ -314,7 +314,15 @@ class ProductStockApi(Resource):
     @auth.login_required
     def get(self,id:int,color:str,size:str):
         try:
-            return B2bProductStock.query.get([id,color,size]).to_dict()
+            reg:B2bProductStock|None  = B2bProductStock.query.get([id,color,size])
+            return {
+                "id_product": 0 if reg is None else reg.id_product,
+                "id_color": 0 if reg is None else reg.id_color,
+                "id_size": 0 if reg is None else reg.id_size,
+                "quantity": 0 if reg is None else reg.quantity,
+                "in_order": 0 if reg is None else reg.in_order,
+                "ilimited": False if reg is None else reg.ilimited
+            }
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -322,17 +330,21 @@ class ProductStockApi(Resource):
                 "error_sql": e._sql_message()
             }
 
-    @ns_stock.response(HTTPStatus.OK.value,"Salva dados de uma condição de pgamento")
+    @ns_stock.response(HTTPStatus.OK.value,"Salva dados de um estoque")
     @ns_stock.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
-    @ns_stock.param("quantiy","Quantidade do estoque","formData",required=True)
-    @ns_stock.param("limited","Se o produto é limitado","formData",type=bool,required=True)
     @auth.login_required
-    def post(self,id:int,color:str,size:str)->bool:
+    def post(self,id:int,color:str,size:str):
         try:
-            stock = B2bProductStock.query.get([id,color,size])
-            stock.quantity = stock.quantity if request.form.get("quantity") is None else int(request.form.get("quantity"))
-            stock.limited  = stock.limited if request.form.get("limited") is None else bool(request.form.get("limited"))
-            db.session.commit()
+            req = request.get_json()
+            stock:B2bProductStock| None = B2bProductStock.query.get([id,color,size])
+            if stock is not None:
+                stock.id_product  = req["id_product"]
+                stock.id_color    = req["id_color"]
+                stock.id_size     = req["id_size"]
+                stock.in_order    = req["in_order"]
+                stock.quantity    = req["quantity"]
+                stock.ilimited    = req["ilimited"]
+                db.session.commit()
             return True
         except exc.SQLAlchemyError as e:
             return {
@@ -344,10 +356,10 @@ class ProductStockApi(Resource):
     @ns_stock.response(HTTPStatus.OK.value,"Exclui os dados de uma condição de pagamento")
     @ns_stock.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
     @auth.login_required
-    def delete(self,id:int,color:str,size:str)->bool:
+    def delete(self,id:int,color:str,size:str):
         try:
             payCond = B2bProductStock.query.get([id,color,size])
-            payCond.trash = True
+            setattr(payCond,"trash",True)
             db.session.commit()
             return True
         except exc.SQLAlchemyError as e:
@@ -437,24 +449,25 @@ class ProductsGallery(Resource):
     @ns_stock.param("query","Texto com parametros para busca","query")
     @auth.login_required
     def get(self):
-        pag_num    = 1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size   = int(environ.get("F2B_PAGINATION_SIZE")) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_num    = 1 if request.args.get("page") is None else int(str(request.args.get("page")))
+        pag_size   = int(str(environ.get("F2B_PAGINATION_SIZE"))) if request.args.get("pageSize") is None else int(str(request.args.get("pageSize")))
         query      = "" if request.args.get("query") is None or request.args.get("query")=="" else request.args.get("query")
 
         try:
-            params     =  _get_params(query)
-            order_by   = "id" if hasattr(params,"order_by")  == False else params.order_by
-            direction  = asc if hasattr(params,"order")      == False else asc if str(params.order).lower()=='asc' else desc
-            list_all   = False if hasattr(params,"list_all") == False else True
-            search     = None if hasattr(params,'search')    == False else "%{}%".format(params.search)
+            params     =  _get_params(str(query))
+            if params is not None:
+                order_by   = "id" if not hasattr(params,"order_by") else params.order_by
+                direction  = asc if not hasattr(params,"order") else asc if str(params.order).lower()=='asc' else desc
+                list_all   = False if not hasattr(params,"list_all") else True
+                search     = None if not hasattr(params,'search') else "%{}%".format(params.search)
 
-            filter_brand      = None if hasattr(params,"brand")      == False else params.brand
-            filter_collection = None if hasattr(params,"collection") == False else params.collection
-            filter_category   = None if hasattr(params,"category")   == False else params.category
-            filter_model      = None if hasattr(params,"model")      == False else params.model
-            filter_type       = None if hasattr(params,"type")       == False else params.type
-            filter_color      = None if hasattr(params,"color")      == False else params.color
-            filter_size       = None if hasattr(params,"size")       == False else params.size
+                filter_brand      = None if not hasattr(params,"brand") else params.brand
+                filter_collection = None if not hasattr(params,"collection") else params.collection
+                filter_category   = None if not hasattr(params,"category") else params.category
+                filter_model      = None if not hasattr(params,"model") else params.model
+                filter_type       = None if not hasattr(params,"type") else params.type
+                filter_color      = None if not hasattr(params,"color") else params.color
+                filter_size       = None if not hasattr(params,"size")else params.size
 
             #realiza a busca das colecoes que tem restricao no calendario
             rquery = Select(CmmProducts.id,CmmProducts.id_grid,CmmProducts.prodCode,CmmProducts.barCode,
@@ -592,22 +605,33 @@ class ProductsGallery(Resource):
                 rquery = rquery.where(CmmProductsTypes.id.in_(filter_type.split(",")))
                 iquery = iquery.where(CmmProductsTypes.id.in_(filter_type.split(",")))
             if filter_color is not None:
-                rquery = rquery.where(CmmProducts.id_grid.in_(
-                    Select(CmmProductsGridDistribution.id_grid)\
-                    .join(B2bProductStock,and_(B2bProductStock.id_color==CmmProductsGridDistribution.id_color,B2bProductStock.id_size==CmmProductsGridDistribution.id_size))
-                    .where(and_(
-                        CmmProductsGridDistribution.id_color.in_(filter_color.split(",")),
-                        B2bProductStock.id_product==CmmProducts.id
+                rquery = rquery.where(CmmProducts.id.in_(
+                    Select(B2bProductStock.id_product).where(
+                        B2bProductStock.id_color.in_(filter_color.split(","))
                     ))
-                ))
-                iquery = iquery.where(CmmProducts.id_grid.in_(
-                    Select(CmmProductsGridDistribution.id_grid)\
-                    .join(B2bProductStock,and_(B2bProductStock.id_color==CmmProductsGridDistribution.id_color,B2bProductStock.id_size==CmmProductsGridDistribution.id_size))
-                    .where(and_(
-                        CmmProductsGridDistribution.id_color.in_(filter_color.split(",")),
-                        B2bProductStock.id_product==CmmProducts.id
+                )
+                
+                iquery = iquery.where(CmmProducts.id.in_(
+                    Select(B2bProductStock.id_product).where(
+                        B2bProductStock.id_color.in_(filter_color.split(","))
                     ))
-                ))
+                )
+                # rquery = rquery.where(CmmProducts.id_grid.in_(
+                #     Select(CmmProductsGridDistribution.id_grid)\
+                #     .join(B2bProductStock,and_(B2bProductStock.id_color==CmmProductsGridDistribution.id_color,B2bProductStock.id_size==CmmProductsGridDistribution.id_size))
+                #     .where(and_(
+                #         CmmProductsGridDistribution.id_color.in_(filter_color.split(",")),
+                #         B2bProductStock.id_product==CmmProducts.id
+                #     ))
+                # ))
+                # iquery = iquery.where(CmmProducts.id_grid.in_(
+                #     Select(CmmProductsGridDistribution.id_grid)\
+                #     .join(B2bProductStock,and_(B2bProductStock.id_color==CmmProductsGridDistribution.id_color,B2bProductStock.id_size==CmmProductsGridDistribution.id_size))
+                #     .where(and_(
+                #         CmmProductsGridDistribution.id_color.in_(filter_color.split(",")),
+                #         B2bProductStock.id_product==CmmProducts.id
+                #     ))
+                # ))
             
             if filter_size is not None:
                 rquery = rquery.where(CmmProducts.id_grid.in_(

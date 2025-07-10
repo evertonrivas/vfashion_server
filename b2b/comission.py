@@ -1,10 +1,11 @@
-from http import HTTPStatus
-from flask_restx import Resource,Namespace,fields
-from flask import request
-from models import B2bComissionRepresentative, db
-# from models import _show_query
-from sqlalchemy import Select, Update, and_, exc, func
 from auth import auth
+from flask import request
+from http import HTTPStatus
+from models.helpers import db
+# from models import _show_query
+from flask_restx import Resource,Namespace,fields
+from models.tenant import B2bComissionRepresentative
+from sqlalchemy import Select, Update, and_, exc, func
 
 ns_comission = Namespace("comission",description="Operações para manipular dados de comissoes")
 
@@ -57,14 +58,14 @@ class ComissionList(Resource):
         try:
             req = request.get_json()
 
-            exist = db.session.execute(Select(func.count(B2bComissionRepresentative.id).label("total")).where(B2bComissionRepresentative.year==year)).first().total
-            if exist == 0:
+            exist = db.session.execute(Select(func.count(B2bComissionRepresentative.id).label("total")).where(B2bComissionRepresentative.year==year)).first()
+            if exist is None or exist == 0:
                 for com in req:
                     comission = B2bComissionRepresentative()
                     comission.id_representative = com["id_representative"]
-                    comission.year    = year
+                    setattr(comission,"year",year)
                     comission.percent = com["percent"]
-                    comission.value   = 0
+                    setattr(comission,"value",0)
                     db.session.add(comission)
                 db.session.commit()
             else:

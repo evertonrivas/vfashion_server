@@ -1,11 +1,12 @@
-from http import HTTPStatus
-from flask_restx import Resource,Namespace,fields
-from flask import request
-from models import CmmCities, CmmCountries, CmmStateRegions, _get_params, db
-# from models import _show_query
-from sqlalchemy import Select, desc, exc, asc
 from auth import auth
 from os import environ
+from flask import request
+from http import HTTPStatus
+from models.helpers import db
+# from models import _show_query
+from sqlalchemy import Select, desc, exc, asc
+from flask_restx import Resource,Namespace,fields
+from models.tenant import CmmCities, CmmCountries, CmmStateRegions, _get_params
 
 ns_city = Namespace("cities",description="Operações para manipular dados de cidades")
 
@@ -42,17 +43,18 @@ class CitiesList(Resource):
     @ns_city.param("query","Texto para busca","query")
     @auth.login_required
     def get(self):
-        pag_num  = 1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size = int(str(environ.get("F2B_PAGINATION_SIZE"))) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_num  = 1 if request.args.get("page") is None else int(str(request.args.get("page")))
+        pag_size = int(str(environ.get("F2B_PAGINATION_SIZE"))) if request.args.get("pageSize") is None else int(str(request.args.get("pageSize")))
+        query    = "" if request.args.get("query") is None else request.args.get("query")
 
         try:
-            params = _get_params(request.args.get("query"))
-            direction = asc if hasattr(params,'order')==False else asc if params.order=='ASC' else desc
-            order_by  = 'id' if hasattr(params,'order_by')==False else params.order_by
-            search = None if hasattr(params,"search")==False else params.search
-            list_all = False if hasattr(params,"list_all")==False else params.list_all
-
-            filter_state = None if hasattr(params,"state_region")==False else params.state_region
+            params = _get_params(str(query))
+            if params is not None:
+                direction = asc if not hasattr(params,'order') else asc if params.order=='ASC' else desc
+                order_by  = 'id' if not hasattr(params,'order_by') else params.order_by
+                search = None if not hasattr(params,"search") else params.search
+                list_all = False if not hasattr(params,"list_all") else params.list_all
+                filter_state = None if not hasattr(params,"state_region") else params.state_region
 
             rquery = Select(CmmCities.id,
                    CmmCities.name,
@@ -65,7 +67,7 @@ class CitiesList(Resource):
                    .join(CmmCountries,CmmCountries.id==CmmStateRegions.id_country)\
                    .order_by(direction(getattr(CmmCities,order_by)))
             
-            if search!=None and search!="":
+            if search is not None and search!="":
                 rquery = rquery.where(
                     CmmCities.name.like('%{}%'.format(search)) |
                     CmmStateRegions.name.like('%{}%'.format(search)) |
@@ -80,7 +82,7 @@ class CitiesList(Resource):
 
             #print(rquery)
 
-            if list_all==False:
+            if not list_all:
                 pag = db.paginate(rquery,page=pag_num,per_page=pag_size)
                 rquery = rquery.limit(pag_size).offset((pag_num -1)*pag_size)
                 return {
@@ -132,9 +134,10 @@ class CitiesList(Resource):
     @auth.login_required
     def post(self):
         try:
-            reg = CmmCities()
-            reg.name = request.form.get("name")
-            reg.id_state_region = request.form.get("id_state_region")
+            req = request.get_json()
+            reg:CmmCities = CmmCities()
+            reg.name = req["name"]
+            reg.id_state_region = req["id_state_region"]
             db.session.add(reg)
             db.session.commit()
             return reg.id
@@ -152,7 +155,15 @@ class CityApi(Resource):
     @auth.login_required
     def get(self,id:int):
         try:
-            return CmmCities.query.get(id).to_dict()
+            req:CmmCities|None = CmmCities.query.get(id)
+            if req is not None:
+                return {
+                    "id": req.id,
+                    "id_state_region": req.id_state_region,
+                    "name": req.name,
+                    "brazil_ibge_code" : req.brazil_ibge_code
+                }
+            return None
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -167,10 +178,13 @@ class CityApi(Resource):
     def post(self,id:int):
         try:
             req = request.get_json()
-            reg = CmmCities.query.get(id)
-            reg.name = reg.name if req["name"] is None else req["name"]
-            reg.id_state_region = reg.id_state_region if req["id_state_region"] is None else req["id_state_region"]
-            db.session.commit() 
+            reg:CmmCities|None = CmmCities.query.get(id)
+            if reg is not None:
+                reg.name = req["name"]
+                reg.id_state_region = req["id_state_region"]
+                db.session.commit()
+                return True
+            return False 
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -184,7 +198,7 @@ class CityApi(Resource):
     def delete(self,id:int):
         try:
             reg = CmmCities.query.get(id)
-            reg.trash = True
+            setattr(reg,"trash",True)
             db.session.commit()
             return True
         except exc.SQLAlchemyError as e:

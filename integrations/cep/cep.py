@@ -5,16 +5,16 @@ from dotenv import load_dotenv
 from os import environ,path
 import json
 
-from sqlalchemy import Select, create_engine
+from sqlalchemy import Select, create_engine, Engine
 
-from models import CmmCities
+from models.tenant import CmmCities
 
 BASEDIR = path.abspath(path.dirname(__file__))
 load_dotenv(path.join(BASEDIR, '.env'))
 
 class CEP(ABC):
-    dbconn = None
-    nav = None
+    dbconn:Engine
+    nav: Session
 
     def __init__(self) -> None:
         self.nav = Session()
@@ -35,7 +35,9 @@ class CEP(ABC):
     def _get_city_id(self,ibge:str)->int:
         id = 0
         with self.dbconn.connect() as con:
-            id = con.execute(Select(CmmCities.id).where(CmmCities.brazil_ibge_code==ibge)).first().id
+            exc = con.execute(Select(CmmCities.id).where(CmmCities.brazil_ibge_code==ibge)).first()
+            if exc is not None:
+                id = exc.id
             con.close()
         return id
     

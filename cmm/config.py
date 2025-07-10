@@ -1,8 +1,8 @@
-from http import HTTPStatus
 import importlib
-from flask_restx import Resource,Namespace,fields
-from flask import request
 from os import environ
+from flask import request
+from http import HTTPStatus
+from flask_restx import Resource,Namespace,fields
 from f2bconfig import DashboardImage, DashboardImageColor
 
 ns_config = Namespace("config",description="Obtem as configuracoes do sistema")

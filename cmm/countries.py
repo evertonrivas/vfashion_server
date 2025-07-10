@@ -1,11 +1,12 @@
-from http import HTTPStatus
-from flask_restx import Resource,Namespace,fields
-from flask import request
-from models import CmmCountries, _get_params, db
-# from models import _show_query
-from sqlalchemy import Select, desc, exc, asc
 from auth import auth
 from os import environ
+from flask import request
+from http import HTTPStatus
+from models.helpers import db
+# from models import _show_query
+from sqlalchemy import Select, desc, exc, asc
+from flask_restx import Resource,Namespace,fields
+from models.tenant import CmmCountries, _get_params
 
 ns_country = Namespace("countries",description="Operações para manipular dados de países")
 
@@ -45,15 +46,16 @@ class CategoryList(Resource):
     @ns_country.param("order_dir","Direção da ordenação","query",enum=['ASC','DESC'])
     @auth.login_required
     def get(self):
-        pag_num   = 1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size  = int(environ.get("F2B_PAGINATION_SIZE")) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_num   = 1 if request.args.get("page") is None else int(str(request.args.get("page")))
+        pag_size  = int(str(environ.get("F2B_PAGINATION_SIZE"))) if request.args.get("pageSize") is None else int(str(request.args.get("pageSize")))
 
         try:
             params = _get_params(request.args.get("query"))
-            direction = asc if hasattr(params,'order')==False else asc if params.order=='ASC' else desc
-            order_by  = 'id' if hasattr(params,'order_by')==False else params.order_by
-            search = None if hasattr(params,"search")==False else params.search
-            list_all = False if hasattr(params,"list_all")==False else params.list_all
+            if params is not None:
+                direction = asc if not hasattr(params,'order') else asc if params.order=='ASC' else desc
+                order_by  = 'id' if not hasattr(params,'order_by') else params.order_by
+                search    = None if not hasattr(params,"search") else params.search
+                list_all  = False if not hasattr(params,"list_all") else params.list_all
 
             rquery = Select(CmmCountries.id,
                             CmmCountries.name).select_from(CmmCountries)\
@@ -62,7 +64,7 @@ class CategoryList(Resource):
             if search is not None:
                 rquery = rquery.where(CmmCountries.name.like("%{}%".format(search)))
 
-            if list_all==False:
+            if not list_all:
                 pag = db.paginate(rquery,page=pag_num,per_page=pag_size)
                 rquery = rquery.limit(pag_size).offset((pag_num - 1) * pag_size)
 
@@ -119,7 +121,7 @@ class CategoryList(Resource):
             req = request.get_json()
             for id in req["ids"]:
                 reg = CmmCountries.query.get(id)
-                reg.trash = req["toTrash"]
+                setattr(reg,"trash",req["toTrash"])
                 db.session.commit()
             return True
         except exc.SQLAlchemyError as e:
@@ -136,7 +138,13 @@ class CategoryApi(Resource):
     @auth.login_required
     def get(self,id:int):
         try:
-            return CmmCountries.query.get(id).to_dict()
+            reg:CmmCountries|None = CmmCountries.query.get(id)
+            if reg is not None:
+                return {
+                    "id": reg.id,
+                    "name": reg.name
+                }
+            return None
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -151,9 +159,12 @@ class CategoryApi(Resource):
     def post(self,id:int):
         try:
             req = request.get_json()
-            reg = CmmCountries.query.get(id)
-            reg.name = req["name"]
-            db.session.commit() 
+            reg:CmmCountries|None = CmmCountries.query.get(id)
+            if reg is not None:
+                reg.name = req["name"]
+                db.session.commit()
+                return True
+            return False 
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -167,7 +178,7 @@ class CategoryApi(Resource):
     def delete(self,id:int):
         try:
             reg = CmmCountries.query.get(id)
-            reg.trash = True
+            setattr(reg,"trash",True)
             db.session.commit()
             return True
         except exc.SQLAlchemyError as e:

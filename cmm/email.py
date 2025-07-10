@@ -1,13 +1,13 @@
-import base64
-from http import HTTPStatus
-from flask_restx import Resource,Namespace
-from flask import request
-from werkzeug import exceptions
-from auth import auth
-from f2bconfig import MailTemplates
-from common import _send_email
-import mimetypes
 import os
+import base64
+import mimetypes
+from auth import auth
+from flask import request
+from http import HTTPStatus
+from common import _send_email
+from werkzeug import exceptions
+from f2bconfig import MailTemplates
+from flask_restx import Resource,Namespace
 
 ns_email = Namespace("email",description="Operações para manipular upload de dados")
 
@@ -23,14 +23,14 @@ class EmailApi(Resource):
             attachs = []
 
             #verifica se os arquivos existem
-            fpath = os.environ.get("F2B_APP_PATH")+'assets/tmp/'
+            fpath = str(os.environ.get("F2B_APP_PATH"))+'assets/tmp/'
             for file in req['attachments']:
-                if os.path.exists(fpath+file)==False:
+                if not os.path.exists(fpath+file):
                     pass
                 else:
                     with open(fpath+file,"rb") as f:
                         content = base64.b64encode(f.read())
-                    attachs.push({
+                    attachs.append({
                         "name": file,
                         "type": mimetypes.guess_type(fpath+file),
                         "content": content

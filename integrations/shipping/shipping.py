@@ -9,7 +9,7 @@ BASEDIR = path.abspath(path.dirname(__file__))
 load_dotenv(path.join(BASEDIR, '.env'))
 
 class Shipping(ABC):
-    nav = None
+    nav:Session
     env = environ
 
     def __init__(self) -> None:

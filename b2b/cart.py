@@ -1,11 +1,16 @@
 
-from http import HTTPStatus
-from flask_restx import Resource,Namespace,fields
-from flask import request
-from models import B2bCartShopping, B2bCustomerGroup, B2bCustomerGroupCustomers, B2bProductStock, CmmLegalEntities, CmmProducts, CmmProductsGrid, CmmProductsGridDistribution, CmmTranslateColors, CmmTranslateSizes,CmmProductsImages, db
-# from models import _show_query
-from sqlalchemy import exc, Select, and_, func, tuple_, distinct, desc, asc, Delete, text
 from auth import auth
+from flask import request
+from http import HTTPStatus
+from models.helpers import db
+# from models import _show_query
+from flask_restx import Resource,Namespace,fields
+from models.tenant import B2bCartShopping, B2bCustomerGroup
+from models.tenant import CmmTranslateSizes,CmmProductsImages
+from models.tenant import B2bCustomerGroupCustomers, B2bProductStock
+from models.tenant import CmmLegalEntities, CmmProducts, CmmProductsGrid
+from models.tenant import CmmProductsGridDistribution, CmmTranslateColors
+from sqlalchemy import exc, Select, and_, func, tuple_, distinct, desc, asc, Delete, text
 
 ns_cart = Namespace("cart",description="Operações para manipular dados do carrinho de compras")
 
@@ -26,7 +31,7 @@ class CartApi(Resource):
     @ns_cart.param("order_dir","Direção da ordenação","query",enum=['ASC','DESC'])
     @auth.login_required
     def get(self):
-        id_profile =  int(request.args.get("id_profile"))
+        id_profile =  int(str(request.args.get("id_profile")))
         order_by   = "id_product" if request.args.get("order_by") is None else request.args.get("order_by")
         direction  = desc if request.args.get("order_dir") == 'DESC' else asc
         user_type  = request.args.get("userType")
@@ -53,7 +58,7 @@ class CartApi(Resource):
                 .join(CmmTranslateColors,CmmTranslateColors.id==B2bCartShopping.id_color)\
             
             if user_type=='C':
-                pquery = pquery.where(B2bCartShopping.id_customer==id_profile).order_by(direction(getattr(B2bCartShopping,order_by)))
+                pquery = pquery.where(B2bCartShopping.id_customer==id_profile).order_by(direction(getattr(B2bCartShopping,str(order_by))))
             elif user_type=='R':
                 pquery = pquery.where(B2bCartShopping.id_customer.in_(
                     Select(B2bCustomerGroupCustomers.id_customer)
@@ -151,7 +156,7 @@ class CartApi(Resource):
                     B2bCartShopping.id_size==item['id_size']
                 ))).scalar()
                 if pItem is None:
-                    it = B2bCartShopping()
+                    it:B2bCartShopping = B2bCartShopping()
                     it.id_customer = int(item['id_customer'])
                     it.id_product  = int(item['id_product'])
                     it.id_color    = item['id_color']
@@ -231,7 +236,7 @@ class CartApi(Resource):
                                 else: # estah no carrinho
                                     # se o estoque for ilimitado ou disponivel atualiza a informacao do carrinho
                                     if stock.ilimited is True or (stock.quantity-(0 if stock.in_order is None else stock.in_order)) >= size.value:
-                                        bcs = B2bCartShopping.query.get((req['customer'],product,stock.id_color,size.id_size))
+                                        bcs:B2bCartShopping = B2bCartShopping.query.get((req['customer'],product,stock.id_color,size.id_size)) # type: ignore
                                         bcs.quantity += size.value
                                         db.session.commit()
             return False if totalExecuted==0 else True
@@ -251,7 +256,7 @@ class CartItem(Resource):
     @ns_cart.response(HTTPStatus.BAD_REQUEST.value,"Falha ao salvar registro!")
     @auth.login_required
     def get(self,id:int):
-        id_customer = int(request.args.get("id_profile"))
+        id_customer = int(str(request.args.get("id_profile")))
         cquery = Select(CmmTranslateColors.color,B2bCartShopping.id_color).distinct()\
             .join(CmmTranslateColors,CmmTranslateColors.id==B2bCartShopping.id_color)\
             .where(and_(B2bCartShopping.id_customer==id_customer,B2bCartShopping.id_product==id))
@@ -325,7 +330,9 @@ class CartTotal(Resource):
         if userType=='R':
             #aqui precisa buscar todos os os do representante
             query = query.where(B2bCartShopping.id_customer.in_(
-                Select(B2bCustomerGroupCustomers.id_customer).where(B2bCustomerGroupCustomers.id_representative==id_entity))
+                Select(B2bCustomerGroupCustomers.id_customer)\
+                .join(B2bCustomerGroup,B2bCustomerGroup.id==B2bCustomerGroupCustomers.id_customer_group)\
+                .where(B2bCustomerGroup.id_representative==id_entity))
             )
         else:
             query = query.where(B2bCartShopping.id_customer==id_entity)

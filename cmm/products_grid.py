@@ -1,11 +1,13 @@
-from http import HTTPStatus
-from flask_restx import Resource,Namespace,fields
-from flask import request
-from models import CmmProductsGrid,CmmProductsGridDistribution, CmmProductsGridSizes, CmmTranslateSizes, _get_params, db
-# from models import _show_query
-from sqlalchemy import Delete, Select, asc, desc, exc, and_
 from auth import auth
 from os import environ
+from flask import request
+from http import HTTPStatus
+from models.helpers import db
+# from models import _show_query
+from flask_restx import Resource,Namespace,fields
+from sqlalchemy import Delete, Select, asc, desc, exc
+from models.tenant import CmmProductsGrid,CmmProductsGridDistribution
+from models.tenant import CmmProductsGridSizes, CmmTranslateSizes, _get_params
 
 ns_gprod = Namespace("products-grid",description="Operações para manipular dados das grades de produtos")
 
@@ -54,19 +56,20 @@ class GridList(Resource):
     @ns_gprod.param("query","Texto para busca","query")
     @auth.login_required
     def get(self):
-        pag_num  = 1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size = int(environ.get("F2B_PAGINATION_SIZE")) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_num  = 1 if request.args.get("page") is None else int(str(request.args.get("page")))
+        pag_size = int(str(environ.get("F2B_PAGINATION_SIZE"))) if request.args.get("pageSize") is None else int(str(request.args.get("pageSize")))
         query    = None if request.args.get("query") is None else request.args.get("query")
 
         try:
             params    = _get_params(query)
-            trash     = False if hasattr(params,'trash')==False else True
-            list_all  = False if hasattr(params,"list_all")==False else True
-            order_by  = "id" if hasattr(params,"order_by")==False else params.order_by
-            direction = desc if hasattr(params,"order_dir") == 'DESC' else asc
+            if params is not None:
+                trash     = False if not hasattr(params,'trash') else True
+                list_all  = False if not hasattr(params,"list_all") else True
+                order_by  = "id" if not hasattr(params,"order_by") else params.order_by
+                direction = desc if hasattr(params,"order_dir") == 'DESC' else asc
 
-            filter_search   = None if hasattr(params,"search")==False else params.search
-            filter_default  = None if hasattr(params,"default")==False else params.default
+                filter_search   = None if not hasattr(params,"search") else params.search
+                # filter_default  = None if not hasattr(params,"default") else params.default
 
             rquery = Select(CmmProductsGrid.id,
                             CmmProductsGrid.name,
@@ -78,10 +81,10 @@ class GridList(Resource):
             if filter_search is not None:
                 rquery = rquery.where(CmmProductsGrid.name.like("%{}%".format(filter_search)))
 
-            if filter_default is not None:
-                rquery = rquery.where(CmmProductsGrid.default==filter_default)
+            # if filter_default is not None:
+            #     rquery = rquery.where(CmmProductsGrid.default==filter_default)
 
-            if list_all==False:
+            if not list_all:
                 pag    = db.paginate(rquery,page=pag_num,per_page=pag_size)
                 rquery = rquery.limit(pag_size).offset((pag_num - 1) * pag_size)
                 return {
@@ -96,7 +99,7 @@ class GridList(Resource):
                         "id": m.id,
                         "name": m.name,
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                        "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
+                        "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated is not None else None
                     }for m in db.session.execute(rquery)]
                 }
             else:
@@ -104,7 +107,7 @@ class GridList(Resource):
                         "id": m.id,
                         "name": m.name,
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                        "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
+                        "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated is not None else None
                     }for m in db.session.execute(rquery)]
         except exc.SQLAlchemyError as e:
             return {
@@ -117,7 +120,7 @@ class GridList(Resource):
     @ns_gprod.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar nova grade!")
     @ns_gprod.doc(body=grd_model)
     @auth.login_required
-    def post(self)->int:
+    def post(self):
         try:
             req = request.get_json()
 
@@ -144,12 +147,12 @@ class GridList(Resource):
     @ns_gprod.response(HTTPStatus.OK.value,"Exclui os dados de uma grade")
     @ns_gprod.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
     @auth.login_required
-    def delete(self)->bool:
+    def delete(self):
         try:
             req = request.get_json()
             for id in req["ids"]:
                 grid = CmmProductsGrid.query.get(id)
-                grid.trash = req["toTrash"]
+                setattr(grid,"trash",req["toTrash"])
                 db.session.commit()
             return True
         except exc.SQLAlchemyError as e:
@@ -168,11 +171,11 @@ class GridApi(Resource):
     @auth.login_required
     def get(self,id:int):
         try:
-            grid = CmmProductsGrid.query.get(id)
+            grid:CmmProductsGrid|None = CmmProductsGrid.query.get(id)
             ssmtm = Select(CmmProductsGridSizes.id_size).where(CmmProductsGridSizes.id_grid==id)
             return {
                 "id": id,
-                "name": grid.name,
+                "name": None if grid is None else grid.name,
                 "sizes":[{
                     "id": s.id_size
                 }for s in db.session.execute(ssmtm)]
@@ -187,12 +190,13 @@ class GridApi(Resource):
     @ns_gprod.response(HTTPStatus.OK.value,"Salva dados de uma grade")
     @ns_gprod.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
     @auth.login_required
-    def post(self,id:int)->bool:
+    def post(self,id:int):
         try:
             req = request.get_json()
-            grid:CmmProductsGrid = CmmProductsGrid.query.get(id)
-            grid.name    = req["name"]
-            db.session.commit()
+            grid:CmmProductsGrid|None = CmmProductsGrid.query.get(id)
+            if grid is not None:
+                grid.name    = req["name"]
+                db.session.commit()
 
             # remove todos os tamanhos existentes para garantir a consistencia da atualizacao
             db.session.execute(Delete(CmmProductsGridSizes).where(CmmProductsGridSizes.id_grid==id))
@@ -201,7 +205,7 @@ class GridApi(Resource):
             for size in req["sizes"]:
                 grids:CmmProductsGridSizes = CmmProductsGridSizes()
                 grids.id_size = size
-                grids.id_grid = grid.id
+                setattr(grids,"id_grid",(0 if grid is None else grid.id))
                 db.session.add(grids)
             db.session.commit()
 
@@ -255,10 +259,10 @@ class GridDistribution(Resource):
                 if dist is not None:
                     dist.value = size["value"]
                 else:
-                    dist = CmmProductsGridDistribution()
-                    dist.id_grid  = id
-                    dist.id_size  = int(size["id"])
-                    dist.value    = int(size["value"])
+                    dist:CmmProductsGridDistribution|None = CmmProductsGridDistribution()
+                    setattr(dist,"id_grid",id)
+                    setattr(dist,"id_size",int(size["id"]))
+                    setattr(dist,"value",int(size["value"]))
                     db.session.add(dist)
                 db.session.commit()
             return True
@@ -274,12 +278,8 @@ class GridDistribution(Resource):
     @auth.login_required 
     def delete(self,id:int):
         try:
-            req = request.get_json()
             db.session.execute(Delete(CmmProductsGridDistribution).where(
-                and_(
-                    CmmProductsGridDistribution.id_grid==id,
-                    CmmProductsGridDistribution.id_color==req["id_color"]
-                )
+                CmmProductsGridDistribution.id_grid==id
             ))
             db.session.commit()
             return True

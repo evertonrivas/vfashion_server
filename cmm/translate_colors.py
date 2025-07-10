@@ -1,7 +1,7 @@
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import B2bProductStock, CmmTranslateColors, _get_params, db
+from models.tenant import B2bProductStock, CmmTranslateColors, _get_params, db
 # from models import _show_query
 from sqlalchemy import Select, exc, desc, asc
 from auth import auth
@@ -46,19 +46,19 @@ class CategoryList(Resource):
     @ns_color.param("query","Texto para busca","query")
     @auth.login_required
     def get(self):
-        pag_num  = 1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size = int(environ.get("F2B_PAGINATION_SIZE")) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_num  = 1 if request.args.get("page") is None else int(str(request.args.get("page")))
+        pag_size = int(str(environ.get("F2B_PAGINATION_SIZE"))) if request.args.get("pageSize") is None else int(str(request.args.get("pageSize")))
         query    = "" if request.args.get("query") is None else request.args.get("query")
         try:
             params = _get_params(query)
+            if params is not None:
+                direction = asc if not hasattr(params,'order') else asc if str(params.order).upper()=='ASC' else desc
+                order_by  = 'id' if not hasattr(params,'order_by') else params.order_by
+                search    = None if not hasattr(params,"search") else params.search
+                trash     = False if not hasattr(params,'trash') else True
+                list_all  = False if not hasattr(params,'list_all') else True
 
-            direction = asc if hasattr(params,'order')==False else asc if str(params.order).upper()=='ASC' else desc
-            order_by  = 'id' if hasattr(params,'order_by')==False else params.order_by
-            search    = None if hasattr(params,"search")==False else params.search
-            trash     = False if hasattr(params,'trash')==False else True
-            list_all  = False if hasattr(params,'list_all')==False else True
-
-            filter_b2b = False if hasattr(params,"b2b")==False else True
+                filter_b2b = False if not hasattr(params,"b2b") else True
 
             rquery = Select(CmmTranslateColors.id,
                             CmmTranslateColors.hexcode,
@@ -79,7 +79,7 @@ class CategoryList(Resource):
             if search is not None:
                 rquery = rquery.where(CmmTranslateColors.name.like("%{}%".format(search)))
 
-            if list_all==False:
+            if not list_all:
                 pag = db.paginate(rquery,page=pag_num,per_page=pag_size)
                 rquery = rquery.limit(pag_size).offset((pag_num - 1) * pag_size)
                 retorno = {
@@ -96,7 +96,7 @@ class CategoryList(Resource):
                         "name": m.name,
                         "color": m.color,
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                        "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
+                        "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated is not None else None
                     } for m in db.session.execute(rquery)]
                 }
             else:
@@ -106,7 +106,7 @@ class CategoryList(Resource):
                         "name": m.name,
                         "color": m.color,
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                        "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
+                        "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated is not None else None
                     } for m in db.session.execute(rquery)]
             return retorno
         except exc.SQLAlchemyError as e:
@@ -140,13 +140,14 @@ class CategoryList(Resource):
     @ns_color.response(HTTPStatus.OK.value,"Exclui os dados de uma nova tradução de tamanho")
     @ns_color.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
     @auth.login_required
-    def delete(self)->bool:
+    def delete(self):
         try:
             req = request.get_json()
             for id in req["ids"]:
-                cor = CmmTranslateColors.query.get(id)
-                cor.trash = req["toTrash"]
-                db.session.commit()
+                cor:CmmTranslateColors|None = CmmTranslateColors.query.get(id)
+                if cor is not None:
+                    cor.trash = req["toTrash"]
+                    db.session.commit()
             return True
         except exc.SQLAlchemyError as e:
             return {
@@ -162,7 +163,18 @@ class CategoryApi(Resource):
     @auth.login_required
     def get(self,id:int):
         try:
-            return CmmTranslateColors.query.get(id).to_dict()
+            reg:CmmTranslateColors|None = CmmTranslateColors.query.get(id)
+            if reg is not None:
+                return {
+                        "id" : reg.id,
+                        "hexcode" : reg.hexcode,
+                        "name" : reg.name,
+                        "color" : reg.color,
+                        "trash" : reg.trash,
+                        "date_created": reg.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+                        "date_updated" : reg.date_updated.strftime("%Y-%m-%d %H:%M:%S") if reg.date_updated is not None else None
+                }
+            return None
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -176,11 +188,15 @@ class CategoryApi(Resource):
     @auth.login_required
     def post(self,id:int):
         try:
-            cor = CmmTranslateColors.query.get(id)
-            cor.hexcode = cor.hexcode if request.form.get("hexcode") is None else request.form.get("hexcode")
-            cor.name    = cor.name if request.form.get("name") is None else request.form.get("name")
-            cor.color   = cor.color if request.form.get("color") is None else request.form.get("color")
-            db.session.commit() 
+            reg = request.get_json()
+            cor:CmmTranslateColors|None = CmmTranslateColors.query.get(id)
+            if cor is not None:
+                cor.hexcode = reg["hexcode"]
+                cor.name    = reg["name"]
+                cor.color   = reg["color"]
+                db.session.commit()
+                return True
+            return False
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,

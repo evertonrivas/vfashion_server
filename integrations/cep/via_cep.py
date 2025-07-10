@@ -23,5 +23,5 @@ class ViaCep(cep.CEP):
             else:
                 return False
         except HTTPError as e:
-            logging.error(e.errno+" - "+e.response+" - "+e.strerror)
+            logging.error(str(e.errno)+" - "+str(e.response)+" - "+str(e.strerror))
             return False

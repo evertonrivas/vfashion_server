@@ -1,6 +1,6 @@
 from flask import request
 from flask_httpauth import HTTPTokenAuth
-from models import CmmUsers
+from models.tenant import CmmUsers
 import jwt
 from os import environ,path
 from dotenv import load_dotenv

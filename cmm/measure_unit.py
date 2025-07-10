@@ -1,11 +1,12 @@
-from http import HTTPStatus
-from flask_restx import Resource,Namespace,fields
-from flask import request
-from models import CmmMeasureUnit, _get_params, db
-# from models import _show_query
-from sqlalchemy import Select, desc, exc, asc
 from auth import auth
 from os import environ
+from flask import request
+from http import HTTPStatus
+from models.helpers import db
+# from models import _show_query
+from sqlalchemy import Select, desc, exc, asc
+from flask_restx import Resource,Namespace,fields
+from models.tenant import CmmMeasureUnit, _get_params
 
 ns_measure_unit = Namespace("measure-unit",description="Operações para manipular dados de países")
 
@@ -45,16 +46,17 @@ class CategoryList(Resource):
     @ns_measure_unit.param("order_dir","Direção da ordenação","query",enum=['ASC','DESC'])
     @auth.login_required
     def get(self):
-        pag_num  = 1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size = int(environ.get("F2B_PAGINATION_SIZE")) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_num  = 1 if request.args.get("page") is None else int(str(request.args.get("page")))
+        pag_size = int(str(environ.get("F2B_PAGINATION_SIZE"))) if request.args.get("pageSize") is None else int(str(request.args.get("pageSize")))
 
         try:
-            params = _get_params(request.args.get("query"))
-            direction = asc if hasattr(params,'order')==False else asc if params.order=='ASC' else desc
-            order_by  = 'id' if hasattr(params,'order_by')==False else params.order_by
-            trash     = False if hasattr(params,'trash')==False else True
-            search    = None if hasattr(params,"search")==False else params.search
-            list_all  = False if hasattr(params,"list_all")==False else True
+            params = _get_params(str(request.args.get("query")))
+            if params is not None:
+                direction = asc if not hasattr(params,'order') else asc if params.order=='ASC' else desc
+                order_by  = 'id' if not hasattr(params,'order_by') else params.order_by
+                trash     = False if not hasattr(params,'trash') else True
+                search    = None if not hasattr(params,"search") else params.search
+                list_all  = False if not hasattr(params,"list_all") else True
 
             rquery = Select(CmmMeasureUnit.id,
                             CmmMeasureUnit.code,
@@ -65,7 +67,7 @@ class CategoryList(Resource):
             if search is not None:
                 rquery = rquery.where(CmmMeasureUnit.description.like("%{}%".format("search")))
 
-            if list_all==False:
+            if not list_all:
                 pag = db.paginate(rquery,page=pag_num,per_page=pag_size)
                 rquery = rquery.limit(pag_size).offset((pag_num - 1) * pag_size)
                 retorno = {
@@ -123,7 +125,7 @@ class CategoryList(Resource):
         try:
             req = request.get_json()
             for id in req["ids"]:
-                reg = CmmMeasureUnit.query.get(id)
+                reg:CmmMeasureUnit = CmmMeasureUnit.query.get(id) # type: ignore
                 reg.trash = req["toTrash"]
                 db.session.commit()
             return True
@@ -141,7 +143,14 @@ class CategoryApi(Resource):
     @auth.login_required
     def get(self,id:int):
         try:
-            return CmmMeasureUnit.query.get(id).to_dict()
+            reg: CmmMeasureUnit = CmmMeasureUnit.query.get(id) # type: ignore
+            return {
+                "id": reg.id,
+                "code": reg.code,
+                "description": reg.description,
+                "trash": reg.trash
+            }
+            return 
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -156,7 +165,7 @@ class CategoryApi(Resource):
     def post(self,id:int):
         try:
             req = request.get_json()
-            reg = CmmMeasureUnit.query.get(id)
+            reg:CmmMeasureUnit = CmmMeasureUnit.query.get(id) # type: ignore
             reg.description = req["description"]
             reg.code        = req["code"]
             db.session.commit()

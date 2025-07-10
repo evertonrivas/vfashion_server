@@ -1,10 +1,11 @@
-from http import HTTPStatus
-from flask_restx import Resource,Namespace,fields
+from auth import auth
 from flask import request
-from models import B2bTarget, db
+from http import HTTPStatus
+from models.helpers import db
+from models.tenant import B2bTarget
 # from models import _show_query
 from sqlalchemy import Select, Update, exc, func
-from auth import auth
+from flask_restx import Resource,Namespace,fields
 
 ns_target = Namespace("target",description="Operações para manipular dados de metas")
 
@@ -104,10 +105,10 @@ class CollectionList(Resource):
         try:
             req = request.get_json()
 
-            exist = db.session.execute(Select(func.count(B2bTarget.id).label("total")).where(B2bTarget.year==year)).first().total
-            if exist == 0:
+            exist = db.session.execute(Select(func.count(B2bTarget.id).label("total")).where(B2bTarget.year==year)).first()
+            if exist is None or exist.total == 0:
                 target = B2bTarget()
-                target.year = year
+                setattr(target,"year",year)
                 target.type           = req["type"]
                 target.max_value      = req["max_value"]
                 target.value_year     = req["value_year"]

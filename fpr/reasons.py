@@ -1,7 +1,7 @@
 from http import HTTPStatus
 from flask_restx import Resource,Namespace,fields
 from flask import request
-from models import FprReason, _get_params, db
+from models.public import FprReason, _get_params, db
 # from models import _show_query
 from sqlalchemy import Select, desc, exc, asc
 from auth import auth

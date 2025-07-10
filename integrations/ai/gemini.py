@@ -1,10 +1,9 @@
-import google.generativeai as genai
-from integrations.ai import ArtifInteli
+from google import genai
+# from google.genai import types
 
-class Gemini(ArtifInteli.ArtifInteli):
+class Gemini():
     def __init__(self) -> None:
-        genai.configure(api_key=self.env.get("F2B_GEMINI_IA_API_KEY"))
-        self.ai_model = genai.GenerativeModel("gemini-1.5-flash")
+        self.ai_model = genai.Client(api_key='F2B_GEMINI_IA_API_KEY')
         super().__init__()
     
     def suggest_email(self, subject: str,type:str):
@@ -17,7 +16,10 @@ class Gemini(ArtifInteli.ArtifInteli):
         elif type=="O":
             question = "Crie um exemplo de orçamento para que seja enviada por e-mail à cada cliente da minha lista com base nos seguintes dados: "+subject+ " coloque os produtos em uma tabela HTML sem bordas e com cabeçalho em negrito"
         
-        content = self.ai_model.generate_content(question).text
+        # content = self.ai_model.generate_content(question).text
+        content = self.ai_model.models.generate_content(
+            model='gemini-2.0-flash-001', contents=question
+        )
         new_content = str(content).split("\n\n")
         subject = new_content[0].replace("##","").replace("Assunto: ","")
         content = "<br><br>".join(new_content[1:])
