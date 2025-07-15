@@ -1,18 +1,18 @@
-from http import HTTPStatus
-from flask_restx import Resource,Namespace
-from flask import request
-from models.tenant import CrmConfig, db
-# from models import _show_query
 import json
-from sqlalchemy import Select, exc
 from auth import auth
+from flask import request
+from http import HTTPStatus
+from models.helpers import db
+from sqlalchemy import Select, exc
+from models.tenant import CrmConfig
+from flask_restx import Resource,Namespace
 
 ns_crm_cfg = Namespace("config",description="Configurações do módulo de CRM")
 
 @ns_crm_cfg.route("/")
 class CollectionList(Resource):
-    @ns_crm_cfg.response(HTTPStatus.OK.value,"Obtem um registro de uma coleção")
-    @ns_crm_cfg.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_crm_cfg.response(HTTPStatus.OK,"Obtem um registro de uma coleção")
+    @ns_crm_cfg.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def get(self):
         try:
@@ -34,8 +34,8 @@ class CollectionList(Resource):
                 "error_sql": e._sql_message()
             }
 
-    @ns_crm_cfg.response(HTTPStatus.OK.value,"Cria ou atualiza as configurações")
-    @ns_crm_cfg.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar registro!")
+    @ns_crm_cfg.response(HTTPStatus.OK,"Cria ou atualiza as configurações")
+    @ns_crm_cfg.response(HTTPStatus.BAD_REQUEST,"Falha ao criar registro!")
     @auth.login_required
     def post(self)->int|dict:
         try:

@@ -3,20 +3,19 @@ from auth import auth
 from os import environ
 from flask import request
 from http import HTTPStatus
-from models.helpers import db
-# from models import _show_query
+from models.helpers import _get_params, db
 from sqlalchemy import Select, Update, desc, exc, and_, asc, or_
 from models.tenant import CmmLegalEntities, CrmFunnel, _save_log
+from models.tenant import CrmFunnelStageCustomer, CrmFunnelStage
 from f2bconfig import CrmFunnelType, CustomerAction, LegalEntityType
-from models.tenant import CrmFunnelStageCustomer, _get_params, CrmFunnelStage
 
 
 ns_fun_stg = Namespace("funnel-stages",description="Operações para manipular estágios dos funis de clientes")
 
 @ns_fun_stg.route("/")
 class FunnelStagesApi(Resource):
-    @ns_fun_stg.response(HTTPStatus.OK.value,"Exibe os dados de um estágio de um funil")
-    @ns_fun_stg.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_fun_stg.response(HTTPStatus.OK,"Exibe os dados de um estágio de um funil")
+    @ns_fun_stg.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @ns_fun_stg.param("page","Número da página de registros","query",type=int,required=True)
     @ns_fun_stg.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_fun_stg.param("query","Texto para busca","query")
@@ -135,8 +134,8 @@ class FunnelStagesApi(Resource):
                 "error_sql": e._sql_message()
             }
         
-    @ns_fun_stg.response(HTTPStatus.OK.value,"Exclui um estágio de um funil")
-    @ns_fun_stg.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_fun_stg.response(HTTPStatus.OK,"Exclui um estágio de um funil")
+    @ns_fun_stg.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def delete(self)->bool|dict:
         try:
@@ -153,8 +152,8 @@ class FunnelStagesApi(Resource):
                 "error_sql": e._sql_message()
             }
 
-    @ns_fun_stg.response(HTTPStatus.OK.value,"Lista os clientes que nao estao em nenhum funil")
-    @ns_fun_stg.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_fun_stg.response(HTTPStatus.OK,"Lista os clientes que nao estao em nenhum funil")
+    @ns_fun_stg.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def patch(self):
         try:
@@ -214,25 +213,31 @@ class FunnelStagesApi(Resource):
 @ns_fun_stg.route("/<int:id>")
 @ns_fun_stg.param("id","Id do registro")
 class FunnelStageApi(Resource):
-    @ns_fun_stg.response(HTTPStatus.OK.value,"Exibe os dados de um estágio de um funil")
-    @ns_fun_stg.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_fun_stg.response(HTTPStatus.OK,"Exibe os dados de um estágio de um funil")
+    @ns_fun_stg.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def get(self,id:int):
         try:
             reg:CrmFunnelStage|None = CrmFunnelStage.query.get(id)
-            if reg is not None:
+            if reg is None:
                 return {
-                    "id": reg.id,
-                    "id_funnel": reg.id_funnel,
-                    "name": reg.name,
-                    "icon": reg.icon,
-                    "icon_color": reg.icon_color,
-                    "color": reg.color,
-                    "order": reg.order,
-                    "date_created": reg.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                    "date_updated": None if reg.date_updated is not None else reg.date_updated.strftime("%Y-%m-%d %H:%M:%S"),
-                    "trash": reg.trash
-                }
+                    "error_code": HTTPStatus.BAD_REQUEST.value,
+                    "error_details": "Registro não encontrado!",
+                    "error_sql": ""
+                }, HTTPStatus.BAD_REQUEST
+            
+            return {
+                "id": reg.id,
+                "id_funnel": reg.id_funnel,
+                "name": reg.name,
+                "icon": reg.icon,
+                "icon_color": reg.icon_color,
+                "color": reg.color,
+                "order": reg.order,
+                "date_created": reg.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+                "date_updated": None if reg.date_updated is not None else reg.date_updated.strftime("%Y-%m-%d %H:%M:%S"),
+                "trash": reg.trash
+            }
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -240,8 +245,8 @@ class FunnelStageApi(Resource):
                 "error_sql": e._sql_message()
             }
 
-    @ns_fun_stg.response(HTTPStatus.OK.value,"Cria ou atualiza um estágio em um funil")
-    @ns_fun_stg.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_fun_stg.response(HTTPStatus.OK,"Cria ou atualiza um estágio em um funil")
+    @ns_fun_stg.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @ns_fun_stg.param("id_funnel","Id de registro do funil",required=True,type=int)
     @ns_fun_stg.param("name","Nome do estágio do funil",required=True)
     @ns_fun_stg.param("order","Ordem do estágio dentro do funil",type=int,required=True)
@@ -306,8 +311,8 @@ class FunnelStageCustomer(Resource):
                 "error_sql": e._sql_message()
             }
         
-    @ns_fun_stg.response(HTTPStatus.OK.value,"Move um ou mais clientes para um estagio de um funil")
-    @ns_fun_stg.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_fun_stg.response(HTTPStatus.OK,"Move um ou mais clientes para um estagio de um funil")
+    @ns_fun_stg.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def post(self):
         try:

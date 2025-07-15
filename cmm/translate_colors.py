@@ -1,11 +1,11 @@
-from http import HTTPStatus
-from flask_restx import Resource,Namespace,fields
-from flask import request
-from models.tenant import B2bProductStock, CmmTranslateColors, _get_params, db
-# from models import _show_query
-from sqlalchemy import Select, exc, desc, asc
 from auth import auth
 from os import environ
+from flask import request
+from http import HTTPStatus
+from models.helpers import _get_params, db
+from sqlalchemy import Select, exc, desc, asc
+from flask_restx import Resource,Namespace,fields
+from models.tenant import B2bProductStock, CmmTranslateColors
 
 ns_color = Namespace("translate-colors",description="Operações para manipular dados de cores")
 
@@ -39,8 +39,8 @@ model_return = ns_color.model(
 
 @ns_color.route("/")
 class CategoryList(Resource):
-    @ns_color.response(HTTPStatus.OK.value,"Obtem a listagem de traduções de cores",model_return)
-    @ns_color.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
+    @ns_color.response(HTTPStatus.OK,"Obtem a listagem de traduções de cores",model_return)
+    @ns_color.response(HTTPStatus.BAD_REQUEST,"Falha ao listar registros!")
     @ns_color.param("page","Número da página de registros","query",type=int,required=True,default=1)
     @ns_color.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_color.param("query","Texto para busca","query")
@@ -116,8 +116,8 @@ class CategoryList(Resource):
                 "error_sql": e._sql_message()
             }
 
-    @ns_color.response(HTTPStatus.OK.value,"Cria uma nova tradução de cor")
-    @ns_color.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar novo modelo de produto!")
+    @ns_color.response(HTTPStatus.OK,"Cria uma nova tradução de cor")
+    @ns_color.response(HTTPStatus.BAD_REQUEST,"Falha ao criar novo modelo de produto!")
     @ns_color.doc(body=color_model)
     @auth.login_required
     def post(self):
@@ -137,8 +137,8 @@ class CategoryList(Resource):
                 "error_sql": e._sql_message()
             }
         
-    @ns_color.response(HTTPStatus.OK.value,"Exclui os dados de uma nova tradução de tamanho")
-    @ns_color.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_color.response(HTTPStatus.OK,"Exclui os dados de uma nova tradução de tamanho")
+    @ns_color.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def delete(self):
         try:
@@ -158,23 +158,28 @@ class CategoryList(Resource):
 
 @ns_color.route("/<int:id>")
 class CategoryApi(Resource):
-    @ns_color.response(HTTPStatus.OK.value,"Obtem um registro de uma nova tradução de cor",color_model)
-    @ns_color.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_color.response(HTTPStatus.OK,"Obtem um registro de uma nova tradução de cor",color_model)
+    @ns_color.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def get(self,id:int):
         try:
             reg:CmmTranslateColors|None = CmmTranslateColors.query.get(id)
-            if reg is not None:
+            if reg is None:
                 return {
-                        "id" : reg.id,
-                        "hexcode" : reg.hexcode,
-                        "name" : reg.name,
-                        "color" : reg.color,
-                        "trash" : reg.trash,
-                        "date_created": reg.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                        "date_updated" : reg.date_updated.strftime("%Y-%m-%d %H:%M:%S") if reg.date_updated is not None else None
-                }
-            return None
+                    "error_code": HTTPStatus.BAD_REQUEST.value,
+                    "error_details": "Registro não encontrado!",
+                    "error_sql": ""
+                }, HTTPStatus.BAD_REQUEST
+            
+            return {
+                    "id" : reg.id,
+                    "hexcode" : reg.hexcode,
+                    "name" : reg.name,
+                    "color" : reg.color,
+                    "trash" : reg.trash,
+                    "date_created": reg.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+                    "date_updated" : reg.date_updated.strftime("%Y-%m-%d %H:%M:%S") if reg.date_updated is not None else None
+            }
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -183,8 +188,8 @@ class CategoryApi(Resource):
             }
             
 
-    @ns_color.response(HTTPStatus.OK.value,"Atualiza os dados de uma nova tradução de cor")
-    @ns_color.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_color.response(HTTPStatus.OK,"Atualiza os dados de uma nova tradução de cor")
+    @ns_color.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def post(self,id:int):
         try:

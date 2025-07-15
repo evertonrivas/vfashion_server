@@ -6,7 +6,6 @@ from flask import request
 from http import HTTPStatus
 from datetime import datetime
 from models.helpers import db
-# from models import _show_query
 from werkzeug import exceptions
 from f2bconfig import CustomerAction
 from flask_restx import Resource,Namespace
@@ -17,8 +16,8 @@ ns_upload = Namespace("upload",description="Operações para manipular upload de
 
 @ns_upload.route("/<int:id>")
 class UploadApi(Resource):
-    @ns_upload.response(HTTPStatus.OK.value,"Realiza envio de arquivo(s) da LegalEntity para o servidor")
-    @ns_upload.response(HTTPStatus.BAD_REQUEST.value,"Falha ao enviar arquivo(s)!")
+    @ns_upload.response(HTTPStatus.OK,"Realiza envio de arquivo(s) da LegalEntity para o servidor")
+    @ns_upload.response(HTTPStatus.BAD_REQUEST,"Falha ao enviar arquivo(s)!")
     @ns_upload.param("files[]","Arquivo a ser enviado para o servidor","formData")
     @auth.login_required
     def post(self,id:int):
@@ -73,8 +72,8 @@ class UploadApi(Resource):
             print(e.get_headers())
             return False
 
-    @ns_upload.response(HTTPStatus.OK.value,"Realiza a exclusão de arquivo(s)")
-    @ns_upload.response(HTTPStatus.BAD_REQUEST.value,"Falha ao excluir arquivo(s)!")
+    @ns_upload.response(HTTPStatus.OK,"Realiza a exclusão de arquivo(s)")
+    @ns_upload.response(HTTPStatus.BAD_REQUEST,"Falha ao excluir arquivo(s)!")
     @auth.login_required
     def delete(self,id:int):
         try:
@@ -96,8 +95,8 @@ class UploadApi(Resource):
         
 
 class UploadTmp(Resource):
-    @ns_upload.response(HTTPStatus.OK.value,"Realiza envio de arquivo(s) para o servidor na pasta temporaria")
-    @ns_upload.response(HTTPStatus.BAD_REQUEST.value,"Falha ao enviar arquivo(s)!")
+    @ns_upload.response(HTTPStatus.OK,"Realiza envio de arquivo(s) para o servidor na pasta temporaria")
+    @ns_upload.response(HTTPStatus.BAD_REQUEST,"Falha ao enviar arquivo(s)!")
     @auth.login_required
     def post(self):
         try:
@@ -114,8 +113,8 @@ ns_upload.add_resource(UploadTmp,'/temp')
 
 @ns_upload.route("/<int:id>/<int:idprod>/<int:idcolor>/<int:idsize>")
 class UploadDevolution(Resource):
-    @ns_upload.response(HTTPStatus.OK.value,"Realiza envio de arquivo(s) para o servidor na pasta temporaria")
-    @ns_upload.response(HTTPStatus.BAD_REQUEST.value,"Falha ao enviar arquivo(s)!")
+    @ns_upload.response(HTTPStatus.OK,"Realiza envio de arquivo(s) para o servidor na pasta temporaria")
+    @ns_upload.response(HTTPStatus.BAD_REQUEST,"Falha ao enviar arquivo(s)!")
     @auth.login_required
     def post(self,id:int,idprod:int,idcolor:int,idsize:int):
         try:
@@ -138,8 +137,8 @@ class UploadDevolution(Resource):
 ns_upload.add_resource(UploadDevolution,'/devolution/<int:id>/<int:idprod>/<int:idcolor>/<int:idsize>')
 
 class UploadImport(Resource):
-    @ns_upload.response(HTTPStatus.OK.value,"Realiza envio de arquivo(s) para o servidor na pasta de importação")
-    @ns_upload.response(HTTPStatus.BAD_REQUEST.value,"Falha ao enviar arquivo(s)!")
+    @ns_upload.response(HTTPStatus.OK,"Realiza envio de arquivo(s) para o servidor na pasta de importação")
+    @ns_upload.response(HTTPStatus.BAD_REQUEST,"Falha ao enviar arquivo(s)!")
     @auth.login_required
     def post(self):
         try:
@@ -162,8 +161,8 @@ ns_upload.add_resource(UploadImport,'/import/')
 
 
 class UploadProduct(Resource):
-    @ns_upload.response(HTTPStatus.OK.value,"Realiza envio de arquivo(s) de produto(s) para o servidor")
-    @ns_upload.response(HTTPStatus.BAD_REQUEST.value,"Falha ao enviar arquivo(s)!")
+    @ns_upload.response(HTTPStatus.OK,"Realiza envio de arquivo(s) de produto(s) para o servidor")
+    @ns_upload.response(HTTPStatus.BAD_REQUEST,"Falha ao enviar arquivo(s)!")
     @auth.login_required
     def post(self,id:int):
         try:

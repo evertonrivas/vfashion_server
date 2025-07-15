@@ -2,11 +2,10 @@ from auth import auth
 from os import environ
 from flask import request
 from http import HTTPStatus
-from models.helpers import db
-# from models import _show_query
+from models.helpers import _get_params, db
 from flask_restx import Resource, fields, Namespace
 from sqlalchemy import Update, desc, exc, and_, asc, Select
-from models.tenant import _get_params,CrmFunnel, CrmFunnelStage
+from models.tenant import CrmFunnel, CrmFunnelStage
 
 ns_funil = Namespace("funnels",description="Operações para manipular funis de clientes")
 
@@ -51,8 +50,8 @@ fun_return = ns_funil.model(
 
 @ns_funil.route("/")
 class FunnelList(Resource):
-    @ns_funil.response(HTTPStatus.OK.value,"Obtem a listagem de funis",fun_return)
-    @ns_funil.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
+    @ns_funil.response(HTTPStatus.OK,"Obtem a listagem de funis",fun_return)
+    @ns_funil.response(HTTPStatus.BAD_REQUEST,"Falha ao listar registros!")
     @ns_funil.param("page","Número da página de registros","query",type=int,required=True)
     @ns_funil.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_funil.param("query","Texto para busca","query")
@@ -143,8 +142,8 @@ class FunnelList(Resource):
             "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated is not None else None
         } for m in rquery]
 
-    @ns_funil.response(HTTPStatus.OK.value,"cria um novo funil")
-    @ns_funil.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar novo funil!")
+    @ns_funil.response(HTTPStatus.OK,"cria um novo funil")
+    @ns_funil.response(HTTPStatus.BAD_REQUEST,"Falha ao criar novo funil!")
     @ns_funil.doc(body=fun_model)
     @auth.login_required
     def post(self):
@@ -179,8 +178,8 @@ class FunnelList(Resource):
                 "error_sql": e._sql_message()
             }
         
-    @ns_funil.response(HTTPStatus.OK.value,"Exclui os dados de um funil")
-    @ns_funil.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
+    @ns_funil.response(HTTPStatus.OK,"Exclui os dados de um funil")
+    @ns_funil.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado")
     @auth.login_required
     def delete(self)->bool:
         try:
@@ -196,8 +195,8 @@ class FunnelList(Resource):
 @ns_funil.route("/<int:id>")
 @ns_funil.param("id","Id do registro")
 class FunnelApi(Resource):
-    @ns_funil.response(HTTPStatus.OK.value,"Obtem um registro de um funil",fun_model)
-    @ns_funil.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
+    @ns_funil.response(HTTPStatus.OK,"Obtem um registro de um funil",fun_model)
+    @ns_funil.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado")
     @auth.login_required
     def get(self,id:int):
         try:
@@ -208,13 +207,20 @@ class FunnelApi(Resource):
                             CrmFunnelStage.date_created,
                             CrmFunnelStage.date_updated)\
                             .where(CrmFunnelStage.id_funnel==id)
+            if rquery is None:
+                return {
+                    "error_code": HTTPStatus.BAD_REQUEST.value,
+                    "error_details": "Registro não encontrado!",
+                    "error_sql": ""
+                }, HTTPStatus.BAD_REQUEST
+            
             return {
-                "id": 0 if rquery is None else rquery.id,
-                "name": None if rquery is None else rquery.name,
-                "type": None if rquery is None else rquery.type,
-                "is_default": False if rquery is None else rquery.is_default,
-                "date_created": None if rquery is None else rquery.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                "date_updated": None if rquery is None else (None if rquery.updated is None else rquery.date_updated.strftime("%Y-%m-%d %H:%M:%S")),
+                "id": rquery.id,
+                "name": rquery.name,
+                "type": rquery.type,
+                "is_default": rquery.is_default,
+                "date_created": rquery.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+                "date_updated": None if rquery.date_updated is None else rquery.date_updated.strftime("%Y-%m-%d %H:%M:%S"),
                 "stages": [{
                     "id": m.id,
                     "name": m.name,
@@ -230,8 +236,8 @@ class FunnelApi(Resource):
                 "error_sql": e._sql_message()
             }
 
-    @ns_funil.response(HTTPStatus.OK.value,"Atualiza dados de um funil")
-    @ns_funil.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
+    @ns_funil.response(HTTPStatus.OK,"Atualiza dados de um funil")
+    @ns_funil.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado")
     @ns_funil.param("name","Nome do funil",required=True)
     @auth.login_required
     def post(self,id:int):

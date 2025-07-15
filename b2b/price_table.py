@@ -3,11 +3,10 @@ from os import environ
 from flask import request
 from http import HTTPStatus
 from decimal import Decimal
-from models.helpers import db
-# from models import _show_query
+from models.helpers import _get_params, db
 from sqlalchemy import Select, exc, desc, asc
 from flask_restx import Resource, Namespace, fields
-from models.tenant import B2bTablePrice, B2bTablePriceProduct, _get_params
+from models.tenant import B2bTablePrice, B2bTablePriceProduct
 
 ns_price = Namespace("price-table",description="Operações para manipular dados de tabelas de preços")
 
@@ -49,8 +48,8 @@ prc_return = ns_price.model(
 
 @ns_price.route("/")
 class PriceTableList(Resource):
-    @ns_price.response(HTTPStatus.OK.value,"Obtem a listagem de pedidos",prc_return)
-    @ns_price.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
+    @ns_price.response(HTTPStatus.OK,"Obtem a listagem de pedidos",prc_return)
+    @ns_price.response(HTTPStatus.BAD_REQUEST,"Falha ao listar registros!")
     @ns_price.param("page","Número da página de registros","query",type=int,required=True)
     @ns_price.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_price.param("query","Texto para busca","query")
@@ -125,8 +124,8 @@ class PriceTableList(Resource):
                 "error_sql": e._sql_message()
             }
 
-    @ns_price.response(HTTPStatus.OK.value,"Cria um novo pedido")
-    @ns_price.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar pedido!")
+    @ns_price.response(HTTPStatus.OK,"Cria um novo pedido")
+    @ns_price.response(HTTPStatus.BAD_REQUEST,"Falha ao criar pedido!")
     @ns_price.doc(body=prc_model)
     @auth.login_required
     def post(self):
@@ -147,8 +146,8 @@ class PriceTableList(Resource):
                 "error_sql": e._sql_message()
             }
         
-    @ns_price.response(HTTPStatus.OK.value,"Exclui os dados de um carrinho")
-    @ns_price.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_price.response(HTTPStatus.OK,"Exclui os dados de um carrinho")
+    @ns_price.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def delete(self):
         try:
@@ -169,24 +168,26 @@ class PriceTableList(Resource):
 @ns_price.param("id","Id do registro")
 class PriceTableApi(Resource):
     
-    @ns_price.response(HTTPStatus.OK.value,"Obtem os dados de um carrinho")
-    @ns_price.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_price.response(HTTPStatus.OK,"Obtem os dados de um carrinho")
+    @ns_price.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def get(self,id:int):
         try:
             rquery = B2bTablePrice.query.get(id)
-            # squery = Select(B2bTablePriceProduct.id_product,
-            #                 B2bTablePriceProduct.price,
-            #                 B2bTablePriceProduct.price_retail)\
-            #                 .where(B2bTablePriceProduct.id_table_price==id)
+            if rquery is None:
+                return {
+                    "error_code": HTTPStatus.BAD_REQUEST.value,
+                    "error_details": "Registro não encontrado!",
+                    "error_sql": ""
+                }, HTTPStatus.BAD_REQUEST
             return {
-                "id": 0 if rquery is None else rquery.id,
-                "name": "" if rquery is None else rquery.name,
-                "start_date": "" if rquery is None else rquery.start_date.strftime("%Y-%m-%d %H:%M:%S"),
-                "end_date": "" if rquery is None else rquery.end_date.strftime("%Y-%m-%d %H:%M:%S"),
-                "active": False if rquery is None else rquery.active,
-                "date_created": "" if rquery is None else rquery.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                "date_updated": None if rquery is None else (None if rquery.date_updated is None else rquery.date_updated.strftime("%Y-%m-%d %H:%M:%S"))
+                "id": rquery.id,
+                "name": rquery.name,
+                "start_date": rquery.start_date.strftime("%Y-%m-%d %H:%M:%S"),
+                "end_date": rquery.end_date.strftime("%Y-%m-%d %H:%M:%S"),
+                "active": rquery.active,
+                "date_created": rquery.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+                "date_updated": None if rquery.date_updated is None else rquery.date_updated.strftime("%Y-%m-%d %H:%M:%S")
             }
         except exc.SQLAlchemyError as e:
             return {
@@ -195,8 +196,8 @@ class PriceTableApi(Resource):
                 "error_sql": e._sql_message()
             }
     
-    @ns_price.response(HTTPStatus.OK.value,"Atualiza os dados de um pedido")
-    @ns_price.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_price.response(HTTPStatus.OK,"Atualiza os dados de um pedido")
+    @ns_price.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @ns_price.doc(body=prc_model)
     @auth.login_required
     def post(self,id:int):
@@ -219,8 +220,8 @@ class PriceTableApi(Resource):
 
 class B2bTablePriceProductApi(Resource):
 
-    @ns_price.response(HTTPStatus.OK.value,"Adiciona uma tabela de preço em uma coleção")
-    @ns_price.response(HTTPStatus.BAD_REQUEST.value,"Falha ao adicionar preço!")
+    @ns_price.response(HTTPStatus.OK,"Adiciona uma tabela de preço em uma coleção")
+    @ns_price.response(HTTPStatus.BAD_REQUEST,"Falha ao adicionar preço!")
     @ns_price.param("id_table_price","Código da tabela de preço","formData",required=True)
     @ns_price.param("id_product","Código do produto","formData",required=True)
     @auth.login_required
@@ -243,8 +244,8 @@ class B2bTablePriceProductApi(Resource):
             }
         pass
 
-    @ns_price.response(HTTPStatus.OK.value,"Remove uma tabela de preço em uma coleção")
-    @ns_price.response(HTTPStatus.BAD_REQUEST.value,"Falha ao adicionar preço!")
+    @ns_price.response(HTTPStatus.OK,"Remove uma tabela de preço em uma coleção")
+    @ns_price.response(HTTPStatus.BAD_REQUEST,"Falha ao adicionar preço!")
     @ns_price.param("id_table_price","Código da tabela de preço","formData",required=True)
     @ns_price.param("id_product","Código do produto","formData",required=True)
     @auth.login_required

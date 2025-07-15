@@ -6,19 +6,18 @@ from auth import auth
 from os import environ
 from flask import request
 from http import HTTPStatus
-from models.helpers import db
-# from models import _show_query
+from models.tenant import CmmReport
+from models.helpers import _get_params, db
 from flask_restx import Resource,Namespace
 from common import _format_action, _gen_report
-from models.tenant import CmmReport, _get_params
 from sqlalchemy import Select, text, desc, exc, asc, or_
 
 ns_report = Namespace("reports",description="Operações para manipular dados de relatórios")
 
 @ns_report.route("/")
 class ReportsApi(Resource):
-    @ns_report.response(HTTPStatus.OK.value,"Lista os relatórios existentes no sistema")
-    @ns_report.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar relatórios")
+    @ns_report.response(HTTPStatus.OK,"Lista os relatórios existentes no sistema")
+    @ns_report.response(HTTPStatus.BAD_REQUEST,"Falha ao listar relatórios")
     @ns_report.param("page","Número da página de registros","query",type=int,required=True,default=1)
     @ns_report.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_report.param("query","Texto para busca","query")
@@ -88,8 +87,8 @@ class ReportsApi(Resource):
 
 
 
-    @ns_report.response(HTTPStatus.OK.value,"Monta um relatório existente no sistema")
-    @ns_report.response(HTTPStatus.BAD_REQUEST.value,"Falha ao montar o relatório!")
+    @ns_report.response(HTTPStatus.OK,"Monta um relatório existente no sistema")
+    @ns_report.response(HTTPStatus.BAD_REQUEST,"Falha ao montar o relatório!")
     @auth.login_required
     def post(self):
         try:
@@ -284,13 +283,21 @@ class ReportsApi(Resource):
 
 @ns_report.route("/<int:id>")
 class ReporApi(Resource):
+    @ns_report.response(HTTPStatus.OK.value,"Obtem um relatório existente no sistema")
+    @ns_report.response(HTTPStatus.BAD_REQUEST.value,"Falha ao buscar o relatório!")
     def get(self,id:int):
         try:
             report = CmmReport.query.get(id)
+            if report is None:
+                return {
+                    "error_code": HTTPStatus.BAD_REQUEST.value,
+                    "error_details": "Registro não encontrado!",
+                    "error_sql": ""
+                }, HTTPStatus.BAD_REQUEST
             return {
-                "id": 0 if report is None else report.id,
-                "name": None if report is None else report.name,
-                "filters": (report.filters if report is not None else "").split(",")
+                "id": report.id,
+                "name": report.name,
+                "filters": (report.filters).split(",")
             }
         except exc.SQLAlchemyError as e:
             return {

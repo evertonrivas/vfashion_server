@@ -1,7 +1,7 @@
 import jwt
 import uuid
 import bcrypt
-from helpers import db
+from models.helpers import db as dbForModel
 from os import path,environ
 from dotenv import load_dotenv
 from sqlalchemy import ForeignKey, func, Column
@@ -13,10 +13,11 @@ from sqlalchemy import String, Integer, CHAR, DateTime
 BASEDIR = path.abspath(path.dirname(__file__))
 load_dotenv(path.join(BASEDIR, '.env'))
 
-class SysUsers(db.Model):
+class SysUsers(dbForModel.Model):
     __bind_key__    = "public"
     __table_args__  = {"schema": "public"}
     id              = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
+    name            = Column(String(255),nullable=False,comment="Nome do usuário")
     username        = Column(String(100), nullable=False,unique=True)
     password        = Column(String(255), nullable=False)
     type            = Column(CHAR(1),nullable=False,default='L',server_default='L',comment='A = Administrador, L = Lojista, I = Lojista (IA), R = Representante, V = Vendedor, C = Company User')
@@ -66,17 +67,20 @@ class SysUsers(db.Model):
         return user
 IDX_USERNAME = Index("IDX_USERNAME",SysUsers.username,unique=True)
 
-class SysCustomer(db.Model):
+class SysCustomer(dbForModel.Model):
     __bind_key__      = "public"
     __table_args__    = {"schema": "public"}
     id                = Column(UUID,primary_key=True,default=uuid.uuid4)
     name              = Column(String(255),nullable=False)
     taxvat            = Column(String(30),nullable=False,comment="CNPJ no Brasil")
     postal_code       = Column(String(30),nullable=False)
+    churn             = Column(Boolean,nullable=False,server_default='0',default=0,comment="Indica se o cliente cancelou a assinatura") 
+    chur_date         = Column(Date,nullable=True,comment="Data do cancelamento da assinatura") 
+    churn_reason     = Column(String(255),nullable=True,comment="Motivo do cancelamento da assinatura")
     date_created      = Column(DateTime,nullable=False,server_default=func.now())
     date_updated      = Column(DateTime,onupdate=func.now())
 
-class SysPlan(db.Model):
+class SysPlan(dbForModel.Model):
     __bind_key__      = "public"
     __table_args__    = {"schema": "public"}
     id                = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
@@ -85,20 +89,21 @@ class SysPlan(db.Model):
     date_created      = Column(DateTime,nullable=False,server_default=func.now())
     date_updated      = Column(DateTime,onupdate=func.now())
 
-class SysCustomerPlan(db.Model):
+class SysCustomerPlan(dbForModel.Model):
     __bind_key__      = "public"
     __table_args__    = {"schema": "public"}
-    id_customer       = Column(ForeignKey(SysCustomer.id))
-    id_plan           = Column(ForeignKey(SysPlan.id))
+    id_customer       = Column(ForeignKey(SysCustomer.id),primary_key=True,nullable=False)
+    id_plan           = Column(ForeignKey(SysPlan.id),primary_key=True,nullable=False)
+    activate          = Column(Boolean,nullable=False,server_default='1',default=1,comment="Indica se o plano está ativo")
     activation_date   = Column(Date,nullable=False)
     inactivation_date = Column(Date,nullable=True)
-    payment_model     = Column(CHAR(1),nullable=False,default='M',commment='M = Mensal, Y = Anual')
+    payment_model     = Column(CHAR(1),nullable=False,default='M',comment='M = Mensal, Y = Anual')
     payment_method    = Column(CHAR(1),nullable=False,default='C',comment='C = Credit Card, P = Pix, B = Boleto')
     date_created      = Column(DateTime,nullable=False,server_default=func.now())
     date_updated      = Column(DateTime,onupdate=func.now())
 
-class SysCustomerUser(db.Model):
+class SysCustomerUser(dbForModel.Model):
     __bind_key__   = "public"
     __table_args__ = {"schema": "public"}
-    id_customer    = Column(ForeignKey(SysCustomer.id))
-    id_user        = Column(ForeignKey(SysUsers.id))
+    id_customer    = Column(ForeignKey(SysCustomer.id),primary_key=True,nullable=False)
+    id_user        = Column(ForeignKey(SysUsers.id),primary_key=True,nullable=False)

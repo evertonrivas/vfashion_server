@@ -2,11 +2,10 @@ from auth import auth
 from os import environ
 from flask import request
 from http import HTTPStatus
-from models.helpers import db
-# from models import _show_query
+from models.tenant import CmmMeasureUnit
+from models.helpers import _get_params, db
 from sqlalchemy import Select, desc, exc, asc
 from flask_restx import Resource,Namespace,fields
-from models.tenant import CmmMeasureUnit, _get_params
 
 ns_measure_unit = Namespace("measure-unit",description="Operações para manipular dados de países")
 
@@ -36,8 +35,8 @@ mu_return = ns_measure_unit.model(
 
 @ns_measure_unit.route("/")
 class CategoryList(Resource):
-    @ns_measure_unit.response(HTTPStatus.OK.value,"Obtem a listagem de unidades de medida",mu_return)
-    @ns_measure_unit.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
+    @ns_measure_unit.response(HTTPStatus.OK,"Obtem a listagem de unidades de medida",mu_return)
+    @ns_measure_unit.response(HTTPStatus.BAD_REQUEST,"Falha ao listar registros!")
     @ns_measure_unit.param("page","Número da página de registros","query",type=int,required=True,default=1)
     @ns_measure_unit.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_measure_unit.param("query","Texto para busca","query")
@@ -98,8 +97,8 @@ class CategoryList(Resource):
                 "error_sql": e._sql_message()
             }
 
-    @ns_measure_unit.response(HTTPStatus.OK.value,"Cria uma nova unidade de media")
-    @ns_measure_unit.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar nova unidade de medida!")
+    @ns_measure_unit.response(HTTPStatus.OK,"Cria uma nova unidade de media")
+    @ns_measure_unit.response(HTTPStatus.BAD_REQUEST,"Falha ao criar nova unidade de medida!")
     @ns_measure_unit.doc(body=mu_model)
     @auth.login_required
     def post(self):
@@ -118,8 +117,8 @@ class CategoryList(Resource):
                 "error_sql": e._sql_message()
             }
     
-    @ns_measure_unit.response(HTTPStatus.OK.value,"Exclui os dados de unidade(s) de medida")
-    @ns_measure_unit.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_measure_unit.response(HTTPStatus.OK,"Exclui os dados de unidade(s) de medida")
+    @ns_measure_unit.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def delete(self):
         try:
@@ -138,12 +137,18 @@ class CategoryList(Resource):
 
 @ns_measure_unit.route("/<int:id>")
 class CategoryApi(Resource):
-    @ns_measure_unit.response(HTTPStatus.OK.value,"Obtem um registro de uma unidade de medida",mu_model)
-    @ns_measure_unit.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_measure_unit.response(HTTPStatus.OK,"Obtem um registro de uma unidade de medida",mu_model)
+    @ns_measure_unit.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def get(self,id:int):
         try:
-            reg: CmmMeasureUnit = CmmMeasureUnit.query.get(id) # type: ignore
+            reg: CmmMeasureUnit|None = CmmMeasureUnit.query.get(id)
+            if reg is None:
+                return {
+                    "error_code": HTTPStatus.BAD_REQUEST.value,
+                    "error_details": "Registro não encontrado!",
+                    "error_sql": ""
+                }, HTTPStatus.BAD_REQUEST
             return {
                 "id": reg.id,
                 "code": reg.code,
@@ -159,8 +164,8 @@ class CategoryApi(Resource):
             }
             
 
-    @ns_measure_unit.response(HTTPStatus.OK.value,"Atualiza os dados de uma unidade de medida")
-    @ns_measure_unit.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_measure_unit.response(HTTPStatus.OK,"Atualiza os dados de uma unidade de medida")
+    @ns_measure_unit.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def post(self,id:int):
         try:

@@ -2,12 +2,11 @@ from auth import auth
 from os import environ
 from flask import request
 from http import HTTPStatus
-from models.helpers import db
-# from models import _show_query
 from f2bconfig import OrderStatus
+from models.helpers import _get_params, db
 from flask_restx import Resource,Namespace,fields
 from sqlalchemy import Delete, Select, exc,and_,desc,asc, func
-from models.tenant import B2bCustomerGroup,B2bCustomerGroupCustomers, B2bOrders, CmmLegalEntities, _get_params
+from models.tenant import B2bCustomerGroup,B2bCustomerGroupCustomers, B2bOrders, CmmLegalEntities
 
 ns_customer_g = Namespace("customer-group",description="Operações para manipular dados de grupos de clientes")
 
@@ -46,8 +45,8 @@ coll_return = ns_customer_g.model(
 
 @ns_customer_g.route("/")
 class CollectionList(Resource):
-    @ns_customer_g.response(HTTPStatus.OK.value,"Obtem um registro de uma coleção",coll_return)
-    @ns_customer_g.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_customer_g.response(HTTPStatus.OK,"Obtem um registro de uma coleção",coll_return)
+    @ns_customer_g.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @ns_customer_g.param("page","Número da página de registros","query",type=int,required=True)
     @ns_customer_g.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_customer_g.param("query","Texto para busca","query")
@@ -125,8 +124,8 @@ class CollectionList(Resource):
                 "error_sql": e._sql_message()
             }
 
-    @ns_customer_g.response(HTTPStatus.OK.value,"Cria uma nova coleção")
-    @ns_customer_g.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar registro!")
+    @ns_customer_g.response(HTTPStatus.OK,"Cria uma nova coleção")
+    @ns_customer_g.response(HTTPStatus.BAD_REQUEST,"Falha ao criar registro!")
     @ns_customer_g.doc(body=grp_model)
     @auth.login_required
     def post(self):
@@ -147,8 +146,8 @@ class CollectionList(Resource):
                 "error_sql": e._sql_message()
             }
         
-    @ns_customer_g.response(HTTPStatus.OK.value,"Exclui os dados de uma coleção")
-    @ns_customer_g.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_customer_g.response(HTTPStatus.OK,"Exclui os dados de uma coleção")
+    @ns_customer_g.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def delete(self):
         try:
@@ -168,18 +167,24 @@ class CollectionList(Resource):
 @ns_customer_g.route("/<int:id>")
 @ns_customer_g.param("id","Id do registro")
 class CollectionApi(Resource):
-    @ns_customer_g.response(HTTPStatus.OK.value,"Retorna os dados dados de uma coleção")
-    @ns_customer_g.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_customer_g.response(HTTPStatus.OK,"Retorna os dados dados de uma coleção")
+    @ns_customer_g.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def get(self,id:int):
         try:
             cquery = B2bCustomerGroup.query.get(id)
+            if cquery is None:
+                return {
+                    "error_code": HTTPStatus.BAD_REQUEST.value,
+                    "error_details": "Registro não encontrado!",
+                    "error_sql": ""
+                }, HTTPStatus.BAD_REQUEST
 
             return {
-                "id": 0 if cquery is None else cquery.id,
-                "name": "" if cquery is None else cquery.name,
-                "id_representative": 0 if cquery is None else cquery.id_representative,
-                "need_approvement": False if cquery is None else cquery.need_approvement
+                "id": cquery.id,
+                "name": cquery.name,
+                "id_representative": cquery.id_representative,
+                "need_approvement": cquery.need_approvement
             }
         except exc.SQLAlchemyError as e:
             return {
@@ -188,8 +193,8 @@ class CollectionApi(Resource):
                 "error_sql": e._sql_message()
             }
     
-    @ns_customer_g.response(HTTPStatus.OK.value,"Atualiza os dados de um grupo de clientes")
-    @ns_customer_g.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_customer_g.response(HTTPStatus.OK,"Atualiza os dados de um grupo de clientes")
+    @ns_customer_g.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @ns_customer_g.doc(body=grp_model)
     @auth.login_required
     def post(self,id:int):
@@ -210,8 +215,8 @@ class CollectionApi(Resource):
                 "error_sql": e._sql_message()
             }
     
-    @ns_customer_g.response(HTTPStatus.OK.value,"Adiciona os clientes em um grupo")
-    @ns_customer_g.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_customer_g.response(HTTPStatus.OK,"Adiciona os clientes em um grupo")
+    @ns_customer_g.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @ns_customer_g.doc(body=grp_model)
     @auth.login_required
     def put(self,id:int):
@@ -239,8 +244,8 @@ class CollectionApi(Resource):
             }
 
 class CustomersApi(Resource):
-    @ns_customer_g.response(HTTPStatus.OK.value,"Obtem os clientes que compoem uma colecao")
-    @ns_customer_g.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_customer_g.response(HTTPStatus.OK,"Obtem os clientes que compoem uma colecao")
+    @ns_customer_g.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @ns_customer_g.param("page","Número da página de registros","query",type=int,required=True)
     @ns_customer_g.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_customer_g.param("query","Texto para busca","query")
@@ -293,8 +298,8 @@ ns_customer_g.add_resource(CustomersApi,'/customers/')
 
 
 class CustomerRepresentative(Resource):
-    @ns_customer_g.response(HTTPStatus.OK.value,"Obtem os clientes pertencentes a um representante")
-    @ns_customer_g.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_customer_g.response(HTTPStatus.OK,"Obtem os clientes pertencentes a um representante")
+    @ns_customer_g.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def get(self,id:int):
         try:
@@ -313,8 +318,8 @@ class CustomerRepresentative(Resource):
                 "error_sql": e._sql_message()
             }
     
-    @ns_customer_g.response(HTTPStatus.OK.value,"Obtem o valor total em pedidos que os clientes do representante fizeram")
-    @ns_customer_g.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_customer_g.response(HTTPStatus.OK,"Obtem o valor total em pedidos que os clientes do representante fizeram")
+    @ns_customer_g.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     def post(self,id:int):
         try:
             stmt = Select(func.sum(B2bOrders.total_value).label("total"))\
@@ -338,8 +343,8 @@ class CustomerRepresentative(Resource):
                 "error_sql": e._sql_message()
             }
     
-    @ns_customer_g.response(HTTPStatus.OK.value,"Obtem o total de pedidos finalizados que os clientes do representante fizeram")
-    @ns_customer_g.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_customer_g.response(HTTPStatus.OK,"Obtem o total de pedidos finalizados que os clientes do representante fizeram")
+    @ns_customer_g.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     def put(self,id:int):
         try:
             stmt = Select(func.count(B2bOrders.id).label("total"))\
@@ -363,8 +368,8 @@ class CustomerRepresentative(Resource):
                 "error_sql": e._sql_message()
             }
     
-    @ns_customer_g.response(HTTPStatus.OK.value,"Obtem o valor da comissão que o representante tem a receber")
-    @ns_customer_g.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_customer_g.response(HTTPStatus.OK,"Obtem o valor da comissão que o representante tem a receber")
+    @ns_customer_g.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     def patch(self,id:int):
         try:
             return id
@@ -380,8 +385,8 @@ ns_customer_g.add_resource(CustomerRepresentative,'/representative-indicator/<in
 
 # class ColletionPriceApi(Resource):
 
-#     @ns_customer_g.response(HTTPStatus.OK.value,"Adiciona uma tabela de preço em uma coleção")
-#     @ns_customer_g.response(HTTPStatus.BAD_REQUEST.value,"Falha ao adicionar preço!")
+#     @ns_customer_g.response(HTTPStatus.OK,"Adiciona uma tabela de preço em uma coleção")
+#     @ns_customer_g.response(HTTPStatus.BAD_REQUEST,"Falha ao adicionar preço!")
 #     @ns_customer_g.param("id_table_price","Código da tabela de preço","formData",required=True)
 #     @ns_customer_g.param("id_collection","Código da coleção","formData",required=True)
 #     @auth.login_required
@@ -401,8 +406,8 @@ ns_customer_g.add_resource(CustomerRepresentative,'/representative-indicator/<in
 #             }
 #         pass
 
-#     @ns_customer_g.response(HTTPStatus.OK.value,"Remove uma tabela de preço em uma coleção")
-#     @ns_customer_g.response(HTTPStatus.BAD_REQUEST.value,"Falha ao adicionar preço!")
+#     @ns_customer_g.response(HTTPStatus.OK,"Remove uma tabela de preço em uma coleção")
+#     @ns_customer_g.response(HTTPStatus.BAD_REQUEST,"Falha ao adicionar preço!")
 #     @ns_customer_g.param("id_table_price","Código da tabela de preço","formData",required=True)
 #     @ns_customer_g.param("id_collection","Código da coleção","formData",required=True)
 #     @auth.login_required

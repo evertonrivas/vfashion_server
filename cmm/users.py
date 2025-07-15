@@ -3,14 +3,12 @@ from os import environ
 from flask import request
 from http import HTTPStatus
 from datetime import datetime
-from models.helpers import db
 from common import _send_email
-# from models import _show_query
+from models.tenant import _save_log
+from models.helpers import _get_params, db
 from flask_restx import Resource,Namespace,fields
-from f2bconfig import ContactType,CustomerAction, MailTemplates
-from models.tenant import CmmLegalEntities, CmmLegalEntityContact
-from models.tenant import CmmUserEntity, _get_params, _save_log
-from models.public import SysUsers
+from f2bconfig import CustomerAction, MailTemplates
+from models.public import SysUsers, SysCustomer, SysCustomerUser
 from sqlalchemy import Delete, Select, desc, exc, and_, asc, Insert, func, or_
 
 ns_user = Namespace("users",description="Operações para manipular dados de usuários do sistema")
@@ -47,8 +45,8 @@ usr_return = ns_user.model(
 @ns_user.route("/")
 class UsersList(Resource):
 
-    @ns_user.response(HTTPStatus.OK.value,"Obtem a listagem de usuários",usr_return)
-    @ns_user.response(HTTPStatus.BAD_REQUEST.value,"Falha oa listar registros!")
+    @ns_user.response(HTTPStatus.OK,"Obtem a listagem de usuários",usr_return)
+    @ns_user.response(HTTPStatus.BAD_REQUEST,"Falha oa listar registros!")
     @ns_user.param("page","Número da página de registros","query",type=int,required=True)
     @ns_user.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_user.param("query","Texto para busca","query")
@@ -68,14 +66,16 @@ class UsersList(Resource):
                 list_all  = False if not hasattr(params,'list_all') else True
                 filter_type   = None if not hasattr(params,'type') else params.type
 
-            rquery = Select(SysUsers.id,
-                          SysUsers.username,
-                          SysUsers.type,
-                          SysUsers.date_created,
-                          SysUsers.date_updated,
-                          SysUsers.active
-                          ).where(SysUsers.active==trash)\
-                          .order_by(direction(getattr(SysUsers, order_by)))
+            rquery = Select(
+                SysUsers.id,
+                SysUsers.name,
+                SysUsers.username,
+                SysUsers.type,
+                SysUsers.date_created,
+                SysUsers.date_updated,
+                SysUsers.active)\
+                    .where(SysUsers.active==trash)\
+                    .order_by(direction(getattr(SysUsers, order_by)))
 
             if filter_type is not None:
                 rquery = rquery.where(SysUsers.type==filter_type)
@@ -96,6 +96,7 @@ class UsersList(Resource):
                     },
                     "data":[{
                         "id": m.id,
+                        "name": m.name,
                         "username": m.username,
                         "type": m.type,
                         "active": m.active,
@@ -106,6 +107,7 @@ class UsersList(Resource):
             else:
                 return [{
                     "id": m.id,
+                    "name": m.name,
                     "username": m.username,
                     "type": m.type,
                     "active": m.active,
@@ -119,8 +121,8 @@ class UsersList(Resource):
                 "error_sql": e._sql_message()
             }
 
-    @ns_user.response(HTTPStatus.OK.value,"Cria um ou mais novo(s) usuário(s) no sistema")
-    @ns_user.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar!")
+    @ns_user.response(HTTPStatus.OK,"Cria um ou mais novo(s) usuário(s) no sistema")
+    @ns_user.response(HTTPStatus.BAD_REQUEST,"Falha ao criar!")
     @auth.login_required
     def post(self)->bool|dict:
         try:
@@ -166,21 +168,16 @@ class UsersList(Resource):
 
                     if usr["id"]==0:
                         user = SysUsers()
+                        user.name     = usr["name"]
                         user.username = usr["username"]
                         user.password = user.hash_pwd(usr["password"])
                         user.type     = usr["type"]
                         db.session.add(user)
                         db.session.commit()
-
-                        if usr["id_entity"]!="undefined":
-                            usrEn = CmmUserEntity()
-                            usrEn.id_user   = user.id
-                            usrEn.id_entity = usr["id_entity"]
-                            db.session.add(usrEn)
-                            db.session.commit()
                     else:
                         user:SysUsers|None = SysUsers.query.get(usr["id"])
                         if user is not None:
+                            user.name     = usr["name"]
                             user.username = usr["username"]
                             user.password = user.hash_pwd(usr["password"])
                             user.type     = usr["type"]
@@ -193,8 +190,8 @@ class UsersList(Resource):
                 "error_sql": e._sql_message()
             }
         
-    @ns_user.response(HTTPStatus.OK.value,"Exclui os dados de um usuario")
-    @ns_user.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
+    @ns_user.response(HTTPStatus.OK,"Exclui os dados de um usuario")
+    @ns_user.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado")
     @auth.login_required
     def delete(self)->bool|dict:
         try:
@@ -216,32 +213,41 @@ class UsersList(Resource):
 @ns_user.route("/<int:id>")
 @ns_user.param("id","Id do registro")
 class UserApi(Resource):
-    @ns_user.response(HTTPStatus.OK.value,"Obtem um registro de usuario",usr_model)
-    @ns_user.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
+    @ns_user.response(HTTPStatus.OK,"Obtem um registro de usuario",usr_model)
+    @ns_user.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado")
     @auth.login_required
     def get(self,id:int):
         try:
-            rquery = Select(SysUsers.username,
-                                             SysUsers.type,
-                                             SysUsers.active,
-                                             CmmUserEntity.id_entity,
-                                             SysUsers.date_created,
-                                             SysUsers.date_updated)\
-                                             .outerjoin(CmmUserEntity,CmmUserEntity.id_user==SysUsers.id)\
-                                             .where(SysUsers.id==id)
+            rquery = Select(
+                SysUsers.name,
+                SysUsers.username,
+                SysUsers.type,
+                SysUsers.active,
+                SysCustomerUser.id_customer,
+                SysUsers.date_created,
+                SysUsers.date_updated)\
+                    .outerjoin(SysCustomerUser,SysCustomerUser.id_user==SysUsers.id)\
+                    .where(SysUsers.id==id)
             
             # _show_query(rquery)
             user = db.session.execute(rquery).first()
+            if user is None:
+                return {
+                    "error_code": HTTPStatus.BAD_REQUEST.value,
+                    "error_details": "Registro não encontrado!",
+                    "error_sql": ""
+                }, HTTPStatus.BAD_REQUEST
 
             return {
                 "id": id,
-                "username": None if user is None else user.username,
-                "type": None if user is None else user.type,
-                "active": False if user is None else user.active,
-                "id_entity": None if user is None else user.id_entity,
+                "name": user.name,
+                "username": user.username,
+                "type": user.type,
+                "active": user.active,
+                "id_entity": user.id_entity,
                 "password": None,
-                "date_created": None if user is None else user.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                "date_updated": None if user is None else (user.date_updated.strftime("%Y-%m-%d %H:%M:%S") if user.date_updated is not None else None)
+                "date_created": user.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+                "date_updated": user.date_updated.strftime("%Y-%m-%d %H:%M:%S") if user.date_updated is not None else None
             }
         except exc.SQLAlchemyError as e:
             return {
@@ -250,27 +256,28 @@ class UserApi(Resource):
                 "error_sql": e._sql_message()
             }
 
-    @ns_user.response(HTTPStatus.OK.value,"Salva dados de um usuario")
-    @ns_user.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
+    @ns_user.response(HTTPStatus.OK,"Salva dados de um usuario")
+    @ns_user.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado")
     @auth.login_required
     def post(self,id:int):
         try:
             req = request.get_json()
             usr:SysUsers|None = SysUsers.query.get(id)
             if usr is not None:
+                usr.name     = req["name"]
                 usr.username = req["username"]
                 usr.password = usr.hash_pwd(req["password"])
                 usr.type     = req["type"]
                 db.session.commit()
 
-                #caso trenha trocado de entidade para aquele usuario. Ex: era lojista e virou representante
-                db.session.execute(Delete(CmmUserEntity).where(CmmUserEntity.id_user==id))
+                #apaga para reconstruir o cadastro
+                db.session.execute(Delete(SysCustomerUser).where(SysCustomerUser.id_user==id))
                 db.session.commit()
 
-                if req["id_entity"]!="undefined":
-                        usrEn = CmmUserEntity()
+                if req["id_customer"]!="undefined":
+                        usrEn = SysCustomerUser()
                         setattr(usrEn,"id_user",id)
-                        usrEn.id_entity = req["id_entity"]
+                        usrEn.id_customer = req["id_customer"]
                         db.session.add(usrEn)
                         db.session.commit()
 
@@ -282,8 +289,8 @@ class UserApi(Resource):
                 "error_sql": e._sql_message()
             }
     
-    @ns_user.response(HTTPStatus.OK.value,"Exclui os dados de um usuario")
-    @ns_user.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
+    @ns_user.response(HTTPStatus.OK,"Exclui os dados de um usuario")
+    @ns_user.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado")
     @auth.login_required
     def delete(self,id:int):
         try:
@@ -300,25 +307,19 @@ class UserApi(Resource):
             }
 
 class UserAuth(Resource):
-    @ns_user.response(HTTPStatus.OK.value,"Realiza login e retorna o token")
-    @ns_user.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_user.response(HTTPStatus.OK,"Realiza login e retorna o token")
+    @ns_user.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @ns_user.param("username","Login do sistema","formData",required=True)
     @ns_user.param("password","Senha do sistema","formData",required=True)
     def post(self):
         # req = request.get_json()
         query = Select(SysUsers)\
-                     .outerjoin(CmmUserEntity,CmmUserEntity.id_user==SysUsers.id)\
-                     .outerjoin(CmmLegalEntities,CmmLegalEntities.id==CmmUserEntity.id_entity)\
-                     .outerjoin(CmmLegalEntityContact,CmmLegalEntityContact.id_legal_entity==CmmLegalEntities.id)\
+                     .outerjoin(SysCustomerUser,SysCustomerUser.id_user==SysUsers.id)\
+                     .outerjoin(SysCustomer,SysCustomer.id==SysCustomerUser.id_customer)\
                      .where(SysUsers.active.is_(True))\
                      .where(or_(
                          SysUsers.username==request.form.get("username"),
-                         CmmLegalEntities.taxvat==request.form.get("username"),
-                         and_(
-                             CmmLegalEntityContact.contact_type==ContactType.EMAIL.value,
-                             CmmLegalEntityContact.is_default.is_(True),
-                             CmmLegalEntityContact.value==request.form.get("username")
-                         )
+                         SysCustomer.taxvat==request.form.get("username")
                      ))
         usr = db.session.execute(query).first()[0] # type: ignore
         # usr = SysUsers.query.filter(and_(SysUsers.username==request.form.get("username"),SysUsers.active==True)).first()
@@ -326,9 +327,9 @@ class UserAuth(Resource):
 
             #tenta buscar um profile
             idProfile = 0
-            entity = CmmUserEntity.query.filter(CmmUserEntity.id_user==usr.id).first()
-            if entity is not None:
-                idProfile = entity.id_entity
+            customer = SysCustomer.query.filter(SysCustomerUser.id_user==usr.id).first()
+            if customer is not None:
+                idProfile = customer.id_customer
 
             #verifica a senha criptografada anteriormente
             pwd = str(request.form.get("password")).encode()
@@ -339,7 +340,7 @@ class UserAuth(Resource):
 					"token_expire": usr.token_expire.strftime("%Y-%m-%d %H:%M:%S"),
 					"level_access": usr.type,
                     "id_user": usr.id,
-                    "id_profile": idProfile
+                    "id_customer": idProfile
                 }
                 usr.is_authenticate = True
                 db.session.commit()
@@ -350,15 +351,10 @@ class UserAuth(Resource):
                 return 0 #senha invalida
         else:
             #tenta encontrar a entidade pelo usuario ou CNPJ/CPF
-            entity = db.session.execute(Select(CmmLegalEntities.id).distinct()\
-                .join(CmmLegalEntityContact,CmmLegalEntityContact.id_legal_entity==CmmLegalEntities.id)\
-                .where(or_(
-                CmmLegalEntities.taxvat==str(request.form.get("username")).replace(".","").replace("-","").replace("/",""),
-                CmmLegalEntityContact.value==request.form.get("username")
-                )
-            )).first()
+            entity = db.session.execute(Select(SysCustomer.id).distinct()\
+                .where(SysCustomer.taxvat==str(request.form.get("username")).replace(".","").replace("-","").replace("/",""))).first()
             if entity is not None:
-                usr = SysUsers.query.filter(and_(SysUsers.id==(Select(CmmUserEntity.id_user).where(CmmUserEntity.id_entity==entity.id)),SysUsers.active==True)).first()
+                usr = SysUsers.query.filter(and_(SysUsers.id==(Select(SysCustomerUser.id_user).where(SysCustomerUser.id_customer==entity.id)),SysUsers.active.is_(True))).first()
                 if usr is not None:
                     #verifica a senha criptografada anteriormente
                     pwd = str(request.form.get("password")).encode()
@@ -377,8 +373,8 @@ class UserAuth(Resource):
                         return obj_retorno
         return -1 #usuario invalido
     
-    @ns_user.response(HTTPStatus.OK.value,"Realiza a validacao do token do usuario")
-    @ns_user.response(HTTPStatus.BAD_REQUEST.value,"Falha ao verificar o token!")
+    @ns_user.response(HTTPStatus.OK,"Realiza a validacao do token do usuario")
+    @ns_user.response(HTTPStatus.BAD_REQUEST,"Falha ao verificar o token!")
     def put(self) -> bool:
         try:
             #print(request.get_json())
@@ -388,8 +384,8 @@ class UserAuth(Resource):
         except Exception:
             return False
     
-    @ns_user.response(HTTPStatus.OK.value,"Realiza a atualizacao do token do usuario")
-    @ns_user.response(HTTPStatus.BAD_REQUEST.value,"Falha ao atualizar o token!")
+    @ns_user.response(HTTPStatus.OK,"Realiza a atualizacao do token do usuario")
+    @ns_user.response(HTTPStatus.BAD_REQUEST,"Falha ao atualizar o token!")
     def get(self):
         try:
             usr:SysUsers|None = SysUsers.query.get(request.args.get("id"))
@@ -411,7 +407,7 @@ class UserAuthLogout(Resource):
             if usr is not None:
                 usr.logout()
                 db.session.commit()
-                entity = CmmUserEntity.query.filter(CmmUserEntity.id_user==id).first()
+                entity = SysCustomerUser.query.filter(SysCustomerUser.id_user==id).first()
                 if entity is not None:
                     _save_log(entity.id,CustomerAction.SYSTEM_ACCESS,'Efetuou logoff')
                 return True
@@ -423,7 +419,7 @@ ns_user.add_resource(UserAuthLogout,"/logout/<int:id>")
 
 class UserUpdate(Resource):
     def __get_username(self,id,rule):
-        reg = db.session.execute(Select(CmmLegalEntities.name).where(CmmLegalEntities.id==id)).first()
+        reg = db.session.execute(Select(SysCustomer.name).where(SysCustomer.id==id)).first()
         if reg is not None:
             name = reg.name
             name = str(name).replace(".","")
@@ -439,17 +435,17 @@ class UserUpdate(Resource):
                     .replace("“","")).lstrip().rstrip()
 
             new_name = ""
-            if rule=="FL":
+            if rule=="FL": # first and last
                 new_name = name.split(" ")[0]+"."+name.split(" ")[len(name.split(" "))-1]
-            elif rule=="IL":
+            elif rule=="IL": # initial and last
                 new_name = name.split(" ")[0][0:1]+"."+name.split(" ")[len(name.split(" "))-1]
-            else: #PI
+            else: # first and initial
                 new_name = name.split(" ")[0]+"."+name.split(" ")[len(name.split(" "))-1][0:1]
 
             return new_name
 
-    @ns_user.response(HTTPStatus.OK.value,"Cria um ou mais novo(s) usuário(s) no sistema")
-    @ns_user.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar!")
+    @ns_user.response(HTTPStatus.OK,"Cria um ou mais novo(s) usuário(s) no sistema")
+    @ns_user.response(HTTPStatus.BAD_REQUEST,"Falha ao criar!")
     @auth.login_required
     def post(self):
         try:
@@ -457,8 +453,8 @@ class UserUpdate(Resource):
             for id_entity in req["ids"]:
 
                 exist_entity = db.session.execute(
-                    Select(func.count().label("total")).select_from(CmmUserEntity)\
-                        .where(CmmUserEntity.id_entity==id_entity)
+                    Select(func.count().label("total")).select_from(SysCustomerUser)\
+                        .where(SysCustomerUser.id_customer==id_entity)
                 ).first()
 
                 if exist_entity is None or exist_entity.total == 0:
@@ -468,65 +464,28 @@ class UserUpdate(Resource):
                         .where(SysUsers.username==self.__get_username(id_entity,req["rule"]))
                     ).first()
 
-                    #forca o tipo do usuario a ser R quando for representante
-                    entity_type = db.session.execute(Select(CmmLegalEntities.type).where(CmmLegalEntities.id==id_entity)).first()
-                    if entity_type is not None:
-                        if entity_type.type=='R' and req["type"]=='R':
-                            new_type = 'R'
-                        elif entity_type.type=='R' and req['type']!='R':
-                            new_type = 'R'
-                        elif entity_type.type=='C' and req['type']=="L":
-                            new_type = req['type']
-                        elif entity_type.type=='C' and req['type']=='I':
-                            new_type = req['type']=="I"
-                        else:
-                            new_type = 'L' #forca como lojista basico se nao souber ou tiver indicado errado
-                    else:
-                        new_type = 'L'
-
                     if exist_uname is None:
                         usr = SysUsers()
                         setattr(usr,"username",(self.__get_username(id_entity,req["rule"])))
                         usr.password = usr.hash_pwd(req["password"])
-                        setattr(usr,"type",new_type)
+                        setattr(usr,"type",req["type"])
                         db.session.add(usr)
                         db.session.commit()
 
-                        usrE = CmmUserEntity()
+                        usrE = SysCustomerUser()
                         usrE.id_user   = usr.id
-                        usrE.id_entity = id_entity
+                        usrE.id_customer = id_entity
                         db.session.add(usrE)
                         db.session.commit()
                 else:
-                    #forca o tipo do usuario a ser R quando for representante
-                    entity_type = db.session.execute(Select(CmmLegalEntities.type).where(CmmLegalEntities.id==id_entity)).first()
-                    if entity_type=='R' and req["type"]=='R':
-                        new_type = 'R'
-                    elif entity_type=='R' and req['type']!='R':
-                        new_type = 'R'
-                    elif entity_type=='C' and req['type']=="L":
-                        new_type = req['type']
-                    elif entity_type=='C' and req['type']=='I':
-                        new_type = req['type']=="I"
-                    else:
-                        new_type = 'L' #forca como lojista basico se nao souber ou tiver indicado errado
-
                     # atualiza apenas o username e o password
-                    usrE = db.session.execute(Select(CmmUserEntity.id_user).where(CmmUserEntity.id_entity==id_entity)).first()
+                    usrE = db.session.execute(Select(SysCustomerUser.id_user).where(SysCustomerUser.id_customer==id_entity)).first()
                     usr:SysUsers|None = SysUsers.query.get(0 if usrE is None else usrE.id_user)
                     if usr is not None:
                         usr.password = usr.hash_pwd(req["password"])
                         setattr(usr,"username",self.__get_username(id_entity,req["rule"]))
-                        setattr(usr,"type",new_type)
+                        setattr(usr,"type",req["type"])
                         db.session.commit()
-                    
-                #''.join([i for i in s if not i.isdigit()])
-            # db.session.execute(Update(SysUsers),[{
-            #     "id": m["id"],
-            #     "active":m["active"],
-            #     "type": m["type"]
-            # }for m in req])
-            # db.session.commit()
             return True
         except exc.SQLAlchemyError as e:
             return {
@@ -558,8 +517,8 @@ class UserNew(Resource):
 ns_user.add_resource(UserNew,'/start')
 
 class UserPassword(Resource):
-    @ns_user.response(HTTPStatus.OK.value,"Gera uma nova senha padrão para um usuário!")
-    @ns_user.response(HTTPStatus.BAD_REQUEST.value,"Falha ao atualizar!")
+    @ns_user.response(HTTPStatus.OK,"Gera uma nova senha padrão para um usuário!")
+    @ns_user.response(HTTPStatus.BAD_REQUEST,"Falha ao atualizar!")
     @auth.login_required
     def put(self):
         try:
@@ -579,8 +538,8 @@ class UserPassword(Resource):
                 "error_sql": e._sql_message()
             }
     
-    @ns_user.response(HTTPStatus.OK.value,"Verifica se o e-mail existe no BD e envia mensagem para redefinição de senha!")
-    @ns_user.response(HTTPStatus.BAD_REQUEST.value,"Falha ao atualizar!")
+    @ns_user.response(HTTPStatus.OK,"Verifica se o e-mail existe no BD e envia mensagem para redefinição de senha!")
+    @ns_user.response(HTTPStatus.BAD_REQUEST,"Falha ao atualizar!")
     def post(self):
         try:
             req = request.get_json()
@@ -590,13 +549,10 @@ class UserPassword(Resource):
             # porem o usuario tambem pode ser desativado diretamente no cadastro de 
             # usuarios
             exist = db.session.execute(
-                Select(CmmLegalEntityContact.value,CmmLegalEntities.fantasy_name)\
-                .join(CmmLegalEntities,CmmLegalEntities.id==CmmLegalEntityContact.id_legal_entity)\
-                .join(CmmUserEntity,CmmUserEntity.id_entity==CmmLegalEntities.id)\
-                .join(SysUsers,SysUsers.id==CmmUserEntity.id_user)\
+                Select(SysUsers.username,SysUsers.name)\
                 .where(and_(
                     SysUsers.active.is_(True),
-                    CmmLegalEntityContact.value==req["email"]
+                    SysUsers.username==req["email"]
                 ))
             ).first()
             if exist is not None:
@@ -617,8 +573,8 @@ class UserPassword(Resource):
 ns_user.add_resource(UserPassword,"/password/")
 
 class UserCount(Resource):
-    @ns_user.response(HTTPStatus.OK.value,"Retorna o total de Usuarios por tipo")
-    @ns_user.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_user.response(HTTPStatus.OK,"Retorna o total de Usuarios por tipo")
+    @ns_user.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @ns_user.param("type","Tipo da Entidade","query",type=str,enum=['','A','L','R','C'])
     @auth.login_required
     def get(self):

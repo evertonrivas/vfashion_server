@@ -2,11 +2,10 @@ from auth import auth
 from os import environ
 from flask import request
 from http import HTTPStatus
-from models.helpers import db
 from datetime import datetime
-# from models import _show_query
+from models.tenant import B2bBrand
+from models.helpers import _get_params, db
 from sqlalchemy import Select, exc, asc, desc
-from models.tenant import B2bBrand, _get_params
 from flask_restx import Resource,Namespace,fields
 
 ns_brand = Namespace("brand",description="Operações para manipular dados de marcas")
@@ -37,8 +36,8 @@ brand_return = ns_brand.model(
 
 @ns_brand.route("/")
 class CollectionList(Resource):
-    @ns_brand.response(HTTPStatus.OK.value,"Obtem um registro de uma marca",brand_return)
-    @ns_brand.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_brand.response(HTTPStatus.OK,"Obtem um registro de uma marca",brand_return)
+    @ns_brand.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @ns_brand.param("page","Número da página de registros","query",type=int,required=True)
     @ns_brand.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_brand.param("query","Texto para busca","query")
@@ -101,8 +100,8 @@ class CollectionList(Resource):
                 "error_sql": e._sql_message()
             }
 
-    @ns_brand.response(HTTPStatus.OK.value,"Cria uma nova marca")
-    @ns_brand.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar registro!")
+    @ns_brand.response(HTTPStatus.OK,"Cria uma nova marca")
+    @ns_brand.response(HTTPStatus.BAD_REQUEST,"Falha ao criar registro!")
     @ns_brand.doc(body=brand_model)
     @auth.login_required
     def post(self):
@@ -124,8 +123,8 @@ class CollectionList(Resource):
             }
         
         
-    @ns_brand.response(HTTPStatus.OK.value,"Exclui os dados de uma ou mais marcas")
-    @ns_brand.response(HTTPStatus.BAD_REQUEST.value,"Falha ao excluir registro!")
+    @ns_brand.response(HTTPStatus.OK,"Exclui os dados de uma ou mais marcas")
+    @ns_brand.response(HTTPStatus.BAD_REQUEST,"Falha ao excluir registro!")
     @auth.login_required
     def delete(self)->bool|dict:
         try:
@@ -145,12 +144,18 @@ class CollectionList(Resource):
 @ns_brand.route("/<int:id>")
 @ns_brand.param("id","Id do registro")
 class CollectionApi(Resource):
-    @ns_brand.response(HTTPStatus.OK.value,"Retorna os dados dados de uma marca")
-    @ns_brand.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_brand.response(HTTPStatus.OK,"Retorna os dados dados de uma marca")
+    @ns_brand.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def get(self,id:int):
         try:
-            cquery:B2bBrand = B2bBrand.query.get(id) # type: ignore
+            cquery:B2bBrand|None = B2bBrand.query.get(id)
+            if cquery is None:
+                return {
+                    "error_code": HTTPStatus.BAD_REQUEST.value,
+                    "error_details": "Registro não encontrado!",
+                    "error_sql": ""
+                }, HTTPStatus.BAD_REQUEST
 
             return {
                 "id": cquery.id,
@@ -165,8 +170,8 @@ class CollectionApi(Resource):
                 "error_sql": e._sql_message()
             }
     
-    @ns_brand.response(HTTPStatus.OK.value,"Atualiza os dados de uma marca")
-    @ns_brand.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_brand.response(HTTPStatus.OK,"Atualiza os dados de uma marca")
+    @ns_brand.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @ns_brand.doc(body=brand_model)
     @auth.login_required
     def post(self,id:int)->bool|dict:

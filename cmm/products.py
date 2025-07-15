@@ -5,8 +5,7 @@ from os import environ
 from flask import request
 from decimal import Decimal
 from http import HTTPStatus
-# from models import _show_query
-from models.tenant import _get_params, db
+from models.helpers import _get_params, db
 from f2bconfig import ProductMassiveAction
 from models.tenant import B2bCollection, B2bProductStock 
 from models.tenant import CmmCategories, CmmMeasureUnit
@@ -67,8 +66,8 @@ prd_return = ns_prod.model(
 ####################################################################################
 @ns_prod.route("/")
 class ProductsList(Resource):
-    @ns_prod.response(HTTPStatus.OK.value,"Obtem a listagem de produto",prd_return)
-    @ns_prod.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
+    @ns_prod.response(HTTPStatus.OK,"Obtem a listagem de produto",prd_return)
+    @ns_prod.response(HTTPStatus.BAD_REQUEST,"Falha ao listar registros!")
     @ns_prod.param("page","Número da página de registros","query",type=int,required=True,default=1)
     @ns_prod.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_prod.param("query","Texto para busca","query")
@@ -229,8 +228,8 @@ class ProductsList(Resource):
                 "error_sql": e._sql_message()
             }
 
-    @ns_prod.response(HTTPStatus.OK.value,"Cria um novo produto no sistema")
-    @ns_prod.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar novo produto!")
+    @ns_prod.response(HTTPStatus.OK,"Cria um novo produto no sistema")
+    @ns_prod.response(HTTPStatus.BAD_REQUEST,"Falha ao criar novo produto!")
     @ns_prod.doc(body=prd_model)
     @auth.login_required
     def post(self):
@@ -284,8 +283,8 @@ class ProductsList(Resource):
                 "error_sql": e._sql_message()
             }
         
-    @ns_prod.response(HTTPStatus.OK.value,"Exclui os dados de produto(s)")
-    @ns_prod.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
+    @ns_prod.response(HTTPStatus.OK,"Exclui os dados de produto(s)")
+    @ns_prod.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado")
     @auth.login_required
     def delete(self):
         try:
@@ -302,8 +301,8 @@ class ProductsList(Resource):
                 "error_sql": e._sql_message()
             }
 
-    @ns_prod.response(HTTPStatus.OK.value,"Realiza ações massivas em produto(s)")
-    @ns_prod.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
+    @ns_prod.response(HTTPStatus.OK,"Realiza ações massivas em produto(s)")
+    @ns_prod.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado")
     def patch(self):
         try:
             req = request.get_json()
@@ -342,31 +341,38 @@ class ProductsList(Resource):
 @ns_prod.param("id","Id do registro")
 class ProductApi(Resource):
 
-    @ns_prod.response(HTTPStatus.OK.value,"Obtem um registro de produto",prd_model)
-    @ns_prod.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
+    @ns_prod.response(HTTPStatus.OK,"Obtem um registro de produto",prd_model)
+    @ns_prod.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado")
     @auth.login_required
     def get(self,id:int):
         try:
             rquery = CmmProducts.query.get(id)
+            if rquery is None:
+                return {
+                    "error_code": HTTPStatus.BAD_REQUEST.value,
+                    "error_details": "Registro não encontrado!",
+                    "error_sql": ""
+                }, HTTPStatus.BAD_REQUEST
+            
             iquery = CmmProductsImages.query.filter_by(id_product=id)
             return {
-                "id": 0 if rquery is None else rquery.id,
-                "id_type": 0 if rquery is None else rquery.id_type,
-                "id_model": 0 if rquery is None else rquery.id_model,
-                "id_grid": 0 if rquery is None else rquery.id_grid,
-                "prodCode": None if rquery is None else rquery.prodCode,
-                "barCode": None if rquery is None else rquery.barCode,
-                "refCode": None if rquery is None else rquery.refCode,
-                "name": None if rquery is None else rquery.name,
-                "description": None if rquery is None else rquery.description,
-                "observation": None if rquery is None else rquery.observation,
-                "ncm": None if rquery is None else rquery.ncm,
-                "price": simplejson.dumps(Decimal(0 if rquery is None else rquery.price)),
-                "price_pos": None if rquery is None else simplejson.dumps(Decimal(rquery.price_pos)),
-                "id_measure_unit": 0 if rquery is None else rquery.id_measure_unit,
-                "structure": None if rquery is None else rquery.structure,
-                "date_created": None if rquery is None else rquery.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                "date_updated": None if rquery is None else (rquery.date_updated.strftime("%Y-%m-%d %H:%M:%S") if rquery.date_updated is not None else None),
+                "id": rquery.id,
+                "id_type": rquery.id_type,
+                "id_model": rquery.id_model,
+                "id_grid": rquery.id_grid,
+                "prodCode": rquery.prodCode,
+                "barCode": rquery.barCode,
+                "refCode": rquery.refCode,
+                "name": rquery.name,
+                "description": rquery.description,
+                "observation": rquery.observation,
+                "ncm": rquery.ncm,
+                "price": simplejson.dumps(Decimal(rquery.price)),
+                "price_pos": simplejson.dumps(Decimal(rquery.price_pos)),
+                "id_measure_unit": rquery.id_measure_unit,
+                "structure": rquery.structure,
+                "date_created": rquery.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+                "date_updated": rquery.date_updated.strftime("%Y-%m-%d %H:%M:%S") if rquery.date_updated is not None else None,
                 "images":[{
                     "id": m.id,
                     "img_url": m.img_url,
@@ -380,8 +386,8 @@ class ProductApi(Resource):
                 "error_sql": e._sql_message()
             }
 
-    @ns_prod.response(HTTPStatus.OK.value,"Salva dados de um produto")
-    @ns_prod.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
+    @ns_prod.response(HTTPStatus.OK,"Salva dados de um produto")
+    @ns_prod.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado")
     @auth.login_required
     def post(self,id:int)->bool|dict:
         try:
@@ -421,7 +427,8 @@ class ProductApi(Resource):
                                 db.session.add(nimg)
                                 db.session.commit()
                 
-            return True
+                return True
+            return False
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -429,8 +436,8 @@ class ProductApi(Resource):
                 "error_sql": e._sql_message()
             }
     
-    @ns_prod.response(HTTPStatus.OK.value,"Exclui os dados de um produto")
-    @ns_prod.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
+    @ns_prod.response(HTTPStatus.OK,"Exclui os dados de um produto")
+    @ns_prod.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado")
     @auth.login_required
     def delete(self,id:int)->bool|dict:
         try:

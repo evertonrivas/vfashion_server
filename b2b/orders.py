@@ -6,14 +6,14 @@ from os import environ
 from flask import request
 from http import HTTPStatus
 from decimal import Decimal
-from models.helpers import db
 from datetime import datetime
+from models.helpers import _get_params, db
+from models.public import SysUsers as CmmUsers
 from flask_restx import Resource,Namespace,fields
 from f2bconfig import CustomerAction, DevolutionStatus, OrderStatus
 from sqlalchemy import Update, and_, exc, Select, Delete, asc, desc, func
-from models.public import SysUsers as CmmUsers
+from models.tenant import CmmTranslateSizes, CmmUserEntity, FprDevolution, _save_log
 from models.tenant import B2bCartShopping, B2bOrders,B2bOrdersProducts, B2bPaymentConditions, CmmLegalEntities
-from models.tenant import CmmTranslateSizes, CmmUserEntity, FprDevolution, _save_log, _get_params
 from models.tenant import B2bCustomerGroup, B2bCustomerGroupCustomers, B2bProductStock, B2bTarget, CmmProducts, CmmTranslateColors
 
 ns_order = Namespace("orders",description="Operações para manipular dados de pedidos")
@@ -64,8 +64,8 @@ ord_return = ns_order.model(
 ####################################################################################
 @ns_order.route("/")
 class OrdersList(Resource):
-    @ns_order.response(HTTPStatus.OK.value,"Obtem a listagem de pedidos",ord_return)
-    @ns_order.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
+    @ns_order.response(HTTPStatus.OK,"Obtem a listagem de pedidos",ord_return)
+    @ns_order.response(HTTPStatus.BAD_REQUEST,"Falha ao listar registros!")
     @ns_order.param("page","Número da página de registros","query",type=int,required=True)
     @ns_order.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_order.param("query","Texto para busca","query")
@@ -90,7 +90,7 @@ class OrdersList(Resource):
                 #pensar nos filtros para essa listagem
                 rquery = B2bOrders.query.paginate(page=pag_num,per_page=pag_size)
             else:
-                rquery = B2bOrders.query.filter(B2bOrders.trash==False).paginate(page=pag_num,per_page=pag_size)
+                rquery = B2bOrders.query.filter(B2bOrders.trash.is_(False)).paginate(page=pag_num,per_page=pag_size)
 
             return {
                 "pagination":{
@@ -116,8 +116,8 @@ class OrdersList(Resource):
                 "error_sql": e._sql_message()
             }
 
-    @ns_order.response(HTTPStatus.OK.value,"Cria um novo pedido")
-    @ns_order.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar pedido!")
+    @ns_order.response(HTTPStatus.OK,"Cria um novo pedido")
+    @ns_order.response(HTTPStatus.BAD_REQUEST,"Falha ao criar pedido!")
     @ns_order.doc(body=ord_model)
     @auth.login_required
     def post(self)->int|dict:
@@ -196,8 +196,8 @@ class OrdersList(Resource):
 @ns_order.route("/<int:id>")
 @ns_order.param("id","Id do registro")
 class OrderApi(Resource):
-    @ns_order.response(HTTPStatus.OK.value,"Obtem um registro de pedido",ord_model)
-    @ns_order.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_order.response(HTTPStatus.OK,"Obtem um registro de pedido",ord_model)
+    @ns_order.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def get(self,id:int):
         try:
@@ -245,29 +245,36 @@ class OrderApi(Resource):
                             B2bProductStock.id_size==B2bOrdersProducts.id_size
                         ))\
                         .where(B2bOrdersProducts.id_order==id)
+            if order is None:
+                return {
+                    "error_code": HTTPStatus.BAD_REQUEST.value,
+                    "error_details": "Registro não encontrado!",
+                    "error_sql": ""
+                }, HTTPStatus.BAD_REQUEST
+            
             return {
                 "id": id,
                 "customer": {
-                    "id": 0 if order is None else order.id_customer,
-                    "name": "" if order is None else order.fantasy_name,
+                    "id": order.id_customer,
+                    "name": order.fantasy_name,
                 },
                 "payment_condition": {
-                    "id": 0 if order is None else order.id_payment_condition,
-                    "name": "" if order is None else order.payment_condition
+                    "id": order.id_payment_condition,
+                    "name": order.payment_condition
                 },
-                "total_value": 0 if order is None else str(order.total_value),
-                "total_itens": 0 if order is None else str(order.total_itens),
-                "installments": 0 if order is None else str(order.installments),
-                "installments_value": 0 if order is None else str(order.installment_value),
-                "date": "" if order is None else order.date.strftime("%Y-%m-%d"),
-                "status": "" if order is None else order.status,
-                "integration_number": None if order is None else (None if order.integration_number is None else str(order.integration_number)),
-                "track_code": None if order is None else (None if order.track_code is None else order.track_code),
-                "track_company": None if order is None else (None if order.track_company is None else order.track_company),
-                "invoice_number": None if order is None else (None if order.invoice_number is None else str(order.invoice_number)),
-                "invoice_serie": None if order is None else (None if order.invoice_serie is None else str(order.invoice_serie)),
-                "date_created": "" if order is None else order.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                "date_updated": None if order is None else (None if order.date_updated is None else order.date_updated.strftime("%Y-%m-%d %H:%M:%S")),
+                "total_value": str(order.total_value),
+                "total_itens": str(order.total_itens),
+                "installments": str(order.installments),
+                "installments_value": str(order.installment_value),
+                "date": order.date.strftime("%Y-%m-%d"),
+                "status": order.status,
+                "integration_number": None if order.integration_number is None else str(order.integration_number),
+                "track_code": None if order.track_code is None else order.track_code,
+                "track_company": None if order.track_company is None else order.track_company,
+                "invoice_number": None if order.invoice_number is None else str(order.invoice_number),
+                "invoice_serie": None if order.invoice_serie is None else str(order.invoice_serie),
+                "date_created": order.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+                "date_updated": None if order.date_updated is None else order.date_updated.strftime("%Y-%m-%d %H:%M:%S"),
                 "products": [{
                     "id_order_product": str(m.id_product)+'_'+str(m.id_color)+'_'+str(m.id_size),
                     "id_product": m.id_product,
@@ -292,8 +299,8 @@ class OrderApi(Resource):
             }
 
 
-    @ns_order.response(HTTPStatus.OK.value,"Atualiza os dados de um pedido")
-    @ns_order.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_order.response(HTTPStatus.OK,"Atualiza os dados de um pedido")
+    @ns_order.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @ns_order.doc(body=ord_model)
     @auth.login_required
     def post(self,id:int)->bool|dict:
@@ -367,13 +374,13 @@ class OrderApi(Resource):
                 "error_sql": e._sql_message()
             }
     
-    @ns_order.response(HTTPStatus.OK.value,"Exclui os dados de um pedido")
-    @ns_order.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_order.response(HTTPStatus.OK,"Exclui os dados de um pedido")
+    @ns_order.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def delete(self,id:int):
         try:
             req   = request.get_json()
-            order:B2bOrders = B2bOrders.query.get(id) # type: ignore
+            order:B2bOrders|None = B2bOrders.query.get(id)
             setattr(order,"trash",True)
             db.session.commit()
             if (req["id_customer"]!=0):
@@ -395,8 +402,8 @@ class OrderApi(Resource):
 
 
 class HistoryOrderList(Resource):
-    @ns_order.response(HTTPStatus.OK.value,"Obtem a listagem de produtos de pedidos",[prd_ord_model])
-    @ns_order.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
+    @ns_order.response(HTTPStatus.OK,"Obtem a listagem de produtos de pedidos",[prd_ord_model])
+    @ns_order.response(HTTPStatus.BAD_REQUEST,"Falha ao listar registros!")
     @ns_order.param("page","Número da página de registros","query",type=int,required=True)
     @ns_order.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_order.param("query","Texto para busca","query")
@@ -537,8 +544,8 @@ ns_order.add_resource(HistoryOrderList,'/history/<int:id>')
 
 
 class HistoryOrderApi(Resource):
-    @ns_order.response(HTTPStatus.OK.value,"Obtem o total de pedidos realizados com base na meta")
-    @ns_order.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
+    @ns_order.response(HTTPStatus.OK,"Obtem o total de pedidos realizados com base na meta")
+    @ns_order.response(HTTPStatus.BAD_REQUEST,"Falha ao listar registros!")
     @auth.login_required
     def get(self):
         try:
@@ -581,8 +588,8 @@ class HistoryOrderApi(Resource):
                 "error_sql": e._sql_message()
             }
     
-    @ns_order.response(HTTPStatus.OK.value,"Obtem o valor total de pedidos realizados com base na meta")
-    @ns_order.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
+    @ns_order.response(HTTPStatus.OK,"Obtem o valor total de pedidos realizados com base na meta")
+    @ns_order.response(HTTPStatus.BAD_REQUEST,"Falha ao listar registros!")
     @auth.login_required
     def post(self):
         try:
@@ -625,8 +632,8 @@ class HistoryOrderApi(Resource):
                 "error_sql": e._sql_message()
             }
     
-    @ns_order.response(HTTPStatus.OK.value,"Obtem o valor por representante de pedidos realizados com base na meta")
-    @ns_order.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
+    @ns_order.response(HTTPStatus.OK,"Obtem o valor por representante de pedidos realizados com base na meta")
+    @ns_order.response(HTTPStatus.BAD_REQUEST,"Falha ao listar registros!")
     def put(self):
         try:
             date_start = str(datetime.now().year)+'-01-01'

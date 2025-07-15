@@ -1,12 +1,14 @@
-from datetime import datetime
-from http import HTTPStatus
-from flask_restx import Resource, Namespace, fields
-from flask import request
-from models.public import _get_params, db, ScmEventType
-# from models import _show_query
-from sqlalchemy import Select, exc, asc, desc
 from auth import auth
 from os import environ
+from flask import request
+from http import HTTPStatus
+from datetime import datetime
+from models.helpers import db
+# from models import _show_query
+from models.helpers import _get_params
+from models.tenant import ScmEventType
+from sqlalchemy import Select, exc, asc, desc
+from flask_restx import Resource, Namespace, fields
 
 ns_event = Namespace("event-type",description="Operações para manipular dados de tipos de eventos")
 
@@ -39,27 +41,29 @@ event_return = ns_event.model(
 
 @ns_event.route("/")
 class CollectionList(Resource):
-    @ns_event.response(HTTPStatus.OK.value,"Obtem registros de tipos de eventos",event_return)
-    @ns_event.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_event.response(HTTPStatus.OK,"Obtem registros de tipos de eventos",event_return)
+    @ns_event.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @ns_event.param("page","Número da página de registros","query",type=int,required=True)
     @ns_event.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_event.param("query","Texto para busca","query")
     @auth.login_required
     def get(self):
-        pag_num  = 1 if request.args.get("page") is None else int(request.args.get("page"))
-        pag_size = int(str(environ.get("F2B_PAGINATION_SIZE"))) if request.args.get("pageSize") is None else int(request.args.get("pageSize"))
+        pag_num  = 1 if request.args.get("page") is None else int(str(request.args.get("page")))
+        pag_size = int(str(environ.get("F2B_PAGINATION_SIZE"))) if request.args.get("pageSize") is None else int(str(request.args.get("pageSize")))
         query    = "" if request.args.get("query") is None else "{}%".format(request.args.get("query"))
 
         try:
             params    = _get_params(query)
-            direction = asc if hasattr(params,'order')==False else asc if str(params.order).upper()=='ASC' else desc
-            order_by  = 'id' if hasattr(params,'order_by')==False else params.order_by
-            trash     = False if hasattr(params,'trash')==False else True
-            list_all  = False if hasattr(params,'list_all')==False else True
+            if params is None:
+                return None
+            direction = asc if not hasattr(params,'order') else asc if str(params.order).upper()=='ASC' else desc
+            order_by  = 'id' if not hasattr(params,'order_by') else params.order_by
+            trash     = False if not hasattr(params,'trash') else True
+            list_all  = False if not hasattr(params,'list_all') else True
             
-            filter_search       = None if hasattr(params,"search")==False or str(params.search).strip()=="" else params.search
-            filter_just_parent  = False if hasattr(params,"just_parent")==False else True
-            filter_no_milestone = False if hasattr(params,"no_milestone")==False else True
+            filter_search       = None if not hasattr(params,"search") or str(params.search).strip()=="" else params.search
+            filter_just_parent  = False if not hasattr(params,"just_parent") else True
+            filter_no_milestone = False if not hasattr(params,"no_milestone") else True
 
 
             rquery = Select(ScmEventType.id,
@@ -80,13 +84,13 @@ class CollectionList(Resource):
             if filter_search is not None:
                 rquery = rquery.where(ScmEventType.name.like("%{}%".format(filter_search)))
 
-            if filter_just_parent==True:
+            if filter_just_parent:
                 rquery = rquery.where(ScmEventType.id_parent.is_(None))
 
-            if filter_no_milestone==True:
-                rquery = rquery.where(ScmEventType.is_milestone==False)
+            if filter_no_milestone:
+                rquery = rquery.where(ScmEventType.is_milestone.is_(False))
 
-            if list_all==False:
+            if list_all:
                 pag    = db.paginate(rquery,page=pag_num,per_page=pag_size)
                 rquery = rquery.limit(pag_size).offset((pag_num - 1) * pag_size)
 
@@ -115,11 +119,11 @@ class CollectionList(Resource):
                             "use_collection": c.use_collection,
                             "create_funnel": c.create_funnel,
                             "date_created": c.date_created.strftime("%Y-%m-%d"),
-                            "date_updated": c.date_updated.strftime("%Y-%m-%d %H:%M:%S") if c.date_updated!=None else None
+                            "date_updated": c.date_updated.strftime("%Y-%m-%d %H:%M:%S") if c.date_updated is not None else None
                         }for c in squery.filter(ScmEventType.id_parent==m.id).all()],
                         "parent": self.__get_parent(m.id_parent),
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                        "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
+                        "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated is not None else None
                     } for m in db.session.execute(rquery)]
                 }
             else:
@@ -140,11 +144,11 @@ class CollectionList(Resource):
                             "use_collection": c.use_collection,
                             "create_funnel": c.create_funnel,
                             "date_created": c.date_created.strftime("%Y-%m-%d"),
-                            "date_updated": c.date_updated.strftime("%Y-%m-%d %H:%M:%S") if c.date_updated!=None else None
+                            "date_updated": c.date_updated.strftime("%Y-%m-%d %H:%M:%S") if c.date_updated is not None else None
                         }for c in squery.filter(ScmEventType.id_parent==m.id).all()],
                         "parent": self.__get_parent(m.id_parent),
                         "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                        "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated!=None else None
+                        "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated is not None else None
                     } for m in db.session.execute(rquery)]
             return retorno
         except exc.SQLAlchemyError as e:
@@ -174,28 +178,28 @@ class CollectionList(Resource):
                 "is_milestone": reg.is_milestone,
                 "create_funnel": reg.create_funnel,
                 "date_created": reg.date_created.strftime("%Y-%m-%d"),
-                "date_updated": reg.date_updated.strftime("%Y-%m-%d %H:%M:%S") if reg.date_updated!=None else None
+                "date_updated": reg.date_updated.strftime("%Y-%m-%d %H:%M:%S") if reg.date_updated is not None else None
             }
         else:
             return {}
 
-    @ns_event.response(HTTPStatus.OK.value,"Cria um novo tipo de evento")
-    @ns_event.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar registro!")
+    @ns_event.response(HTTPStatus.OK,"Cria um novo tipo de evento")
+    @ns_event.response(HTTPStatus.BAD_REQUEST,"Falha ao criar registro!")
     @ns_event.doc(body=event_model)
     @auth.login_required
-    def post(self)->int|dict:
+    def post(self):
         try:
             req = request.get_json()
             reg = ScmEventType()
             reg.name           = req["name"]
             reg.hex_color      = req["hex_color"]
-            reg.has_budget     = False if req["has_budget"]=='false' else True
-            reg.use_collection = False if req["use_collection"]=='false' else True
-            reg.is_milestone   = False if req["is_milestone"]=='false' else True
-            reg.create_funnel  = False if req["create_funnel"]=='false' else True
+            setattr(reg,"has_budget",(False if req["has_budget"]=='false' else True))
+            setattr(reg,"use_collection",(False if req["use_collection"]=='false' else True))
+            setattr(reg,"is_milestone",(False if req["is_milestone"]=='false' else True))
+            setattr(reg,"create_funnel",(False if req["create_funnel"]=='false' else True))
             if reg.create_funnel is True:
-                reg.use_collection = True # forca o uso de colecao quando houver criacao de Funil
-            reg.date_created   = datetime.now()
+                setattr(reg,"use_collection",True) # forca o uso de colecao quando houver criacao de Funil
+            setattr(reg,"date_created", datetime.now())
             db.session.add(reg)
             db.session.commit()
 
@@ -207,15 +211,15 @@ class CollectionList(Resource):
                 "error_sql": e._sql_message()
             }
     
-    @ns_event.response(HTTPStatus.OK.value,"Exclui os dados de um tipo de evento")
-    @ns_event.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_event.response(HTTPStatus.OK,"Exclui os dados de um tipo de evento")
+    @ns_event.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def delete(self)->bool|dict:
         try:
             req = request.get_json()
             for id in req["ids"]:
-                reg:ScmEventType = ScmEventType.query.get(id)
-                reg.trash = req["toTrash"]
+                reg:ScmEventType|None = ScmEventType.query.get(id)
+                setattr(reg,"trash",req["toTrash"])
                 db.session.commit()
             return True
         except exc.SQLAlchemyError as e:
@@ -228,12 +232,18 @@ class CollectionList(Resource):
 @ns_event.route("/<int:id>")
 @ns_event.param("id","Id do registro")
 class CollectionApi(Resource):
-    @ns_event.response(HTTPStatus.OK.value,"Retorna os dados de um tipo de evento")
-    @ns_event.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_event.response(HTTPStatus.OK,"Retorna os dados de um tipo de evento")
+    @ns_event.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def get(self,id:int):
         try:
             qry = ScmEventType.query.get(id)
+            if qry is None:
+                return {
+                    "error_code": HTTPStatus.BAD_REQUEST.value,
+                    "error_details": "Registro não encontrado!",
+                    "error_sql": ""
+                }, HTTPStatus.BAD_REQUEST
 
             return {
                 "id": qry.id,
@@ -244,7 +254,7 @@ class CollectionApi(Resource):
                 "use_collection": qry.use_collection,
                 "create_funnel": qry.create_funnel,
                 "date_created": qry.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                "date_updated": qry.date_updated.strftime("%Y-%m-%d %H:%M:%S") if qry.date_updated!=None else None
+                "date_updated": qry.date_updated.strftime("%Y-%m-%d %H:%M:%S") if qry.date_updated is not None else None
             }
         except exc.SQLAlchemyError as e:
             return {
@@ -253,23 +263,25 @@ class CollectionApi(Resource):
                 "error_sql": e._sql_message()
             }
     
-    @ns_event.response(HTTPStatus.OK.value,"Atualiza os dados de um tipo de evento")
-    @ns_event.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_event.response(HTTPStatus.OK,"Atualiza os dados de um tipo de evento")
+    @ns_event.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @ns_event.doc(body=event_model)
     @auth.login_required
-    def post(self,id:int)->bool|dict:
+    def post(self,id:int):
         try:
             req = request.get_json()
-            reg:ScmEventType = ScmEventType.query.get(id)
+            reg:ScmEventType|None = ScmEventType.query.get(id)
+            if reg is None:
+                return {"error":"Registro não encontrado!"}, HTTPStatus.BAD_REQUEST
             reg.name           = req["name"]
             reg.hex_color      = req["hex_color"]
-            reg.has_budget     = False if req["has_budget"]=='false' else True
-            reg.use_collection = False if req["use_collection"]=='false' else True
-            reg.is_milestone   = False if req["is_milestone"]=='false' else True
-            reg.create_funnel  = False if req["create_funnel"]=='false' else True
+            setattr(reg,"has_budget",(False if req["has_budget"]=='false' else True))
+            setattr(reg,"use_collection",(False if req["use_collection"]=='false' else True))
+            setattr(reg,"is_milestone",(False if req["is_milestone"]=='false' else True))
+            setattr(reg,"create_funnel",(False if req["create_funnel"]=='false' else True))
             if reg.create_funnel is True:
-                reg.use_collection = True # forca o uso de colecao quando houver criacao de Funil
-            reg.date_updated   = datetime.now()
+                setattr(reg,"use_collection",True) # forca o uso de colecao quando houver criacao de Funil
+            setattr(reg,"date_updated",datetime.now())
             db.session.commit()
 
             return True

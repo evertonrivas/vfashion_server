@@ -2,11 +2,10 @@ from auth import auth
 from os import environ
 from flask import request
 from http import HTTPStatus
-from models.helpers import db
-# from models import _show_query
+from models.helpers import _get_params, db
 from sqlalchemy import Select, exc, desc, asc
+from models.tenant import B2bPaymentConditions
 from flask_restx import Resource,Namespace,fields
-from models.tenant import B2bPaymentConditions, _get_params
 
 ns_payment = Namespace("payment-conditions",description="Operações para manipular dados de condições de pagamento")
 
@@ -39,8 +38,8 @@ pay_return = ns_payment.model(
 
 @ns_payment.route("/")
 class PaymentConditionsList(Resource):
-    @ns_payment.response(HTTPStatus.OK.value,"Obtem a lista de condições de pagamento",pay_return)
-    @ns_payment.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
+    @ns_payment.response(HTTPStatus.OK,"Obtem a lista de condições de pagamento",pay_return)
+    @ns_payment.response(HTTPStatus.BAD_REQUEST,"Falha ao listar registros!")
     @ns_payment.param("page","Número da página de registros","query",type=int,required=True,default=1)
     @ns_payment.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_payment.param("query","Texto para busca","query")
@@ -117,8 +116,8 @@ class PaymentConditionsList(Resource):
                 "error_sql": e._sql_message()
             }
 
-    @ns_payment.response(HTTPStatus.OK.value,"Cria uma nova condição de pagamento no sistema")
-    @ns_payment.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar nova condicao de pagamento!")
+    @ns_payment.response(HTTPStatus.OK,"Cria uma nova condição de pagamento no sistema")
+    @ns_payment.response(HTTPStatus.BAD_REQUEST,"Falha ao criar nova condicao de pagamento!")
     @auth.login_required
     def post(self):
         try:
@@ -137,8 +136,8 @@ class PaymentConditionsList(Resource):
                 "error_sql": e._sql_message()
             }
         
-    @ns_payment.response(HTTPStatus.OK.value,"Exclui os dados de uma condição de pagamento")
-    @ns_payment.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_payment.response(HTTPStatus.OK,"Exclui os dados de uma condição de pagamento")
+    @ns_payment.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def delete(self):
         try:
@@ -158,12 +157,18 @@ class PaymentConditionsList(Resource):
 @ns_payment.route("/<int:id>")
 @ns_payment.param("id","Id do registro")
 class PaymentConditionApi(Resource):
-    @ns_payment.response(HTTPStatus.OK.value,"Obtem um registro de uma condição de pagamento",pay_model)
-    @ns_payment.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_payment.response(HTTPStatus.OK,"Obtem um registro de uma condição de pagamento",pay_model)
+    @ns_payment.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def get(self,id:int):
         try:
-            reg:B2bPaymentConditions = B2bPaymentConditions.query.get(id) # type: ignore
+            reg:B2bPaymentConditions|None = B2bPaymentConditions.query.get(id)
+            if reg is None:
+                return {
+                    "error_code": HTTPStatus.BAD_REQUEST.value,
+                    "error_details": "Registro não encontrado!",
+                    "error_sql": ""
+                }, HTTPStatus.BAD_REQUEST
 
             return {
                 "id": reg.id,
@@ -181,8 +186,8 @@ class PaymentConditionApi(Resource):
                 "error_sql": e._sql_message()
             }
 
-    @ns_payment.response(HTTPStatus.OK.value,"Salva dados de uma condição de pgamento")
-    @ns_payment.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_payment.response(HTTPStatus.OK,"Salva dados de uma condição de pgamento")
+    @ns_payment.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def post(self,id:int):
         try:

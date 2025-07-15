@@ -1,6 +1,6 @@
 from flask import request
 from flask_httpauth import HTTPTokenAuth
-from models.tenant import CmmUsers
+from models.public import SysUsers
 import jwt
 from os import environ,path
 from dotenv import load_dotenv
@@ -18,7 +18,7 @@ def verify_token(token):
         if "Authorization" in request.headers and token is None:
             token = request.headers["Authorization"].replace("Bearer ","")
 
-        user = CmmUsers.check_token(token)
+        user = SysUsers.check_token(token)
         if user is not None:
             try:
                 data = jwt.decode(token,str(environ.get("F2B_TOKEN_KEY")),algorithms=['HS256'])

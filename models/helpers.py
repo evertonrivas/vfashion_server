@@ -1,6 +1,8 @@
+import json
 from os import popen
 from sqlalchemy import text
 from flask_migrate import Migrate
+from types import SimpleNamespace
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.exc import InternalError
 from sqlalchemy.schema import CreateSchema
@@ -8,6 +10,46 @@ from sqlalchemy.orm import sessionmaker, scoped_session
 
 db = SQLAlchemy()
 migrate = Migrate()
+
+def _get_params(search:str|None):
+    if search is not None:
+        # verifica se existem os pipes de separacao
+        if search.find("||")!=-1:
+            #ajusta os parametros para nao vacilar com espacos
+            search = search.replace(" ||","||").replace("|| ","")
+            #inicia criacao do objeto
+            p_obj = "{\n"
+            #realiza o primeiro split para segmentar parametro + valor
+            for param in search.split("||"):
+                #segundo split sem looping para montar os parametros no object
+                broken = param.split(" ")
+                #se o len for 2 soh tem um valor para o parametro
+                if len(broken)==2:
+                    p_obj += "\""+broken[0].replace("is:","").replace("can:","").replace(" ","").replace("-","_")+"\": \""+broken[1]+"\",\n"
+                else:
+                #significa que eh uma string separada por espacos, precisa reconcatenar
+                    p_obj += "\""+broken[0].replace("is:","").replace("can:","").replace(" ","").replace("-","_")+"\": \""+' '.join(broken[1:len(broken)])+"\",\n"
+            p_obj += "}"
+            #ajusta o final do objeto
+            p_obj = p_obj.replace(",\n}","\n}")
+
+            #retorna um objeto para realizar a busca
+            return json.loads(p_obj,object_hook=lambda d: SimpleNamespace(**d))
+        else:
+            if len(search) > 0:
+                p_obj = "{\n"
+                broken = search.split( )
+                if len(broken)==2:
+                    p_obj += "\""+broken[0].replace("is:","").replace("can:","").replace(" ","").replace("-","_")+"\": \""+broken[1]+"\",\n"
+                else:
+                    p_obj += "\""+broken[0].replace("is:","").replace("can:","").replace(" ","").replace("-","_")+"\": \""+' '.join(broken[1:len(broken)])+"\",\n"
+                p_obj += "}"
+                p_obj = p_obj.replace(",\n}","\n}")
+                return json.loads(p_obj,object_hook=lambda d: SimpleNamespace(**d))
+    return None
+
+def _show_query(rquery):
+    print(rquery.compile(compile_kwargs={"literal_binds": True}))
 
 
 class Database:

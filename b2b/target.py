@@ -3,7 +3,6 @@ from flask import request
 from http import HTTPStatus
 from models.helpers import db
 from models.tenant import B2bTarget
-# from models import _show_query
 from sqlalchemy import Select, Update, exc, func
 from flask_restx import Resource,Namespace,fields
 
@@ -37,8 +36,8 @@ target_model = ns_target.model(
 
 @ns_target.route("/<int:year>")
 class CollectionList(Resource):
-    @ns_target.response(HTTPStatus.OK.value,"Obtem um registro de metas de um ano",target_model)
-    @ns_target.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_target.response(HTTPStatus.OK,"Obtem um registro de metas de um ano",target_model)
+    @ns_target.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def get(self,year:int):
         try:
@@ -97,8 +96,8 @@ class CollectionList(Resource):
                 "error_sql": e._sql_message()
             }
 
-    @ns_target.response(HTTPStatus.OK.value,"Cria ou atualiza metas do ano")
-    @ns_target.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar registro!")
+    @ns_target.response(HTTPStatus.OK,"Cria ou atualiza metas do ano")
+    @ns_target.response(HTTPStatus.BAD_REQUEST,"Falha ao criar registro!")
     @ns_target.doc(body=target_model)
     @auth.login_required
     def post(self,year:int)->bool|dict:

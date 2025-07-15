@@ -1,11 +1,12 @@
-from datetime import datetime
-from http import HTTPStatus
-from flask_restx import Resource, Namespace, fields
+from auth import auth
 from flask import request
-from models.public import db, ScmFlimv
+from http import HTTPStatus
+from datetime import datetime
+from models.helpers import db
+from models.tenant import ScmFlimv
 # from models import _show_query
 from sqlalchemy import Select, exc, desc
-from auth import auth
+from flask_restx import Resource, Namespace, fields
 
 ns_flimv = Namespace("flimv",description="Operações para manipular dados da metodologia FLIMV")
 
@@ -38,8 +39,8 @@ event_return = ns_flimv.model(
 
 @ns_flimv.route("/")
 class FlimvList(Resource):
-    @ns_flimv.response(HTTPStatus.OK.value,"Obtem a listagem de flimvs")
-    @ns_flimv.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
+    @ns_flimv.response(HTTPStatus.OK,"Obtem a listagem de flimvs")
+    @ns_flimv.response(HTTPStatus.BAD_REQUEST,"Falha ao listar registros!")
     @ns_flimv.param("id","Id para busca de um registro","query",type=int,required=False)
     @auth.login_required
     def get(self):
@@ -62,7 +63,9 @@ class FlimvList(Resource):
                     "volume": [f.vol_min,f.vol_max]
                 }for f in db.session.execute(flimvs)]
             else:
-                flimv:ScmFlimv = ScmFlimv.query.get(id)
+                flimv:ScmFlimv|None = ScmFlimv.query.get(id)
+                if flimv is None:
+                    return {"error":"Registro não encontrado!"}, HTTPStatus.BAD_REQUEST
 
             return {
                 "id": flimv.id,
@@ -80,8 +83,8 @@ class FlimvList(Resource):
                 "error_sql": e._sql_message()
             }
         
-    @ns_flimv.response(HTTPStatus.OK.value,"Salva ou atualiza um flimv")
-    @ns_flimv.response(HTTPStatus.BAD_REQUEST.value,"Falha ao salvar ou atualizar registro!")
+    @ns_flimv.response(HTTPStatus.OK,"Salva ou atualiza um flimv")
+    @ns_flimv.response(HTTPStatus.BAD_REQUEST,"Falha ao salvar ou atualizar registro!")
     @auth.login_required
     def post(self):
         req = request.get_json()

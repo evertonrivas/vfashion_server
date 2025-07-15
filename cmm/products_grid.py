@@ -2,12 +2,11 @@ from auth import auth
 from os import environ
 from flask import request
 from http import HTTPStatus
-from models.helpers import db
-# from models import _show_query
+from models.helpers import _get_params, db
 from flask_restx import Resource,Namespace,fields
 from sqlalchemy import Delete, Select, asc, desc, exc
+from models.tenant import CmmProductsGridSizes, CmmTranslateSizes
 from models.tenant import CmmProductsGrid,CmmProductsGridDistribution
-from models.tenant import CmmProductsGridSizes, CmmTranslateSizes, _get_params
 
 ns_gprod = Namespace("products-grid",description="Operações para manipular dados das grades de produtos")
 
@@ -49,8 +48,8 @@ grd_return = ns_gprod.model(
 @ns_gprod.route("/")
 class GridList(Resource):
 
-    @ns_gprod.response(HTTPStatus.OK.value,"Obtem os registros de grades existentes",grd_return)
-    @ns_gprod.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
+    @ns_gprod.response(HTTPStatus.OK,"Obtem os registros de grades existentes",grd_return)
+    @ns_gprod.response(HTTPStatus.BAD_REQUEST,"Falha ao listar registros!")
     @ns_gprod.param("page","Número da página de registros","query",type=int,required=True)
     @ns_gprod.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_gprod.param("query","Texto para busca","query")
@@ -116,8 +115,8 @@ class GridList(Resource):
                 "error_sql": e._sql_message()
             }
 
-    @ns_gprod.response(HTTPStatus.OK.value,"Cria uma nova grade no sistema")
-    @ns_gprod.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar nova grade!")
+    @ns_gprod.response(HTTPStatus.OK,"Cria uma nova grade no sistema")
+    @ns_gprod.response(HTTPStatus.BAD_REQUEST,"Falha ao criar nova grade!")
     @ns_gprod.doc(body=grd_model)
     @auth.login_required
     def post(self):
@@ -144,8 +143,8 @@ class GridList(Resource):
                 "error_sql": e._sql_message()
             }
         
-    @ns_gprod.response(HTTPStatus.OK.value,"Exclui os dados de uma grade")
-    @ns_gprod.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_gprod.response(HTTPStatus.OK,"Exclui os dados de uma grade")
+    @ns_gprod.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def delete(self):
         try:
@@ -166,16 +165,22 @@ class GridList(Resource):
 @ns_gprod.route("/<int:id>")
 @ns_gprod.param("id","Id do registro")
 class GridApi(Resource):
-    @ns_gprod.response(HTTPStatus.OK.value,"Obtem um registro de uma grade",grd_model)
-    @ns_gprod.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_gprod.response(HTTPStatus.OK,"Obtem um registro de uma grade",grd_model)
+    @ns_gprod.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def get(self,id:int):
         try:
             grid:CmmProductsGrid|None = CmmProductsGrid.query.get(id)
+            if grid is None:
+                return {
+                    "error_code": HTTPStatus.BAD_REQUEST.value,
+                    "error_details": "Registro não encontrado!",
+                    "error_sql": ""
+                }, HTTPStatus.BAD_REQUEST
             ssmtm = Select(CmmProductsGridSizes.id_size).where(CmmProductsGridSizes.id_grid==id)
             return {
                 "id": id,
-                "name": None if grid is None else grid.name,
+                "name": grid.name,
                 "sizes":[{
                     "id": s.id_size
                 }for s in db.session.execute(ssmtm)]
@@ -187,8 +192,8 @@ class GridApi(Resource):
                 "error_sql": e._sql_message()
             }
 
-    @ns_gprod.response(HTTPStatus.OK.value,"Salva dados de uma grade")
-    @ns_gprod.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_gprod.response(HTTPStatus.OK,"Salva dados de uma grade")
+    @ns_gprod.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def post(self,id:int):
         try:
@@ -222,8 +227,8 @@ class GridApi(Resource):
             }
         
 class GridDistribution(Resource):
-    @ns_gprod.response(HTTPStatus.OK.value,"Lista os dados de uma distribuição de uma grade")
-    @ns_gprod.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_gprod.response(HTTPStatus.OK,"Lista os dados de uma distribuição de uma grade")
+    @ns_gprod.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def get(self,id:int):
         try:
@@ -248,8 +253,8 @@ class GridDistribution(Resource):
                 "error_sql": e._sql_message()
             }
         
-    @ns_gprod.response(HTTPStatus.OK.value,"Salva dados de uma grade")
-    @ns_gprod.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_gprod.response(HTTPStatus.OK,"Salva dados de uma grade")
+    @ns_gprod.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def post(self,id:int):
         try:
@@ -273,8 +278,8 @@ class GridDistribution(Resource):
                 "error_sql": e._sql_message()
             }
 
-    @ns_gprod.response(HTTPStatus.OK.value,"Salva dados de uma grade")
-    @ns_gprod.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_gprod.response(HTTPStatus.OK,"Salva dados de uma grade")
+    @ns_gprod.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required 
     def delete(self,id:int):
         try:

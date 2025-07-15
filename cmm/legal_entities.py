@@ -3,15 +3,14 @@ from os import environ
 from flask import request
 from http import HTTPStatus
 from datetime import datetime
-from models.helpers import db
-# from models import _show_query
 from f2bconfig import CustomerAction
+from models.helpers import _get_params, db
+from models.tenant import CmmLegalEntities
 from flask_restx import Resource,Namespace,fields
-from models.tenant import CmmLegalEntities,CmmUserEntity
+from sqlalchemy import Delete, Select, and_,exc,asc,desc,func, or_
+from models.tenant import _save_log, B2bCustomerGroupCustomers 
+from models.tenant import  B2bCustomerGroup, CmmLegalEntityHistory
 from models.tenant import CmmCities, CmmCountries, CmmLegalEntityContact
-from sqlalchemy import Delete, Select, Update,and_,exc,asc,desc,func, or_
-from models.tenant import _save_log,_get_params,B2bCustomerGroupCustomers 
-from models.tenant import  B2bCustomerGroup, CmmLegalEntityHistory, CmmUsers
 from models.tenant import CmmLegalEntityFile, CmmStateRegions, CrmFunnelStageCustomer
 
 ns_legal = Namespace("legal-entities",description="Operações para manipular dados de clientes/representantes")
@@ -65,8 +64,8 @@ lgl_return = ns_legal.model(
 ####################################################################################
 @ns_legal.route("/")
 class EntitysList(Resource):
-    @ns_legal.response(HTTPStatus.OK.value,"Obtem a listagem de clientes/representantes",lgl_return)
-    @ns_legal.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
+    @ns_legal.response(HTTPStatus.OK,"Obtem a listagem de clientes/representantes",lgl_return)
+    @ns_legal.response(HTTPStatus.BAD_REQUEST,"Falha ao listar registros!")
     @ns_legal.param("page","Número da página de registros","query",type=int,required=True)
     @ns_legal.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_legal.param("query","Texto para busca","query")
@@ -227,8 +226,8 @@ class EntitysList(Resource):
                 "error_sql": ""
             }        
 
-    @ns_legal.response(HTTPStatus.OK.value,"Cria um novo registro de cliente/representante/fornecedor",model=lgl_registry)
-    @ns_legal.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar um novo cliente/representante/fornecedor!")
+    @ns_legal.response(HTTPStatus.OK,"Cria um novo registro de cliente/representante/fornecedor",model=lgl_registry)
+    @ns_legal.response(HTTPStatus.BAD_REQUEST,"Falha ao criar um novo cliente/representante/fornecedor!")
     @auth.login_required
     def post(self):
         try:
@@ -278,8 +277,8 @@ class EntitysList(Resource):
                 "error_sql": e._sql_message()
             }
         
-    @ns_legal.response(HTTPStatus.OK.value,"Exclui os dados de um cliente/representante")
-    @ns_legal.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_legal.response(HTTPStatus.OK,"Exclui os dados de um cliente/representante")
+    @ns_legal.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def delete(self):
         try:
@@ -290,13 +289,13 @@ class EntitysList(Resource):
                 setattr(cst,"trash",req["toTrash"])
                 db.session.commit()
 
-                for usr in db.session.execute(Select(CmmUserEntity).where(CmmUserEntity.id_entity==id)):
-                    db.session.execute(
-                        Update(CmmUsers).values(active=(False if req["toTrash"]==1 else True)).where(CmmUsers.id==usr)
-                    )
-                    db.session.commit()
+                # for usr in db.session.execute(Select(CmmUserEntity).where(CmmUserEntity.id_entity==id)):
+                #     db.session.execute(
+                #         Update(CmmUsers).values(active=(False if req["toTrash"]==1 else True)).where(CmmUsers.id==usr)
+                #     )
+                #     db.session.commit()
 
-                _save_log(id,CustomerAction.DATA_DELETED,'Registro e usuários '+('movido para a' if req["toTrash"]==1 else 'removido da') +' Lixeira')
+                _save_log(id,CustomerAction.DATA_DELETED,'Registro '+('movido para a' if req["toTrash"]==1 else 'removido da') +' Lixeira')
             return True
         except exc.SQLAlchemyError as e:
             return {
@@ -309,8 +308,8 @@ class EntitysList(Resource):
 @ns_legal.route("/<int:id>")
 class EntityApi(Resource):
 
-    @ns_legal.response(HTTPStatus.OK.value,"Obtem um registro de cliente",lgl_model)
-    @ns_legal.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
+    @ns_legal.response(HTTPStatus.OK,"Obtem um registro de cliente",lgl_model)
+    @ns_legal.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado")
     @ns_legal.param("id","Id do usuário do sistema (tabela CmmUser)")
     @auth.login_required
     def get(self,id:int):
@@ -341,36 +340,42 @@ class EntityApi(Resource):
             .where(CmmLegalEntities.id==id)
 
             m = db.session.execute(rquery).first()
+            if m is None:
+                return {
+                        "error_code": HTTPStatus.BAD_REQUEST.value,
+                        "error_details": "Registro não encontrado!",
+                        "error_sql": ""
+                    }, HTTPStatus.BAD_REQUEST
 
             return {
-                    "id": 0 if m is None else m.id,
-                    "origin_id": 0 if m is None else m.origin_id,
-                    "name": "" if m is None else m.social_name,
-                    "fantasy_name": "" if m is None else m.fantasy_name,
-                    "taxvat": "" if m is None else m.taxvat,
+                    "id": m.id,
+                    "origin_id": m.origin_id,
+                    "name": m.social_name,
+                    "fantasy_name": m.fantasy_name,
+                    "taxvat": m.taxvat,
                     "city": {
-                        "id": 0 if m is None else m.city_id,
-                        "name": "" if m is None else m.city_name,
-                        "brazil_ibge_code": "" if m is None else m.brazil_ibge_code,
+                        "id": m.city_id,
+                        "name": m.city_name,
+                        "brazil_ibge_code": m.brazil_ibge_code,
                         "state_region": {
-                            "id": 0 if m is None else m.state_id,
-                            "name": "" if m is None else m.state_name,
-                            "acronym": "" if m is None else m.acronym,
+                            "id": m.state_id,
+                            "name": m.state_name,
+                            "acronym": m.acronym,
                             "country":{
-                                "id": 0 if m is None else m.country_id,
-                                "name": "" if m is None else m.country_name
+                                "id": m.country_id,
+                                "name": m.country_name
                             }
                         }
                     },
-                    "agent": self.__get_representative((0 if m is None else m.id)),
-                    "contacts": self.__get_contacts((0 if m is None else m.id)),
-                    "files": self.__get_file((0 if m is None else m.id)),
-                    "postal_code": None if m is None else m.postal_code,
-                    "neighborhood": None if m is None else m.neighborhood,
-                    "address": None if m is None else m.address,
-                    "type": None if m is None else m.type,
-                    "date_created": None if m is None else m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                    "date_updated": None if m is None else m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated is not None else None,
+                    "agent": self.__get_representative((m.id)),
+                    "contacts": self.__get_contacts((m.id)),
+                    "files": self.__get_file((m.id)),
+                    "postal_code": m.postal_code,
+                    "neighborhood": m.neighborhood,
+                    "address": m.address,
+                    "type": m.type,
+                    "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+                    "date_updated": m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated is not None else None,
                 }
         except exc.SQLAlchemyError as e:
             return {
@@ -437,44 +442,50 @@ class EntityApi(Resource):
                 .join(CmmStateRegions,CmmStateRegions.id==CmmCities.id_state_region)\
                 .join(CmmCountries,CmmCountries.id==CmmStateRegions.id_country)\
                 .join(B2bCustomerGroup,B2bCustomerGroup.id_representative==CmmLegalEntities.id)\
-                .where(and_(CmmLegalEntities.trash==False,B2bCustomerGroupCustomers.id_customer==id))
+                .where(and_(CmmLegalEntities.trash.is_(False),B2bCustomerGroupCustomers.id_customer==id))
             
             m = db.session.execute(rquery).first()
+            if m is None:
+                return {
+                        "error_code": HTTPStatus.BAD_REQUEST.value,
+                        "error_details": "Registro não encontrado!",
+                        "error_sql": ""
+                    }, HTTPStatus.BAD_REQUEST
 
             return {
-                    "id": 0 if m is None else m.id,
-                    "origin_id": 0 if m is None else m.origin_id,
-                    "name": None if m is None else m.social_name,
-                    "fantasy_name": None if m is None else m.fantasy_name,
-                    "taxvat": None if m is None else m.taxvat,
+                    "id": m.id,
+                    "origin_id": m.origin_id,
+                    "name": m.social_name,
+                    "fantasy_name": m.fantasy_name,
+                    "taxvat": m.taxvat,
                     "city": {
-                        "id": 0 if m is None else m.city_id,
-                        "name": None if m is None else m.city_name,
-                        "brazil_ibge_code":None if m is None else m.brazil_ibge_code,
+                        "id": m.city_id,
+                        "name": m.city_name,
+                        "brazil_ibge_code":m.brazil_ibge_code,
                         "state_region": {
-                            "id": 0 if m is None else m.state_id,
-                            "name": None if m is None else m.state_name,
-                            "acronym": None if m is None else m.acronym,
+                            "id": m.state_id,
+                            "name": m.state_name,
+                            "acronym": m.acronym,
                             "country":{
-                                "id": 0 if m is None else m.country_id,
-                                "name": None if m is None else m.country_name
+                                "id": m.country_id,
+                                "name": m.country_name
                             }
                         }
                     },
-                    "contacts": self.__get_contacts(0 if m is None else m.id),
-                    "files": self.__get_file(0 if m is None else m.id),
-                    "postal_code": None if m is None else m.postal_code,
-                    "neighborhood": None if m is None else m.neighborhood,
-                    "address": None if m is None else m.address,
-                    "type": None if m is None else m.type,
-                    "date_created": None if m is None else m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                    "date_updated": None if m is None else (m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated is not None else None)
+                    "contacts": self.__get_contacts(m.id),
+                    "files": self.__get_file(m.id),
+                    "postal_code": m.postal_code,
+                    "neighborhood": m.neighborhood,
+                    "address": m.address,
+                    "type": m.type,
+                    "date_created": m.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+                    "date_updated": (m.date_updated.strftime("%Y-%m-%d %H:%M:%S") if m.date_updated is not None else None)
                 }
         except Exception:
             return None
 
-    @ns_legal.response(HTTPStatus.OK.value,"Salva dados de um cliente/representante/fornecedor",model=lgl_registry)
-    @ns_legal.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_legal.response(HTTPStatus.OK,"Salva dados de um cliente/representante/fornecedor",model=lgl_registry)
+    @ns_legal.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def post(self,id:int):
         try:
@@ -537,8 +548,8 @@ class EntityApi(Resource):
                 "error_sql": e._sql_message()
             }
     
-    @ns_legal.response(HTTPStatus.OK.value,"Exclui os dados de um cliente/representante")
-    @ns_legal.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_legal.response(HTTPStatus.OK,"Exclui os dados de um cliente/representante")
+    @ns_legal.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @ns_legal.param("id","Id do registro")
     @auth.login_required
     def delete(self,id:int)->bool|dict:
@@ -556,8 +567,8 @@ class EntityApi(Resource):
             }
 
 class EntityCount(Resource):
-    @ns_legal.response(HTTPStatus.OK.value,"Retorna o total de Entidades por tipo")
-    @ns_legal.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_legal.response(HTTPStatus.OK,"Retorna o total de Entidades por tipo")
+    @ns_legal.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @ns_legal.param("type","Tipo da Entidade","query",type=str,enum=['C','R','S'])
     @auth.login_required
     def get(self):
@@ -575,8 +586,8 @@ class EntityCount(Resource):
 ns_legal.add_resource(EntityCount,'/count')
 
 class EntityOfStage(Resource):
-    @ns_legal.response(HTTPStatus.OK.value,"Retorna o total de Entidades por tipo")
-    @ns_legal.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_legal.response(HTTPStatus.OK,"Retorna o total de Entidades por tipo")
+    @ns_legal.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @ns_legal.param("page","Número da página de registros","query",type=int,required=True)
     @ns_legal.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_legal.param("query","Número de registros por página","query",type=str)
@@ -721,8 +732,8 @@ class EntityOfStage(Resource):
             "content_type":c.content_type
         }for c in db.session.execute(stmt)]
 
-    @ns_legal.response(HTTPStatus.OK.value,"Adiciona um ou mais clientes em um estagio de um funil")
-    @ns_legal.response(HTTPStatus.BAD_REQUEST.value,"Falha ao adicionar cliente!")
+    @ns_legal.response(HTTPStatus.OK,"Adiciona um ou mais clientes em um estagio de um funil")
+    @ns_legal.response(HTTPStatus.BAD_REQUEST,"Falha ao adicionar cliente!")
     @auth.login_required
     def post(self,id:int):
         try:
@@ -754,8 +765,8 @@ class EntityOfStage(Resource):
 ns_legal.add_resource(EntityOfStage,'/by-crm-stage/<int:id>')
 
 class EntityContact(Resource):
-    @ns_legal.response(HTTPStatus.OK.value,"Salva contato(s) de uma entidade")
-    @ns_legal.response(HTTPStatus.BAD_REQUEST.value,"Falha ao salvar o(s) registro(s)!")
+    @ns_legal.response(HTTPStatus.OK,"Salva contato(s) de uma entidade")
+    @ns_legal.response(HTTPStatus.BAD_REQUEST,"Falha ao salvar o(s) registro(s)!")
     @auth.login_required
     def post(self):
         try:
@@ -788,8 +799,8 @@ class EntityContact(Resource):
                 "error_sql": e._sql_message()
             }
     
-    @ns_legal.response(HTTPStatus.OK.value,"Exclui contato(s) de uma entidade")
-    @ns_legal.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_legal.response(HTTPStatus.OK,"Exclui contato(s) de uma entidade")
+    @ns_legal.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def delete(self):
         try:
@@ -807,8 +818,8 @@ class EntityContact(Resource):
 ns_legal.add_resource(EntityContact,'/save-contacts')
 
 class EntityHistory(Resource):
-    @ns_legal.response(HTTPStatus.OK.value,"Obtem os dados históricos de uma entidade")
-    @ns_legal.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
+    @ns_legal.response(HTTPStatus.OK,"Obtem os dados históricos de uma entidade")
+    @ns_legal.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado")
     @ns_legal.param("page","Número da página de registros","query",type=int,required=True)
     @ns_legal.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_legal.param("query","Texto para busca","query")
@@ -861,8 +872,8 @@ class EntityHistory(Resource):
                 "error_sql": e._sql_message()
             }
 
-    @ns_legal.response(HTTPStatus.OK.value,"Adiciona um comentário no histórico de uma entidade")
-    @ns_legal.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
+    @ns_legal.response(HTTPStatus.OK,"Adiciona um comentário no histórico de uma entidade")
+    @ns_legal.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado")
     def post(self,id:int):
         try:
             req = request.get_json()
@@ -887,8 +898,8 @@ ns_legal.add_resource(EntityHistory,'/history/<int:id>')
 
 
 class EntityImport(Resource):
-    @ns_legal.response(HTTPStatus.OK.value,"Realiza o pocessamento dos registros do arquivo de importacao")
-    @ns_legal.response(HTTPStatus.BAD_REQUEST.value,"Falha ao processar registros")
+    @ns_legal.response(HTTPStatus.OK,"Realiza o pocessamento dos registros do arquivo de importacao")
+    @ns_legal.response(HTTPStatus.BAD_REQUEST,"Falha ao processar registros")
     def post(self):
         try:
             pass

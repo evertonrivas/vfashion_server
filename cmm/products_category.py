@@ -2,11 +2,10 @@ from auth import auth
 from os import environ
 from flask import request
 from http import HTTPStatus
-from models.helpers import db
-# from models import _show_query
+from models.tenant import CmmCategories
+from models.helpers import _get_params, db
 from sqlalchemy import Select, exc, asc, desc
 from flask_restx import Resource,Namespace,fields
-from models.tenant import CmmCategories, _get_params
 
 ns_cat  = Namespace("products-category",description="Operações para manipular dados de categorias de produtos")
 
@@ -39,8 +38,8 @@ cat_return = ns_cat.model(
 
 @ns_cat.route("/")
 class CategoryList(Resource):
-    @ns_cat.response(HTTPStatus.OK.value,"Obtem a listagem de categorias de produto",cat_return)
-    @ns_cat.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
+    @ns_cat.response(HTTPStatus.OK,"Obtem a listagem de categorias de produto",cat_return)
+    @ns_cat.response(HTTPStatus.BAD_REQUEST,"Falha ao listar registros!")
     @ns_cat.param("page","Número da página de registros","query",type=int,required=True,default=1)
     @ns_cat.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_cat.param("query","Texto para busca","query")
@@ -117,8 +116,8 @@ class CategoryList(Resource):
                 "error_sql": e._sql_message()
             }
 
-    @ns_cat.response(HTTPStatus.OK.value,"Cria uma nova categoria de produto no sistema")
-    @ns_cat.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar nova categoria de produto!")
+    @ns_cat.response(HTTPStatus.OK,"Cria uma nova categoria de produto no sistema")
+    @ns_cat.response(HTTPStatus.BAD_REQUEST,"Falha ao criar nova categoria de produto!")
     @ns_cat.doc(body=cat_model)
     @auth.login_required
     def post(self):
@@ -137,8 +136,8 @@ class CategoryList(Resource):
                 "error_sql": e._sql_message()
             }
         
-    @ns_cat.response(HTTPStatus.OK.value,"Exclui os dados de uma categoria")
-    @ns_cat.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_cat.response(HTTPStatus.OK,"Exclui os dados de uma categoria")
+    @ns_cat.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def delete(self):
         try:
@@ -157,23 +156,27 @@ class CategoryList(Resource):
 
 @ns_cat.route("/<int:id>")
 class CategoryApi(Resource):
-    @ns_cat.response(HTTPStatus.OK.value,"Obtem um registro de uma categoria",cat_model)
-    @ns_cat.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_cat.response(HTTPStatus.OK,"Obtem um registro de uma categoria",cat_model)
+    @ns_cat.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def get(self,id:int):
         try:
             reg:CmmCategories|None = CmmCategories.query.get(id)
-            if reg is not None:
+            if reg is None:
                 return {
-                    "id": reg.id,
-                    "origin_id": reg.origin_id,
-                    "name": reg.name,
-                    "id_parent": reg.id_parent,
-                    "date_created": reg.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                    "date_updated": reg.date_updated.strftime("%Y-%m-%d %H:%M:%S") if reg.date_updated is not None else None,
-                    "trash": reg.trash
-                }
-            return None
+                    "error_code": HTTPStatus.BAD_REQUEST.value,
+                    "error_details": "Registro não encontrado!",
+                    "error_sql": ""
+                }, HTTPStatus.BAD_REQUEST
+            return {
+                "id": reg.id,
+                "origin_id": reg.origin_id,
+                "name": reg.name,
+                "id_parent": reg.id_parent,
+                "date_created": reg.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+                "date_updated": reg.date_updated.strftime("%Y-%m-%d %H:%M:%S") if reg.date_updated is not None else None,
+                "trash": reg.trash
+            }
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -182,8 +185,8 @@ class CategoryApi(Resource):
             }
             
 
-    @ns_cat.response(HTTPStatus.OK.value,"Atualiza os dados de uma categoria")
-    @ns_cat.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_cat.response(HTTPStatus.OK,"Atualiza os dados de uma categoria")
+    @ns_cat.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def post(self,id:int):
         try:

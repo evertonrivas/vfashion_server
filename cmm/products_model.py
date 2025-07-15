@@ -2,11 +2,10 @@ from auth import auth
 from os import environ
 from flask import request
 from http import HTTPStatus
-from models.helpers import db
-# from models import _show_query
+from models.helpers import _get_params, db
+from models.tenant import CmmProductsModels
 from sqlalchemy import Select, exc, desc, asc
 from flask_restx import Resource,Namespace,fields
-from models.tenant import CmmProductsModels, _get_params
 
 ns_model = Namespace("products-model",description="Operações para manipular dados de modelos de produtos")
 
@@ -38,8 +37,8 @@ model_return = ns_model.model(
 
 @ns_model.route("/")
 class CategoryList(Resource):
-    @ns_model.response(HTTPStatus.OK.value,"Obtem a listagem de categorias de modelos de produto",model_return)
-    @ns_model.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
+    @ns_model.response(HTTPStatus.OK,"Obtem a listagem de categorias de modelos de produto",model_return)
+    @ns_model.response(HTTPStatus.BAD_REQUEST,"Falha ao listar registros!")
     @ns_model.param("page","Número da página de registros","query",type=int,required=True,default=1)
     @ns_model.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_model.param("query","Texto para busca","query")
@@ -104,8 +103,8 @@ class CategoryList(Resource):
                 "error_sql": e._sql_message()
             }
 
-    @ns_model.response(HTTPStatus.OK.value,"Cria um novo modelo de produto no sistema")
-    @ns_model.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar novo modelo de produto!")
+    @ns_model.response(HTTPStatus.OK,"Cria um novo modelo de produto no sistema")
+    @ns_model.response(HTTPStatus.BAD_REQUEST,"Falha ao criar novo modelo de produto!")
     @ns_model.doc(body=model_model)
     @auth.login_required
     def post(self):
@@ -124,8 +123,8 @@ class CategoryList(Resource):
                 "error_sql": e._sql_message()
             }
         
-    @ns_model.response(HTTPStatus.OK.value,"Exclui os dados de um modelo de produto")
-    @ns_model.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_model.response(HTTPStatus.OK,"Exclui os dados de um modelo de produto")
+    @ns_model.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def delete(self):
         try:
@@ -144,21 +143,26 @@ class CategoryList(Resource):
 
 @ns_model.route("/<int:id>")
 class CategoryApi(Resource):
-    @ns_model.response(HTTPStatus.OK.value,"Obtem um registro de um modelo de produto",model_model)
-    @ns_model.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_model.response(HTTPStatus.OK,"Obtem um registro de um modelo de produto",model_model)
+    @ns_model.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def get(self,id:int):
         try:
             reg:CmmProductsModels|None = CmmProductsModels.query.get(id)
-            if reg is not None:
+            if reg is None:
                 return {
-                    "id": reg.id,
-                    "origin_id": reg.origin_id,
-                    "name": reg.name,
-                    "date_created": reg.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                    "date_updated": None if reg.date_updated is None else reg.date_updated.strftime("%Y-%m-%d %H:%M:%S"),
-                    "trash": reg.trash
-                }
+                    "error_code": HTTPStatus.BAD_REQUEST.value,
+                    "error_details": "Registro não encontrado!",
+                    "error_sql": ""
+                }, HTTPStatus.BAD_REQUEST
+            return {
+                "id": reg.id,
+                "origin_id": reg.origin_id,
+                "name": reg.name,
+                "date_created": reg.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+                "date_updated": None if reg.date_updated is None else reg.date_updated.strftime("%Y-%m-%d %H:%M:%S"),
+                "trash": reg.trash
+            }
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -167,8 +171,8 @@ class CategoryApi(Resource):
             }
             
 
-    @ns_model.response(HTTPStatus.OK.value,"Atualiza os dados de um modelo de produto")
-    @ns_model.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_model.response(HTTPStatus.OK,"Atualiza os dados de um modelo de produto")
+    @ns_model.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def post(self,id:int):
         try:

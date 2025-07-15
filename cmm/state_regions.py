@@ -2,11 +2,10 @@ from auth import auth
 from os import environ
 from flask import request
 from http import HTTPStatus
-from models.helpers import db
-# from models import _show_query
+from models.tenant import CmmStateRegions
+from models.helpers import _get_params, db
 from flask_restx import Resource,Namespace,fields
 from sqlalchemy import Select, desc, exc, asc, or_
-from models.tenant import CmmStateRegions, _get_params
 
 ns_state_region = Namespace("state-regions",description="Operações para manipular dados de estados ou regiões")
 
@@ -36,8 +35,8 @@ cou_return = ns_state_region.model(
 
 @ns_state_region.route("/")
 class CategoryList(Resource):
-    @ns_state_region.response(HTTPStatus.OK.value,"Obtem a listagem de cidades",cou_return)
-    @ns_state_region.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
+    @ns_state_region.response(HTTPStatus.OK,"Obtem a listagem de cidades",cou_return)
+    @ns_state_region.response(HTTPStatus.BAD_REQUEST,"Falha ao listar registros!")
     @ns_state_region.param("page","Número da página de registros","query",type=int,required=True,default=1)
     @ns_state_region.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_state_region.param("query","Texto para busca","query")
@@ -108,8 +107,8 @@ class CategoryList(Resource):
                 "error_sql": e._sql_message()
             }
 
-    @ns_state_region.response(HTTPStatus.OK.value,"Cria uma nova cidade")
-    @ns_state_region.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar novo registro!")
+    @ns_state_region.response(HTTPStatus.OK,"Cria uma nova cidade")
+    @ns_state_region.response(HTTPStatus.BAD_REQUEST,"Falha ao criar novo registro!")
     @ns_state_region.doc(body=cou_model)
     @auth.login_required
     def post(self):
@@ -130,19 +129,25 @@ class CategoryList(Resource):
 
 @ns_state_region.route("/<int:id>")
 class CategoryApi(Resource):
-    @ns_state_region.response(HTTPStatus.OK.value,"Obtem um registro de uma nova cidade",cou_model)
-    @ns_state_region.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_state_region.response(HTTPStatus.OK,"Obtem um registro de uma nova cidade",cou_model)
+    @ns_state_region.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def get(self,id:int):
         try:
             reg:CmmStateRegions|None = CmmStateRegions.query.get(id)
-            if reg is not None:
+            if reg is None:
                 return {
-                    "id": reg.id,
-                    "id_country": reg.id_country,
-                    "name": reg.name,
-                    "acronym": reg.acronym
-                }
+                    "error_code": HTTPStatus.BAD_REQUEST.value,
+                    "error_details": "Registro não encontrado!",
+                    "error_sql": ""
+                }, HTTPStatus.BAD_REQUEST
+            
+            return {
+                "id": reg.id,
+                "id_country": reg.id_country,
+                "name": reg.name,
+                "acronym": reg.acronym
+            }
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -151,8 +156,8 @@ class CategoryApi(Resource):
             }
             
 
-    @ns_state_region.response(HTTPStatus.OK.value,"Atualiza os dados de uma cidade")
-    @ns_state_region.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_state_region.response(HTTPStatus.OK,"Atualiza os dados de uma cidade")
+    @ns_state_region.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def post(self,id:int):
         try:
@@ -171,8 +176,8 @@ class CategoryApi(Resource):
                 "error_sql": e._sql_message()
             }
 
-    @ns_state_region.response(HTTPStatus.OK.value,"Exclui os dados de uma cidade")
-    @ns_state_region.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_state_region.response(HTTPStatus.OK,"Exclui os dados de uma cidade")
+    @ns_state_region.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def delete(self,id:int):
         try:

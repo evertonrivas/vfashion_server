@@ -2,11 +2,10 @@ from auth import auth
 from os import environ
 from flask import request
 from http import HTTPStatus
-from models.tenant import db
-# from models import _show_query
+from models.helpers import _get_params, db
 from sqlalchemy import Select, exc, desc, asc
 from flask_restx import Resource,Namespace,fields
-from models.tenant import B2bBrand, B2bCollection, _get_params
+from models.tenant import B2bBrand, B2bCollection
 
 ns_collection = Namespace("collection",description="Operações para manipular dados de coleções")
 
@@ -49,8 +48,8 @@ coll_return = ns_collection.model(
 
 @ns_collection.route("/")
 class CollectionList(Resource):
-    @ns_collection.response(HTTPStatus.OK.value,"Obtem um registro de uma coleção",coll_return)
-    @ns_collection.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_collection.response(HTTPStatus.OK,"Obtem um registro de uma coleção",coll_return)
+    @ns_collection.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @ns_collection.param("page","Número da página de registros","query",type=int,required=True)
     @ns_collection.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_collection.param("query","Texto para busca","query")
@@ -130,8 +129,8 @@ class CollectionList(Resource):
                 "error_sql": e._sql_message()
             }
 
-    @ns_collection.response(HTTPStatus.OK.value,"Cria uma nova coleção")
-    @ns_collection.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar registro!")
+    @ns_collection.response(HTTPStatus.OK,"Cria uma nova coleção")
+    @ns_collection.response(HTTPStatus.BAD_REQUEST,"Falha ao criar registro!")
     @ns_collection.doc(body=coll_model)
     @auth.login_required
     def post(self):
@@ -161,8 +160,8 @@ class CollectionList(Resource):
 @ns_collection.route("/<int:id>")
 @ns_collection.param("id","Id do registro")
 class CollectionApi(Resource):
-    @ns_collection.response(HTTPStatus.OK.value,"Retorna os dados dados de uma coleção")
-    @ns_collection.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_collection.response(HTTPStatus.OK,"Retorna os dados dados de uma coleção")
+    @ns_collection.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def get(self,id:int):
         try:
@@ -174,13 +173,19 @@ class CollectionApi(Resource):
                             B2bBrand.name.label("brand"))\
                             .join(B2bBrand,B2bBrand.id==B2bCollection.id_brand)\
                             .where(B2bCollection.id==id)).first()
+            if cquery is None:
+                return {
+                    "error_code": HTTPStatus.BAD_REQUEST.value,
+                    "error_details": "Registro não encontrado!",
+                    "error_sql": ""
+                }, HTTPStatus.BAD_REQUEST
 
             return {
-                "id": 0 if cquery is None else cquery.id,
-                "name": "" if cquery is None else cquery.name,
+                "id": cquery.id,
+                "name": cquery.name,
                 "brand":{
-                    "id": 0 if cquery is None else cquery.id_brand,
-                    "name": "" if cquery is None else cquery.brand
+                    "id": cquery.id_brand,
+                    "name": cquery.brand
                 }
             }
         except exc.SQLAlchemyError as e:
@@ -190,8 +195,8 @@ class CollectionApi(Resource):
                 "error_sql": e._sql_message()
             }
         
-    @ns_collection.response(HTTPStatus.OK.value,"Exclui os dados de uma coleção")
-    @ns_collection.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_collection.response(HTTPStatus.OK,"Exclui os dados de uma coleção")
+    @ns_collection.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def delete(self)->bool | dict:
         try:
@@ -208,8 +213,8 @@ class CollectionApi(Resource):
                 "error_sql": e._sql_message()
             }
     
-    @ns_collection.response(HTTPStatus.OK.value,"Atualiza os dados de uma coleção")
-    @ns_collection.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_collection.response(HTTPStatus.OK,"Atualiza os dados de uma coleção")
+    @ns_collection.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @ns_collection.doc(body=coll_model)
     @auth.login_required
     def post(self,id:int)->bool | dict:

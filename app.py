@@ -18,11 +18,15 @@ load_dotenv(path.join(BASEDIR, '.env'))
 locale.setlocale(locale.LC_TIME,environ.get("F2B_LOCALE"))
 
 app = Flask(__name__)
-SQLALCHEMY_DATABASE_URI = str(environ.get("F2B_DB_LIB"))+"://"+str(environ.get("F2B_DB_USER"))+":"+\
+app.config['SQLALCHEMY_DATABASE_URI'] = str(environ.get("F2B_DB_LIB"))+"://"+str(environ.get("F2B_DB_USER"))+":"+\
 str(environ.get("F2B_DB_PASS"))+"@"+str(environ.get("F2B_DB_HOST"))+"/"+str(environ.get("F2B_DB_NAME"))
-SQLALCHEMY_ENGINE_OPTIONS = {
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'pool_recycle': 280,
     'pool_pre_ping': True
+}
+app.config['SQLALCHEMY_BINDS'] = {
+    "public": str(environ.get("F2B_DB_LIB"))+"://"+str(environ.get("F2B_DB_USER"))+":"+\
+    str(environ.get("F2B_DB_PASS"))+"@"+str(environ.get("F2B_DB_HOST"))+"/"+str(environ.get("F2B_DB_NAME"))
 }
 
 db.init_app(app)
@@ -34,7 +38,7 @@ try:
             conn.close()
 
         #se nao existirem as tabelas tenta crialas
-        db.create_all()
+        db.create_all("public")
 except Exception as e:
     print(e)
     print("###################################################")

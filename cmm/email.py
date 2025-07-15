@@ -14,8 +14,8 @@ ns_email = Namespace("email",description="Operações para manipular upload de d
 @ns_email.route("/")
 class EmailApi(Resource):
 
-    @ns_email.response(HTTPStatus.OK.value,"Realiza envio de arquivo(s) para o servidor")
-    @ns_email.response(HTTPStatus.BAD_REQUEST.value,"Falha ao enviar arquivo(s)!")
+    @ns_email.response(HTTPStatus.OK,"Realiza envio de arquivo(s) para o servidor")
+    @ns_email.response(HTTPStatus.BAD_REQUEST,"Falha ao enviar arquivo(s)!")
     @auth.login_required
     def post(self):
         try:

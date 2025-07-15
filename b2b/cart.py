@@ -3,7 +3,6 @@ from auth import auth
 from flask import request
 from http import HTTPStatus
 from models.helpers import db
-# from models import _show_query
 from flask_restx import Resource,Namespace,fields
 from models.tenant import B2bCartShopping, B2bCustomerGroup
 from models.tenant import CmmTranslateSizes,CmmProductsImages
@@ -24,8 +23,8 @@ m_list_content = ns_cart.model(
 
 @ns_cart.route("/")
 class CartApi(Resource):
-    @ns_cart.response(HTTPStatus.OK.value,"Retorna os dados de produtos que estão no carrinho de compras")
-    @ns_cart.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros")
+    @ns_cart.response(HTTPStatus.OK,"Retorna os dados de produtos que estão no carrinho de compras")
+    @ns_cart.response(HTTPStatus.BAD_REQUEST,"Falha ao listar registros")
     @ns_cart.param("id_profile","Número da página de registros","query",type=int,required=True,default=1)
     @ns_cart.param("order_by","Campo de ordenacao","query")
     @ns_cart.param("order_dir","Direção da ordenação","query",enum=['ASC','DESC'])
@@ -45,7 +44,7 @@ class CartApi(Resource):
                             CmmProductsImages.img_url,
                             CmmProducts.name,CmmProducts.refCode,
                             func.sum(B2bCartShopping.quantity).label("total")).distinct()\
-                .join(CmmProductsImages,and_(CmmProductsImages.id_product==B2bCartShopping.id_product,CmmProductsImages.img_default==True))\
+                .join(CmmProductsImages,and_(CmmProductsImages.id_product==B2bCartShopping.id_product,CmmProductsImages.img_default.is_(True)))\
                 .join(CmmLegalEntities,CmmLegalEntities.id==B2bCartShopping.id_customer)\
                 .join(CmmProducts,CmmProducts.id==B2bCartShopping.id_product)\
                 .group_by(B2bCartShopping.id_product)
@@ -118,8 +117,8 @@ class CartApi(Resource):
 
         return db.session.execute(query).all()
 
-    @ns_cart.response(HTTPStatus.OK.value,"Retorna verdadeiro ou falso se conseguiu excluir o(s) registro(s)")
-    @ns_cart.response(HTTPStatus.BAD_REQUEST.value,"Falha ao excluir")
+    @ns_cart.response(HTTPStatus.OK,"Retorna verdadeiro ou falso se conseguiu excluir o(s) registro(s)")
+    @ns_cart.response(HTTPStatus.BAD_REQUEST,"Falha ao excluir")
     @auth.login_required
     def delete(self):
         try:
@@ -140,8 +139,8 @@ class CartApi(Resource):
                 "errors_sql": e._sql_message()
             }
 
-    @ns_cart.response(HTTPStatus.OK.value,"Salva os dados de produtos no carrinho de compras")
-    @ns_cart.response(HTTPStatus.BAD_REQUEST.value,"Falha ao salvar registro!")
+    @ns_cart.response(HTTPStatus.OK,"Salva os dados de produtos no carrinho de compras")
+    @ns_cart.response(HTTPStatus.BAD_REQUEST,"Falha ao salvar registro!")
     @auth.login_required
     def post(self):
         try:
@@ -179,8 +178,8 @@ class CartApi(Resource):
                 "errors_sql": e._sql_message()
             }
     
-    @ns_cart.response(HTTPStatus.OK.value,"Adição em massa de produtos no carrinho de compras utilizando a configuracao de grade")
-    @ns_cart.response(HTTPStatus.BAD_REQUEST.value,"Falha ao salvar registro!")
+    @ns_cart.response(HTTPStatus.OK,"Adição em massa de produtos no carrinho de compras utilizando a configuracao de grade")
+    @ns_cart.response(HTTPStatus.BAD_REQUEST,"Falha ao salvar registro!")
     @ns_cart.doc(body=m_list_content,description="Dados necessários dos produtos",name="content")
     def put(self):
         totalExecuted = 0
@@ -252,8 +251,8 @@ class CartApi(Resource):
 @ns_cart.param("id","Id")
 class CartItem(Resource):
     @ns_cart.hide
-    @ns_cart.response(HTTPStatus.OK.value,"Metodo a ser implementado")
-    @ns_cart.response(HTTPStatus.BAD_REQUEST.value,"Falha ao salvar registro!")
+    @ns_cart.response(HTTPStatus.OK,"Metodo a ser implementado")
+    @ns_cart.response(HTTPStatus.BAD_REQUEST,"Falha ao salvar registro!")
     @auth.login_required
     def get(self,id:int):
         id_customer = int(str(request.args.get("id_profile")))
@@ -284,8 +283,8 @@ class CartItem(Resource):
             }for c in db.session.execute(cquery)]
         }
 
-    @ns_cart.response(HTTPStatus.OK.value,"Remove os itens do carrinho de compras")
-    @ns_cart.response(HTTPStatus.BAD_REQUEST.value,"Falha ao remover registros!")
+    @ns_cart.response(HTTPStatus.OK,"Remove os itens do carrinho de compras")
+    @ns_cart.response(HTTPStatus.BAD_REQUEST,"Falha ao remover registros!")
     @auth.login_required
     def delete(self,id:int):
         try:
@@ -316,8 +315,8 @@ class CartItem(Resource):
 
 @ns_cart.param('id_entity','Código do perfil',"query",type=int)
 class CartTotal(Resource):
-    @ns_cart.response(HTTPStatus.OK.value,"Lista o total de produtos no carrinho")
-    @ns_cart.response(HTTPStatus.BAD_REQUEST.value,"Falha ao contar registros!")
+    @ns_cart.response(HTTPStatus.OK,"Lista o total de produtos no carrinho")
+    @ns_cart.response(HTTPStatus.BAD_REQUEST,"Falha ao contar registros!")
     @ns_cart.param("userType","Tipo do usuário","query",enum=['A','C','R'])
     @auth.login_required
     def get(self,id_entity:int):

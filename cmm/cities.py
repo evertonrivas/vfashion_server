@@ -2,12 +2,10 @@ from auth import auth
 from os import environ
 from flask import request
 from http import HTTPStatus
-from models.helpers import db
-# from models import _show_query
+from models.helpers import _get_params, db
 from sqlalchemy import Select, desc, exc, asc
 from flask_restx import Resource,Namespace,fields
-from models.tenant import CmmCities, CmmCountries, CmmStateRegions, _get_params
-
+from models.tenant import CmmCities, CmmCountries, CmmStateRegions
 ns_city = Namespace("cities",description="Operações para manipular dados de cidades")
 
 #API Models
@@ -36,8 +34,8 @@ cou_return = ns_city.model(
 
 @ns_city.route("/")
 class CitiesList(Resource):
-    @ns_city.response(HTTPStatus.OK.value,"Obtem a listagem de cidades",cou_return)
-    @ns_city.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
+    @ns_city.response(HTTPStatus.OK,"Obtem a listagem de cidades",cou_return)
+    @ns_city.response(HTTPStatus.BAD_REQUEST,"Falha ao listar registros!")
     @ns_city.param("page","Número da página de registros","query",type=int,required=True,default=1)
     @ns_city.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_city.param("query","Texto para busca","query")
@@ -128,8 +126,8 @@ class CitiesList(Resource):
                 "error_sql": e._sql_message()
             }
 
-    @ns_city.response(HTTPStatus.OK.value,"Cria uma nova cidade")
-    @ns_city.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar novo registro!")
+    @ns_city.response(HTTPStatus.OK,"Cria uma nova cidade")
+    @ns_city.response(HTTPStatus.BAD_REQUEST,"Falha ao criar novo registro!")
     @ns_city.doc(body=cou_model)
     @auth.login_required
     def post(self):
@@ -150,20 +148,25 @@ class CitiesList(Resource):
 
 @ns_city.route("/<int:id>")
 class CityApi(Resource):
-    @ns_city.response(HTTPStatus.OK.value,"Obtem um registro de uma nova cidade",cou_model)
-    @ns_city.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_city.response(HTTPStatus.OK,"Obtem um registro de uma nova cidade",cou_model)
+    @ns_city.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def get(self,id:int):
         try:
             req:CmmCities|None = CmmCities.query.get(id)
-            if req is not None:
+            if req is None:
                 return {
-                    "id": req.id,
-                    "id_state_region": req.id_state_region,
-                    "name": req.name,
-                    "brazil_ibge_code" : req.brazil_ibge_code
-                }
-            return None
+                    "error_code": HTTPStatus.BAD_REQUEST.value,
+                    "error_details": "Registro não encontrado!",
+                    "error_sql": ""
+                }, HTTPStatus.BAD_REQUEST
+
+            return {
+                "id": req.id,
+                "id_state_region": req.id_state_region,
+                "name": req.name,
+                "brazil_ibge_code" : req.brazil_ibge_code
+            }
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -172,8 +175,8 @@ class CityApi(Resource):
             }
             
 
-    @ns_city.response(HTTPStatus.OK.value,"Atualiza os dados de uma cidade")
-    @ns_city.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_city.response(HTTPStatus.OK,"Atualiza os dados de uma cidade")
+    @ns_city.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def post(self,id:int):
         try:
@@ -192,8 +195,8 @@ class CityApi(Resource):
                 "error_sql": e._sql_message()
             }
 
-    @ns_city.response(HTTPStatus.OK.value,"Exclui os dados de uma cidade")
-    @ns_city.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_city.response(HTTPStatus.OK,"Exclui os dados de uma cidade")
+    @ns_city.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def delete(self,id:int):
         try:

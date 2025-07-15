@@ -2,11 +2,10 @@ from auth import auth
 from os import environ
 from flask import request
 from http import HTTPStatus
-from models.helpers import db
-# from models import _show_query
+from models.tenant import CmmCountries
+from models.helpers import _get_params, db
 from sqlalchemy import Select, desc, exc, asc
 from flask_restx import Resource,Namespace,fields
-from models.tenant import CmmCountries, _get_params
 
 ns_country = Namespace("countries",description="Operações para manipular dados de países")
 
@@ -36,8 +35,8 @@ cou_return = ns_country.model(
 
 @ns_country.route("/")
 class CategoryList(Resource):
-    @ns_country.response(HTTPStatus.OK.value,"Obtem a listagem de países",cou_return)
-    @ns_country.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
+    @ns_country.response(HTTPStatus.OK,"Obtem a listagem de países",cou_return)
+    @ns_country.response(HTTPStatus.BAD_REQUEST,"Falha ao listar registros!")
     @ns_country.param("page","Número da página de registros","query",type=int,required=True,default=1)
     @ns_country.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_country.param("query","Texto para busca","query")
@@ -94,8 +93,8 @@ class CategoryList(Resource):
                 "error_sql": e._sql_message()
             }
 
-    @ns_country.response(HTTPStatus.OK.value,"Cria um novo país")
-    @ns_country.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar novo país!")
+    @ns_country.response(HTTPStatus.OK,"Cria um novo país")
+    @ns_country.response(HTTPStatus.BAD_REQUEST,"Falha ao criar novo país!")
     @ns_country.doc(body=cou_model)
     @auth.login_required
     def post(self):
@@ -113,8 +112,8 @@ class CategoryList(Resource):
                 "error_sql": e._sql_message()
             }
         
-    @ns_country.response(HTTPStatus.OK.value,"Exclui os dados de um país")
-    @ns_country.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_country.response(HTTPStatus.OK,"Exclui os dados de um país")
+    @ns_country.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def delete(self):
         try:
@@ -133,18 +132,22 @@ class CategoryList(Resource):
 
 @ns_country.route("/<int:id>")
 class CategoryApi(Resource):
-    @ns_country.response(HTTPStatus.OK.value,"Obtem um registro de um país",cou_model)
-    @ns_country.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_country.response(HTTPStatus.OK,"Obtem um registro de um país",cou_model)
+    @ns_country.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def get(self,id:int):
         try:
             reg:CmmCountries|None = CmmCountries.query.get(id)
-            if reg is not None:
+            if reg is None:
                 return {
-                    "id": reg.id,
-                    "name": reg.name
-                }
-            return None
+                    "error_code": HTTPStatus.BAD_REQUEST.value,
+                    "error_details": "Registro não encontrado!",
+                    "error_sql": ""
+                }, HTTPStatus.BAD_REQUEST
+            return {
+                "id": reg.id,
+                "name": reg.name
+            }
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -153,8 +156,8 @@ class CategoryApi(Resource):
             }
             
 
-    @ns_country.response(HTTPStatus.OK.value,"Atualiza os dados de um país")
-    @ns_country.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_country.response(HTTPStatus.OK,"Atualiza os dados de um país")
+    @ns_country.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def post(self,id:int):
         try:
@@ -172,8 +175,8 @@ class CategoryApi(Resource):
                 "error_sql": e._sql_message()
             }
 
-    @ns_country.response(HTTPStatus.OK.value,"Exclui os dados de um país")
-    @ns_country.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_country.response(HTTPStatus.OK,"Exclui os dados de um país")
+    @ns_country.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def delete(self,id:int):
         try:

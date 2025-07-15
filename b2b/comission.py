@@ -23,8 +23,8 @@ comission_return = fields.List(fields.Nested(comission_model))
 
 @ns_comission.route("/<int:year>")
 class ComissionList(Resource):
-    @ns_comission.response(HTTPStatus.OK.value,"Obtem um registro de comissoes de um ano",comission_return)
-    @ns_comission.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_comission.response(HTTPStatus.OK,"Obtem um registro de comissoes de um ano",comission_return)
+    @ns_comission.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def get(self,year:int):
         try:
@@ -50,8 +50,8 @@ class ComissionList(Resource):
                 "error_sql": e._sql_message()
             }
 
-    @ns_comission.response(HTTPStatus.OK.value,"Cria ou atualiza uma nova comissao do ano")
-    @ns_comission.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar registro!")
+    @ns_comission.response(HTTPStatus.OK,"Cria ou atualiza uma nova comissao do ano")
+    @ns_comission.response(HTTPStatus.BAD_REQUEST,"Falha ao criar registro!")
     @ns_comission.doc(body=comission_model)
     @auth.login_required
     def post(self,year:int)->bool|dict:

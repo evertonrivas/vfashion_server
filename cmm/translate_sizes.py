@@ -3,10 +3,9 @@ from auth import auth
 from os import environ
 from flask import request
 from http import HTTPStatus
-from models.helpers import db
-# from models import _show_query
+from models.helpers import _get_params, db
 from sqlalchemy import Select, exc, desc, asc
-from models.tenant import CmmTranslateSizes, _get_params
+from models.tenant import CmmTranslateSizes
 
 ns_size = Namespace("translate-sizes",description="Operações para manipular dados de tamanhos")
 
@@ -39,8 +38,8 @@ size_return = ns_size.model(
 
 @ns_size.route("/")
 class CategoryList(Resource):
-    @ns_size.response(HTTPStatus.OK.value,"Obtem a listagem de traduções de tamanhos",size_return)
-    @ns_size.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
+    @ns_size.response(HTTPStatus.OK,"Obtem a listagem de traduções de tamanhos",size_return)
+    @ns_size.response(HTTPStatus.BAD_REQUEST,"Falha ao listar registros!")
     @ns_size.param("page","Número da página de registros","query",type=int,required=True,default=1)
     @ns_size.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_size.param("query","Texto para busca","query")
@@ -113,8 +112,8 @@ class CategoryList(Resource):
                 "error_sql": e._sql_message()
             }
 
-    @ns_size.response(HTTPStatus.OK.value,"Cria uma nova tradução de tamanho")
-    @ns_size.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar novo modelo de produto!")
+    @ns_size.response(HTTPStatus.OK,"Cria uma nova tradução de tamanho")
+    @ns_size.response(HTTPStatus.BAD_REQUEST,"Falha ao criar novo modelo de produto!")
     @ns_size.doc(body=size_model)
     @auth.login_required
     def post(self):
@@ -136,8 +135,8 @@ class CategoryList(Resource):
                 "error_sql": e._sql_message()
             }
         
-    @ns_size.response(HTTPStatus.OK.value,"Exclui os dados de uma nova tradução de tamanho")
-    @ns_size.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_size.response(HTTPStatus.OK,"Exclui os dados de uma nova tradução de tamanho")
+    @ns_size.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def delete(self):
         try:
@@ -156,23 +155,28 @@ class CategoryList(Resource):
 
 @ns_size.route("/<int:id>")
 class CategoryApi(Resource):
-    @ns_size.response(HTTPStatus.OK.value,"Obtem um registro de uma nova tradução de tamanho",size_model)
-    @ns_size.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_size.response(HTTPStatus.OK,"Obtem um registro de uma nova tradução de tamanho",size_model)
+    @ns_size.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def get(self,id:int):
         try:
-            req:CmmTranslateSizes|None = CmmTranslateSizes.query.get(id)
-            if req is not None:
+            reg:CmmTranslateSizes|None = CmmTranslateSizes.query.get(id)
+            if reg is None:
                 return {
-                    "id": req.id,
-                    "new_size": req.new_size,
-                    "name": req.name,
-                    "old_size": req.old_size,
-                    "trash": req.trash,
-                    "date_created": req.date_created.strftime("%Y-%m-%d %H:%M:%S"),
-                    "date_updated": None if req.date_updated is None else req.date_updated.strftime("%Y-%m-%d %H:%M:%S")
-                }
-            return None
+                    "error_code": HTTPStatus.BAD_REQUEST.value,
+                    "error_details": "Registro não encontrado!",
+                    "error_sql": ""
+                }, HTTPStatus.BAD_REQUEST
+            
+            return {
+                "id": reg.id,
+                "new_size": reg.new_size,
+                "name": reg.name,
+                "old_size": reg.old_size,
+                "trash": reg.trash,
+                "date_created": reg.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+                "date_updated": None if reg.date_updated is None else reg.date_updated.strftime("%Y-%m-%d %H:%M:%S")
+            }
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -181,8 +185,8 @@ class CategoryApi(Resource):
             }
             
 
-    @ns_size.response(HTTPStatus.OK.value,"Atualiza os dados de uma nova tradução de tamanho")
-    @ns_size.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_size.response(HTTPStatus.OK,"Atualiza os dados de uma nova tradução de tamanho")
+    @ns_size.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required      
     def post(self,id:int):
         try:

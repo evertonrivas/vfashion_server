@@ -31,8 +31,8 @@ cfg_cep_model = ns_config.model(
 
 @ns_config.route("/")
 class CategoryList(Resource):
-    @ns_config.response(HTTPStatus.OK.value,"Obtem as configurações do sistema",cfg_model)
-    @ns_config.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
+    @ns_config.response(HTTPStatus.OK,"Obtem as configurações do sistema",cfg_model)
+    @ns_config.response(HTTPStatus.BAD_REQUEST,"Falha ao listar registros!")
     def get(self):
         try:
             if environ.get("F2B_DASHBOARD_CONFIG")=="MEN":
@@ -79,8 +79,8 @@ class CategoryList(Resource):
                 "error_sql": None
             }
     
-    @ns_config.response(HTTPStatus.OK.value,"Obtem as informações de CEP")
-    @ns_config.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
+    @ns_config.response(HTTPStatus.OK,"Obtem as informações de CEP")
+    @ns_config.response(HTTPStatus.BAD_REQUEST,"Falha ao listar registros!")
     @ns_config.doc(body=cfg_cep_model,description="Dados necessários",name="content")
     def post(self):
         try:

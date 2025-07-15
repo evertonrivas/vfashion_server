@@ -1,14 +1,13 @@
-from flask_restx import Resource,Namespace,fields
 from auth import auth
 from os import environ
 from flask import request
 from http import HTTPStatus
 from datetime import datetime
-from models.helpers import db
-# from models import _show_query
+from models.helpers import _get_params, db
+from models.tenant import FprReason, _save_log
+from flask_restx import Resource,Namespace,fields
 from f2bconfig import CustomerAction, DevolutionStatus
 from models.tenant import FprDevolution, FprDevolutionItem
-from models.tenant import FprReason, _get_params, _save_log
 from models.tenant import CmmTranslateColors, CmmTranslateSizes
 from models.tenant import B2bOrders, CmmProducts, CmmLegalEntities
 from sqlalchemy import Delete, Select, Update, desc, distinct, exc, asc, func, text, tuple_
@@ -42,8 +41,8 @@ dev_return = ns_devolution.model(
 
 @ns_devolution.route("/")
 class CategoryList(Resource):
-    @ns_devolution.response(HTTPStatus.OK.value,"Obtem a listagem de devoluções",dev_return)
-    @ns_devolution.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
+    @ns_devolution.response(HTTPStatus.OK,"Obtem a listagem de devoluções",dev_return)
+    @ns_devolution.response(HTTPStatus.BAD_REQUEST,"Falha ao listar registros!")
     @ns_devolution.param("page","Número da página de registros","query",type=int,required=True,default=1)
     @ns_devolution.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_devolution.param("query","Texto para busca","query")
@@ -116,8 +115,8 @@ class CategoryList(Resource):
                 "error_sql": e._sql_message()
             }
 
-    @ns_devolution.response(HTTPStatus.OK.value,"Cria uma nova devolução")
-    @ns_devolution.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar novo etapa de devolução!")
+    @ns_devolution.response(HTTPStatus.OK,"Cria uma nova devolução")
+    @ns_devolution.response(HTTPStatus.BAD_REQUEST,"Falha ao criar novo etapa de devolução!")
     @ns_devolution.doc(body=dev_model)
     @auth.login_required
     def post(self):
@@ -158,8 +157,8 @@ class CategoryList(Resource):
                 "error_sql": e._sql_message()
             }
     
-    @ns_devolution.response(HTTPStatus.OK.value,"Exclui os dados de uma devolução")
-    @ns_devolution.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_devolution.response(HTTPStatus.OK,"Exclui os dados de uma devolução")
+    @ns_devolution.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def delete(self):
         try:
@@ -179,8 +178,8 @@ class CategoryList(Resource):
 
 @ns_devolution.route("/<int:id>")
 class CategoryApi(Resource):
-    @ns_devolution.response(HTTPStatus.OK.value,"Obtem um registro de uma etapa de devolução",dev_model)
-    @ns_devolution.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_devolution.response(HTTPStatus.OK,"Obtem um registro de uma etapa de devolução",dev_model)
+    @ns_devolution.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def get(self,id:int):
         try:
@@ -240,6 +239,12 @@ class CategoryApi(Resource):
                         "picture_4": i.picture_4
                     }for i in db.session.execute(dev_itens)]
                 }
+            else:
+                return {
+                    "error_code": HTTPStatus.BAD_REQUEST.value,
+                    "error_details": "Registro não encontrado!",
+                    "error_sql": ""
+                }, HTTPStatus.BAD_REQUEST
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -248,8 +253,8 @@ class CategoryApi(Resource):
             }
             
 
-    @ns_devolution.response(HTTPStatus.OK.value,"Atualiza os dados de uma etapa de devolução")
-    @ns_devolution.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_devolution.response(HTTPStatus.OK,"Atualiza os dados de uma etapa de devolução")
+    @ns_devolution.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def post(self,id:int):
         try:
@@ -310,8 +315,8 @@ class CategoryApi(Resource):
                 "error_sql": e._sql_message()
             }
     
-    @ns_devolution.response(HTTPStatus.OK.value,"Finaliza o status de uma devolução")
-    @ns_devolution.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_devolution.response(HTTPStatus.OK,"Finaliza o status de uma devolução")
+    @ns_devolution.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def put(self,id:int):
         try:
@@ -329,8 +334,8 @@ class CategoryApi(Resource):
         
 @ns_devolution.param('id_entity','Código do perfil',"query",type=int)
 class DevolutionTotal(Resource):
-    @ns_devolution.response(HTTPStatus.OK.value,"Lista o total de produtos no carrinho")
-    @ns_devolution.response(HTTPStatus.BAD_REQUEST.value,"Falha ao contar registros!")
+    @ns_devolution.response(HTTPStatus.OK,"Lista o total de produtos no carrinho")
+    @ns_devolution.response(HTTPStatus.BAD_REQUEST,"Falha ao contar registros!")
     @ns_devolution.param("userType","Tipo do usuário","query",enum=['A','L','I','R'])
     @auth.login_required
     def get(self,id_entity:int):

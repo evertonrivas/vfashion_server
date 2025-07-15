@@ -5,12 +5,11 @@ from flask import request
 from decimal import Decimal
 from http import HTTPStatus
 from datetime import datetime
-from models.helpers import db
-# from models import _show_query
+from models.helpers import _get_params, db
 from flask_restx import Resource,Namespace,fields
 from sqlalchemy import Delete, Select, and_, exc, or_, desc, asc
+from models.tenant import CmmTranslateColors, CmmTranslateSizes, ScmEvent
 from models.tenant import B2bBrand, B2bCartShopping, B2bCollection, B2bProductStock
-from models.tenant import CmmTranslateColors, CmmTranslateSizes, ScmEvent, _get_params
 from models.tenant import B2bTablePrice, B2bTablePriceProduct, CmmCategories, CmmMeasureUnit
 from models.tenant import CmmProducts, CmmProductsCategories, CmmProductsGrid, CmmProductsGridDistribution 
 from models.tenant import CmmProductsGridSizes, CmmProductsImages, CmmProductsModels, CmmProductsTypes
@@ -80,8 +79,8 @@ stock_return = ns_stock.model(
 
 @ns_stock.route("/")
 class ProductStockList(Resource):
-    @ns_stock.response(HTTPStatus.OK.value,"Obtem a lista de estoques de produtos do B2B",stock_return)
-    @ns_stock.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
+    @ns_stock.response(HTTPStatus.OK,"Obtem a lista de estoques de produtos do B2B",stock_return)
+    @ns_stock.response(HTTPStatus.BAD_REQUEST,"Falha ao listar registros!")
     @ns_stock.param("page","Número da página de registros","query",type=int,required=True)
     @ns_stock.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_stock.param("query","Texto para busca","query")
@@ -239,8 +238,8 @@ class ProductStockList(Resource):
                 "error_sql": e._sql_message()
             }
 
-    @ns_stock.response(HTTPStatus.OK.value,"Cria um registro de estoque de produto do B2B")
-    @ns_stock.response(HTTPStatus.BAD_REQUEST.value,"Falha ao criar nova condicao de pagamento!")
+    @ns_stock.response(HTTPStatus.OK,"Cria um registro de estoque de produto do B2B")
+    @ns_stock.response(HTTPStatus.BAD_REQUEST,"Falha ao criar nova condicao de pagamento!")
     @ns_stock.param("name","Nome da condição de pagamento","formData",required=True)
     @ns_stock.param("received_days","Dias para recebimento","formData",type=int,required=True)
     @ns_stock.param("installments","Número de parcelas","formData",type=int,required=True)
@@ -249,7 +248,7 @@ class ProductStockList(Resource):
         try:
             req = request.get_json()
 
-            stock:B2bProductStock = B2bProductStock() # type: ignore
+            stock = B2bProductStock()
             stock.id_product = req["id_product"]
             stock.id_color   = req["id_color"]
             stock.id_size    = req["id_size"]
@@ -309,19 +308,26 @@ class ProductStockList(Resource):
 @ns_stock.param("color","Cor do produto")
 @ns_stock.param("size","Tamanho do produto")
 class ProductStockApi(Resource):
-    @ns_stock.response(HTTPStatus.OK.value,"Obtem um registro do estoque de um produto do B2B",stock_model)
-    @ns_stock.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_stock.response(HTTPStatus.OK,"Obtem um registro do estoque de um produto do B2B",stock_model)
+    @ns_stock.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def get(self,id:int,color:str,size:str):
         try:
             reg:B2bProductStock|None  = B2bProductStock.query.get([id,color,size])
+            if reg is None:
+                return {
+                    "error_code": HTTPStatus.BAD_REQUEST.value,
+                    "error_details": "Registro não encontrado!",
+                    "error_sql": ""
+                }, HTTPStatus.BAD_REQUEST
+            
             return {
-                "id_product": 0 if reg is None else reg.id_product,
-                "id_color": 0 if reg is None else reg.id_color,
-                "id_size": 0 if reg is None else reg.id_size,
-                "quantity": 0 if reg is None else reg.quantity,
-                "in_order": 0 if reg is None else reg.in_order,
-                "ilimited": False if reg is None else reg.ilimited
+                "id_product": reg.id_product,
+                "id_color": reg.id_color,
+                "id_size": reg.id_size,
+                "quantity": reg.quantity,
+                "in_order": reg.in_order,
+                "ilimited": reg.ilimited
             }
         except exc.SQLAlchemyError as e:
             return {
@@ -330,8 +336,8 @@ class ProductStockApi(Resource):
                 "error_sql": e._sql_message()
             }
 
-    @ns_stock.response(HTTPStatus.OK.value,"Salva dados de um estoque")
-    @ns_stock.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_stock.response(HTTPStatus.OK,"Salva dados de um estoque")
+    @ns_stock.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def post(self,id:int,color:str,size:str):
         try:
@@ -353,8 +359,8 @@ class ProductStockApi(Resource):
                 "error_sql": e._sql_message()
             }
     
-    @ns_stock.response(HTTPStatus.OK.value,"Exclui os dados de uma condição de pagamento")
-    @ns_stock.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado!")
+    @ns_stock.response(HTTPStatus.OK,"Exclui os dados de uma condição de pagamento")
+    @ns_stock.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def delete(self,id:int,color:str,size:str):
         try:
@@ -370,8 +376,8 @@ class ProductStockApi(Resource):
             }
 
 class ProductStockLoad(Resource):
-    @ns_stock.response(HTTPStatus.OK.value,"Obtem a lista de estoques de um determinado produto do B2B")
-    @ns_stock.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
+    @ns_stock.response(HTTPStatus.OK,"Obtem a lista de estoques de um determinado produto do B2B")
+    @ns_stock.response(HTTPStatus.BAD_REQUEST,"Falha ao listar registros!")
     @auth.login_required
     def get(self,id_product:int):    
         cquery = Select(CmmTranslateColors.hexcode,CmmTranslateColors.name,CmmTranslateColors.color,CmmTranslateColors.id)\
@@ -442,8 +448,8 @@ ns_stock.add_resource(ProductStockLoad,"/load-by-product/<int:id_product>")
 #busca especifica para a galeria de produtos do B2B, jah que precisa buscar mais coisas além do nome
 #so irah buscar produtos que tiverem estoque disponivel para o B2B
 class ProductsGallery(Resource):
-    @ns_stock.response(HTTPStatus.OK.value,"Obtem a listagem de produto",prd_return)
-    @ns_stock.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
+    @ns_stock.response(HTTPStatus.OK,"Obtem a listagem de produto",prd_return)
+    @ns_stock.response(HTTPStatus.BAD_REQUEST,"Falha ao listar registros!")
     @ns_stock.param("page","Número da página de registros","query",type=int,required=True,default=1)
     @ns_stock.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_stock.param("query","Texto com parametros para busca","query")
@@ -485,7 +491,7 @@ class ProductsGallery(Resource):
                 .outerjoin(B2bTablePrice,B2bTablePrice.id==B2bTablePriceProduct.id_table_price)\
                 .outerjoin(CmmProductsCategories,CmmProductsCategories.id_product==CmmProducts.id)\
                 .outerjoin(CmmCategories,CmmCategories.id==CmmProductsCategories.id_category)\
-                .where(CmmProducts.trash==False)\
+                .where(CmmProducts.trash.is_(False))\
                 .where(CmmProducts.id.in_(
                     Select(B2bProductStock.id_product).where(
                         or_(
@@ -495,7 +501,7 @@ class ProductsGallery(Resource):
                                     B2bProductStock.quantity==0,
                                     B2bProductStock.quantity.is_(None)
                                 ),
-                                B2bProductStock.ilimited==True
+                                B2bProductStock.ilimited.is_(True)
                             )
                         )
                     ))
@@ -527,7 +533,7 @@ class ProductsGallery(Resource):
                 .outerjoin(B2bTablePrice,B2bTablePrice.id==B2bTablePriceProduct.id_table_price)\
                 .outerjoin(CmmProductsCategories,CmmProductsCategories.id_product==CmmProducts.id)\
                 .outerjoin(CmmCategories,CmmCategories.id==CmmProductsCategories.id_category)\
-                .where(CmmProducts.trash==False)\
+                .where(CmmProducts.trash.is_(False))\
                 .where(CmmProducts.id.in_(
                     Select(B2bProductStock.id_product).where(
                         or_(
@@ -537,7 +543,7 @@ class ProductsGallery(Resource):
                                     B2bProductStock.quantity==0,
                                     B2bProductStock.quantity.is_(None)
                                 ),
-                                B2bProductStock.ilimited==True
+                                B2bProductStock.ilimited.is_(True)
                             )
                         )
                     ))
@@ -566,7 +572,7 @@ class ProductsGallery(Resource):
             # _show_query(cquery)
             
             if search is not None:
-                rquery = rquery.where(and_(CmmProducts.trash==False,or_(
+                rquery = rquery.where(and_(CmmProducts.trash.is_(False),or_(
                     CmmProducts.name.like(search),
                     CmmProducts.description.like(search),
                     CmmProducts.barCode.like(search),
@@ -576,7 +582,7 @@ class ProductsGallery(Resource):
                     CmmProductsTypes.name.like(search)
                 )))
 
-                iquery = iquery.where(and_(CmmProducts.trash==False,or_(
+                iquery = iquery.where(and_(CmmProducts.trash.is_(False),or_(
                     CmmProducts.name.like(search),
                     CmmProducts.description.like(search),
                     CmmProducts.barCode.like(search),
@@ -661,7 +667,7 @@ class ProductsGallery(Resource):
                 rquery = rquery.order_by(direction(order_by))
 
             if list_all is False:
-                pag = db.paginate(rquery,page=pag_num,per_page=pag_size)
+                pag = db.paginate(rquery,page=pag_num,per_page=pag_size) # type: ignore
                 rquery = rquery.limit(pag_size).offset((pag_num - 1) * pag_size)
 
                 return {

@@ -2,8 +2,7 @@ from auth import auth
 # from os import environ
 # from flask import request
 from http import HTTPStatus
-# from models.tenant import db
-# from models import _show_query
+# from models.helpers import _get_params, db
 from flask_restx import Resource, Namespace, fields
 # from sqlalchemy import exc, Select, and_, Delete, asc, desc
 
@@ -34,8 +33,8 @@ inv_return = ns_invoice.model(
 
 @ns_invoice.route("/")
 class InvoiceList(Resource):
-    @ns_invoice.response(HTTPStatus.OK.value,"Obtem a listagem de produto",inv_return)
-    @ns_invoice.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
+    @ns_invoice.response(HTTPStatus.OK,"Obtem a listagem de produto",inv_return)
+    @ns_invoice.response(HTTPStatus.BAD_REQUEST,"Falha ao listar registros!")
     @ns_invoice.param("page","Número da página de registros","query",type=int,required=True,default=1)
     @ns_invoice.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_invoice.param("query","Texto para busca","query")
