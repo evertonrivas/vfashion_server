@@ -20,10 +20,25 @@ cust_pag_model = ns_customer.model(
     }
 )
 
+plan_model = ns_customer.model(
+    "Plan",{
+        "active": fields.Boolean,
+        "activation_date": fields.Date,
+        "inactivation_date": fields.Date,
+        "payment_method": fields.String,
+        "payment_model": fields.String
+    }
+)
+
 customer_model = ns_customer.model(
     "Customer",{
         "id": fields.Integer,
-        "name": fields.String
+        "name": fields.String,
+        "taxvat": fields.String,
+        "postal_code": fields.String,
+        "date_created": fields.DateTime,
+        "date_updated": fields.DateTime,
+        "plan": fields.Nested(plan_model),
     }
 )
 
@@ -34,10 +49,11 @@ customer_return = ns_customer.model(
     }
 )
 
-def __register_customer(
+def _register_customer(
         name:str,
         taxvat:str,
         postal_code:str,
+        id_plan:int,
         payment_model:str="M",
         payment_method:str="C",
         users:list|None=None):
@@ -61,6 +77,7 @@ def __register_customer(
         if customer.id is not None:
             customer_plan:SysCustomerPlan = SysCustomerPlan()
             customer_plan.id_customer = customer.id
+            setattr(customer_plan,"id_plan",id_plan)
             setattr(customer_plan,"activate",True)
             setattr(customer_plan,"activation_date",datetime.now())
             setattr(customer_plan,"payment_model",payment_model)
@@ -71,6 +88,7 @@ def __register_customer(
             # cria o schema do novo cliente
             tenant = Database(str(customer.id))
             tenant.create_schema()
+            tenant.create_tables()
             
         return True
     except exc.SQLAlchemyError as e:
@@ -177,10 +195,11 @@ class CustomerList(Resource):
     def post(self):
         req = request.get_json()
 
-        return  __register_customer(
+        return  _register_customer(
             req["name"],
             req["taxvat"],
             req["postal_code"],
+            req["plan"]["id"],
             req["payment_model"] if "payment_model" in req else "M",
             req["payment_method"] if "payment_method" in req else "C"
         )
@@ -313,22 +332,21 @@ class CustomerPlanApi(Resource):
 ns_customer.add_resource(CustomerPlanApi,"/status-plan/<int:id>")
 
 
-@ns_customer.route("/<int:id>")
-@ns_customer.param("id","Id do registro")
 class CustomerSysApi(Resource):
-    @ns_customer.response(HTTPStatus.OK,"Ativa ou Inativa o plano de um cliente")
+    @ns_customer.response(HTTPStatus.OK,"Registra um novo cliente")
     @ns_customer.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
-    @auth.login_required
-    def post(self,id:int):
+    @ns_customer.doc(body=customer_model)
+    def post(self):
         
         req = request.get_json()
 
-        return __register_customer(
+        return _register_customer(
             req["name"],
             req["taxvat"],
             req["postal_code"],
+            req["plan"]["id"],
             req["payment_model"] if "payment_model" in req else "M",
             req["payment_method"] if "payment_method" in req else "C",
             users=req["users"] if "users" in req else None
         )
-ns_customer.add_resource(CustomerSysApi,"/register/<int:id>")
+ns_customer.add_resource(CustomerSysApi,"/register")

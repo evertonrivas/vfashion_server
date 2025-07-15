@@ -1,16 +1,17 @@
-from flask import Blueprint
 from flask_restx import Api
-from b2b.price_table import ns_price
-from b2b.orders import ns_order
-from b2b.payment_condition import ns_payment
-from b2b.collection import ns_collection
-from b2b.brand import ns_brand
-from b2b.product_stock import ns_stock
 from b2b.cart import ns_cart
-from b2b.invoices import ns_invoice
-from b2b.customer_group import ns_customer_g
-from b2b.comission import ns_comission
+from b2b.brand import ns_brand
+from b2b.orders import ns_order
 from b2b.target import ns_target
+from models.helpers import Database
+from b2b.invoices import ns_invoice
+from flask import Blueprint, request
+from b2b.price_table import ns_price
+from b2b.comission import ns_comission
+from b2b.product_stock import ns_stock
+from b2b.collection import ns_collection
+from b2b.payment_condition import ns_payment
+from b2b.customer_group import ns_customer_g
 
 """ Módulo Business to Business (Gestão de Vendas entre empresas)
     Módulo para realizar pedidos que realiza:
@@ -49,10 +50,20 @@ nss = [ns_brand,
 
 blueprint = Blueprint("b2b",__name__,url_prefix="/b2b/api/")
 
+@blueprint.before_request
+def before_request():
+    """ Executa antes de cada requisição """
+    if request.headers.get("x-customer", None) is None:
+        return {"message": "Customer header is required"}, 400
+    
+    tenant = Database(str(request.headers.get("x-customer")))
+    tenant.switch_schema()
+    
+
 api = Api(blueprint,
     version="1.0",
     title="API Fast2Bee",
-    description="Uma API REST para o sistema CLM - Módulo B2B",
+    description="Uma API REST para o sistema CLM - Módulo B2B (Business to Business)",
     contact_email="e.rivas@fast2bee.com",
     contact="Fast2Bee",
     contact_url="http://www.fast2bee.com")

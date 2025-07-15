@@ -14,13 +14,14 @@ class ERP(ABC):
     nav: Session
     dbconn: Engine
 
-    def __init__(self) -> None:
+    def __init__(self, schema:str) -> None:
         self.nav = Session()
         conn = str(environ.get("F2B_DB_LIB"))+"://"
         conn += str(environ.get("F2B_DB_USER"))+":"
         conn += str(environ.get("F2B_DB_PASS"))+"@"
         conn += str(environ.get("F2B_DB_HOST"))+"/"
         conn += str(environ.get("F2B_DB_NAME"))
+        conn += "?options=-c%20search_path="+schema
         self.dbconn = create_engine(conn)
         super().__init__()
 

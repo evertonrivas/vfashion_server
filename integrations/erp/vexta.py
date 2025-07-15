@@ -2,6 +2,11 @@ from integrations.erp import erp
 from requests import RequestException
 
 class Vexta(erp.ERP):
+    def __init__(self, _schema:str) -> None:
+        super().__init__(schema=_schema)
+        self.token_type = ''
+        self.token_access = ''
+        
     def _get_header(self):
         return super()._get_header()
     

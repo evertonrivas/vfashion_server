@@ -13,8 +13,8 @@ from models.tenant import CmmLegalEntityContact,CmmProducts
 class VirtualAge(erp.ERP):
     token_type = ''
     token_access = ''
-    def __init__(self) -> None:
-        super().__init__()
+    def __init__(self, _schema:str) -> None:
+        super().__init__(schema=_schema)
         self.__get_token()
 
     def _get_header(self,is_json:bool=True):

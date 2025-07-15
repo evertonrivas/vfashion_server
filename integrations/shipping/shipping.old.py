@@ -105,7 +105,7 @@ class Shipping():
 
     def __jamef_tracking(self,_cnpj:str,_nf:str,_serie_nf:str):
         login = self.__jamef_login()
-        if login!=False:
+        if not login:
             self.nav.verify = False
             self.nav.headers = {
                 "Authorization": login.token_type+" "+login.access_token

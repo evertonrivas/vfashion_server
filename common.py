@@ -7,7 +7,7 @@ import requests
 from os import environ
 import logging
 
-def _gen_report(fileName:str,_content:object):
+def _gen_report(fileName:str,_content:dict):
     try:
         tplLoader  = jinja2.FileSystemLoader(searchpath=str(environ.get("F2B_APP_PATH"))+'assets/layout/')
         tplEnv     = jinja2.Environment(loader=tplLoader)
@@ -65,10 +65,10 @@ def _gen_report(fileName:str,_content:object):
             'footer-html': footer_temp
         })
         
-        if os.path.exists(header_temp)==True:
+        if os.path.exists(header_temp):
             os.remove(header_temp)
 
-        if os.path.exists(footer_temp)==True:
+        if os.path.exists(footer_temp):
             os.remove(footer_temp)
 
         return True
@@ -76,7 +76,7 @@ def _gen_report(fileName:str,_content:object):
         logging.error(e)
         return False
 
-def _send_email(p_to:[],p_cc:[],p_subject:str,p_content:str,p_tpl:MailTemplates,p_attach:[]=None)->bool: # type: ignore
+def _send_email(p_to:list,p_cc:list,p_subject:str,p_content:str,p_tpl:MailTemplates,p_attach:list|None=None)->bool:
     try:
         tplLoader     = jinja2.FileSystemLoader(searchpath=str(environ.get("F2B_APP_PATH"))+'assets/layout/')
         tplEnv        = jinja2.Environment(loader=tplLoader)

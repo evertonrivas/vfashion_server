@@ -1,16 +1,18 @@
-from datetime import datetime
-from sqlalchemy import Insert, Select, Update, and_, create_engine, distinct, func, tuple_
-from models.public import B2bCollection, B2bOrdersProducts, CmmLegalEntities, CmmProducts, CmmProductsGridDistribution, FprDevolution, FprDevolutionItem, B2bOrders, ScmFlimvResult
-# from models import _show_query
-from dotenv import load_dotenv
 from os import environ,path
+from datetime import datetime
+from dotenv import load_dotenv
+from sqlalchemy.engine import Engine
 from f2bconfig import LegalEntityType, OrderStatus,FlimvModel
+from models.tenant import CmmProducts, CmmProductsGridDistribution
+from models.tenant import B2bCollection, B2bOrdersProducts, CmmLegalEntities 
+from models.tenant import FprDevolution, FprDevolutionItem, B2bOrders, ScmFlimvResult
+from sqlalchemy import Insert, Select, Update, and_, create_engine, distinct, func, tuple_
 
 BASEDIR = path.abspath(path.dirname(__file__))
 load_dotenv(path.join(BASEDIR, '.env'))
 
 class Flimv():
-    dbconn = None
+    dbconn:Engine
     internal_flimv = []
 
     def __init__(self) -> None:
@@ -32,12 +34,13 @@ class Flimv():
     def __make_data_seasonal(self) -> None:
         with self.dbconn.connect() as conn:
             # realiza a busca de todas as colecoes existentes
-            for collection in conn.execute(Select(B2bCollection.id).where(B2bCollection.trash==False)):
+            for collection in conn.execute(Select(B2bCollection.id).where(B2bCollection.trash.is_(False))):
 
                 # utilizado para calcular o volume do mix comprado
                 total_mix = conn.execute(
-                    Select(func.count(CmmProducts.id).label("total")).where(and_(CmmProducts.id_collection==collection.id,CmmProducts.trash==False))
-                ).first().total
+                    Select(func.count(CmmProducts.id).label("total")).where(and_(CmmProducts.id_collection==collection.id,CmmProducts.trash.is_(False)))
+                ).first()
+                total_mix = total_mix.total if total_mix is not None else 0
 
                 # busca todos os clientes existentes
                 for cst in conn.execute(Select(CmmLegalEntities.id).where(CmmLegalEntities.type==LegalEntityType.CUSTOMER.value)):
@@ -57,9 +60,9 @@ class Flimv():
                     ).where(and_(
                         B2bOrders.id_customer==cst.id,
                         B2bOrders.status==OrderStatus.FINISHED.value
-                    ))).first().total
+                    ))).first()
 
-                    if customer_in_collection > 0:
+                    if customer_in_collection is not None and customer_in_collection.total > 0:
                         self.internal_flimv.append({
                             "id_customer": cst.id,
                             "id_collection": collection.id,
@@ -87,9 +90,9 @@ class Flimv():
                         FprDevolutionItem.id_size==CmmProductsGridDistribution.id_size
                     ))
 
-                    reclamacao_cliente = conn.execute(sql_reclamacao_cliente).first().total
+                    reclamacao_cliente = conn.execute(sql_reclamacao_cliente).first()
 
-                    if reclamacao_cliente > 0:
+                    if reclamacao_cliente is not None and reclamacao_cliente.total > 0:
                         for flimv in self.internal_flimv:
                             if flimv["id_customer"]==cst.id and flimv["id_collection"]==collection.id:
                                 flimv["injury"] = reclamacao_cliente
@@ -109,11 +112,12 @@ class Flimv():
                             B2bOrders.id_customer==cst.id,
                             CmmProducts.id_collection==collection.id
                         )
-                    )).first().total
-                    if total_unique_aquisition > 0:
+                    )).first()
+
+                    if total_unique_aquisition is not None and total_unique_aquisition.total > 0:
                         for flimv in self.internal_flimv:
                             if flimv["id_customer"]==cst.id and flimv["id_collection"]==collection.id:
-                                flimv["mix"] = total_mix/total_unique_aquisition
+                                flimv["mix"] = total_mix/total_unique_aquisition.total
                     
 
                     ###############################################################
@@ -130,23 +134,26 @@ class Flimv():
                             B2bOrders.id_customer==cst.id,
                             CmmProducts.id_collection==collection.id
                         )
-                    )).first().total
-                    if total_aquisition > 0:
+                    )).first()
+                    if total_aquisition is not None and total_aquisition._total > 0:
                         for flimv in self.internal_flimv:
                             if flimv["id_customer"]==cst.id and flimv["id_collection"]==collection.id:
-                                flimv["volume"] = total_aquisition/total_mix
+                                flimv["volume"] = total_aquisition.total/total_mix
 
                     
     def __make_data_continuos(self) -> None:
         with self.dbconn.connect() as conn:
             # total de pedidos existentes finalizados
-            total_orders = conn.execute(Select(func.count(B2bOrders.id).label("total")).where(B2bOrders.status==OrderStatus.FINISHED.value)).first().total
+            total_orders = conn.execute(Select(func.count(B2bOrders.id).label("total")).where(B2bOrders.status==OrderStatus.FINISHED.value)).first()
+            total_orders = total_orders.total if total_orders is not None else 0
             # total adquirido em pedidos finalizados
             volume_total = conn.execute(
                 Select(func.sum(B2bOrdersProducts.quantity))
                 .join(B2bOrders,B2bOrders.id==B2bOrdersProducts.id_order)
                 .where(B2bOrders.status==OrderStatus.FINISHED)
             )
+            volume_total = volume_total.first()
+            volume_total = volume_total[0] if volume_total is not None else 0
 
 
             # busca todos os clientes existentes

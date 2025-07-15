@@ -7,6 +7,7 @@ from b2b.api import blueprint as b2b
 from fpr.api import blueprint as fpr
 from scm.api import blueprint as scm
 from mpg.api import blueprint as mpg
+from smc.api import blueprint as smc
 from models.helpers import db, migrate
 import locale
 from dotenv import load_dotenv
@@ -37,8 +38,8 @@ try:
             conn.execute(text("SELECT 1"))
             conn.close()
 
-        #se nao existirem as tabelas tenta crialas
-        db.create_all("public")
+        #se nao existirem as tabelas tenta cria-las
+        db.create_all()
 except Exception as e:
     print(e)
     print("###################################################")
@@ -48,12 +49,14 @@ except Exception as e:
 
 migrate.init_app(app,db)
 
+
 app.register_blueprint(cmm)
 app.register_blueprint(crm)
 app.register_blueprint(b2b)
 app.register_blueprint(fpr)
 app.register_blueprint(scm)
 app.register_blueprint(mpg)
+app.register_blueprint(smc)
 
 CORS(app, resources={r"/*": {"origins": "*"}},supports_credentials=True)
 # CORS(app, resources={r"/*": {"origins": "https://system.fast2bee.com"}},supports_credentials=True)
@@ -81,12 +84,13 @@ def index():
                             Para acessar as documenta&ccedil;&otilde;es das APIS, clique nos links abaixo:<br/><br/>
                             F2B_B2B - Business to Business <a href='/b2b/api'>/b2b/api</a><br>
                             F2B_FPR - Finished Product Return <a href='/fpr/api'>/fpr/api</a><br>
-                            F2B_POS - Point Of Sale <a href='/pos/api'>/pos/api</a><br>
+                            <!-- F2B_POS - Point Of Sale <a href='/pos/api'>/pos/api</a><br> -->
                             F2B_CRM - Customer Relashionship Management <a href='/crm/api'>/crm/api</a><br>
                             F2B_SCM - Sales Calendar Management <a href='/scm/api'>/scm/api</a><br>
-                            F2B_MPG - Marketing Plan Generator <a href='/mpg/api'>/mpg/api</a><hr size='1'>
+                            F2B_MPG - Marketing Plan Generator <a href='/mpg/api'>/mpg/api</a><br><hr size='1'>
 
-                            F2B_CMM - M&oacute;dulo Common (Fun&ccedil;&otilde;es comuns dos m&oacute;dulos) <a href='/cmm/api'>/cmm/api</a>
+                            F2B_CMM - M&oacute;dulo Common (Fun&ccedil;&otilde;es comuns dos m&oacute;dulos) <a href='/cmm/api'>/cmm/api</a><br>
+                            F2B_SMC - System Management Customer (Módulo de Gestão dos Clientes e assinaturas) <a href='/smc/api'>/smc/api</a>
                             </p>
                         </div>
                     </div>

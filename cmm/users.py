@@ -495,16 +495,22 @@ class UserUpdate(Resource):
             }
 ns_user.add_resource(UserUpdate,'/massive-change')
 
-@ns_user.hide
+# @ns_user.hide
 class UserNew(Resource):
+    @ns_user.response(HTTPStatus.OK,"Cria um novo usuário no sistem!")
+    @ns_user.response(HTTPStatus.BAD_REQUEST,"Falha ao criar o usuário!")
+    @ns_user.doc(body=usr_model)
     def post(self):
         try:
             req = request.get_json()
             db.session.execute(
                 Insert(SysUsers),[{
                     "username": usr["username"],
-                    "password": SysUsers().hash_pwd(usr["password"]),
-                    "type": usr["type"]
+                    "name": usr["name"],
+                    "type": usr["type"],
+                    "active": True,
+                    "date_created": datetime.now(),
+                    "password": SysUsers().hash_pwd(usr["password"])
                 }for usr in req])
             db.session.commit()
             return  True

@@ -33,7 +33,7 @@ class SysUsers(dbForModel.Model):
         return self.password
     
     def check_pwd(self,pwd:str):
-        return bcrypt.checkpw(pwd.encode(), self.password.encode())
+        return bcrypt.checkpw(pwd, self.password.encode()) # type: ignore
 
     def get_token(self,expires_in:int=int(str(environ.get("F2B_EXPIRE_SESSION")))):
         now        = datetime.now(tz=timezone.utc)
@@ -81,13 +81,18 @@ class SysCustomer(dbForModel.Model):
     date_updated      = Column(DateTime,onupdate=func.now())
 
 class SysPlan(dbForModel.Model):
-    __bind_key__      = "public"
-    __table_args__    = {"schema": "public"}
-    id                = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
-    name              = Column(String(50),nullable=False)
-    plan_value        = Column(DECIMAL(10,2),nullable=False)
-    date_created      = Column(DateTime,nullable=False,server_default=func.now())
-    date_updated      = Column(DateTime,onupdate=func.now())
+    __bind_key__    = "public"
+    __table_args__  = {"schema": "public"}
+    id              = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
+    name            = Column(String(50),nullable=False)
+    value           = Column(DECIMAL(10,2),nullable=False)
+    adm_licenses    = Column(Integer,nullable=False,default=1,server_default='1',comment="Número de licenças de administrador")
+    user_licenses   = Column(Integer,nullable=False,default=1,server_default='1',comment="Número de licenças de usuário")
+    repr_licenses   = Column(Integer,nullable=False,default=1,server_default='1',comment="Número de licenças de representante")
+    store_licenses  = Column(Integer,nullable=False,default=1,server_default='1',comment="Número de licenças de loja")
+    istore_licenses = Column(Integer,nullable=False,default=1,server_default='1',comment="Número de licenças de loja (IA)")
+    date_created    = Column(DateTime,nullable=False,server_default=func.now())
+    date_updated    = Column(DateTime,onupdate=func.now())
 
 class SysCustomerPlan(dbForModel.Model):
     __bind_key__      = "public"
