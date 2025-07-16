@@ -10,7 +10,7 @@ blueprint = Blueprint("smc",__name__,url_prefix="/smc/api/")
 api = Api(blueprint,
     version="1.0",
     title="API Fast2Bee",
-    description="Uma API REST para o sistema Módulo SCM (System Management Customers)",
+    description="Uma API REST para o sistema Módulo SMC (System Management Customers)",
     contact_email="e.rivas@fast2bee.com",
     contact="Fast2Bee",
     contact_url="http://www.fast2bee.com")
