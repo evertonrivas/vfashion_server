@@ -1,10 +1,10 @@
-from flask import request
-from flask_httpauth import HTTPTokenAuth
-from models.public import SysUsers
 import jwt
-from os import environ,path
-from dotenv import load_dotenv
 import logging
+from flask import request
+from os import environ, path
+from dotenv import load_dotenv
+from models.public import SysUsers
+from flask_httpauth import HTTPTokenAuth
 
 BASEDIR = path.abspath(path.dirname(__file__))
 load_dotenv(path.join(BASEDIR, '.env'))

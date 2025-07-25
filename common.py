@@ -1,11 +1,12 @@
-from random import seed,randint
-from f2bconfig import CustomerAction, MailTemplates
+import os
+import logging
+import requests
 import jinja2
 import pdfkit
-import os
-import requests
 from os import environ
-import logging
+from random import seed,randint
+from f2bconfig import CustomerAction, MailTemplates
+
 
 def _gen_report(fileName:str,_content:dict):
     try:

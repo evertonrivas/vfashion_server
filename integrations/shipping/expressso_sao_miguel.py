@@ -1,9 +1,9 @@
-from datetime import datetime
-from integrations.shipping import shipping
-from requests import RequestException
 import logging
+from datetime import datetime
+from requests import RequestException
+from .shipping import Shipping
 
-class ExpressoSaoMiguel(shipping.Shipping):
+class ExpressoSaoMiguel(Shipping):
     def __init__(self) -> None:
         super().__init__()
 

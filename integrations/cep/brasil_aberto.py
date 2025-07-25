@@ -1,7 +1,7 @@
-from requests.exceptions import HTTPError 
-from requests import Response
 import logging
-from cep import CEP
+from .cep import CEP 
+from requests import Response
+from requests.exceptions import HTTPError
 
 class BrasilAberto(CEP):
 

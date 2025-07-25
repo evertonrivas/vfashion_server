@@ -1,9 +1,9 @@
-from http import HTTPStatus
 import importlib
-from flask_restx import Resource,Namespace,fields
 from auth import auth
-from flask import request
 from os import environ
+from flask import request
+from http import HTTPStatus
+from flask_restx import Resource, Namespace, fields
 
 ns_ai = Namespace("ai",description="Manipula informacoes com IA")
 
@@ -25,9 +25,9 @@ class CategoryList(Resource):
         try:
             req = request.get_json()
             module = environ.get("F2B_AI_MODEL")
-            class_name = environ.get("F2B_AI_MODEL").replace("_"," ").title().replace(" ","")
+            class_name = str(environ.get("F2B_AI_MODEL")).replace("_"," ").title().replace(" ","")
             AI_OBJ = getattr(
-            importlib.import_module('integrations.ai.'+module),
+            importlib.import_module('integrations.ai.'+str(module)),
             class_name
             )
             ai = AI_OBJ()

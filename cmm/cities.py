@@ -5,7 +5,7 @@ from http import HTTPStatus
 from models.helpers import _get_params, db
 from sqlalchemy import Select, desc, exc, asc
 from flask_restx import Resource,Namespace,fields
-from models.tenant import CmmCities, CmmCountries, CmmStateRegions
+from models.public import SysCities , SysCountries, SysStateRegions
 ns_city = Namespace("cities",description="Operações para manipular dados de cidades")
 
 #API Models
@@ -54,29 +54,29 @@ class CitiesList(Resource):
                 list_all = False if not hasattr(params,"list_all") else params.list_all
                 filter_state = None if not hasattr(params,"state_region") else params.state_region
 
-            rquery = Select(CmmCities.id,
-                   CmmCities.name,
-                   CmmStateRegions.id.label("state_region_id"),
-                   CmmStateRegions.name.label("state_region_name"),
-                   CmmStateRegions.acronym,
-                   CmmCountries.id.label("country_id"),
-                   CmmCountries.name.label("country_name"))\
-                   .join(CmmStateRegions,CmmStateRegions.id==CmmCities.id_state_region)\
-                   .join(CmmCountries,CmmCountries.id==CmmStateRegions.id_country)\
-                   .order_by(direction(getattr(CmmCities,order_by)))
+            rquery = Select(SysCities.id,
+                   SysCities.name,
+                   SysStateRegions.id.label("state_region_id"),
+                   SysStateRegions.name.label("state_region_name"),
+                   SysStateRegions.acronym,
+                   SysCountries.id.label("country_id"),
+                   SysCountries.name.label("country_name"))\
+                   .join(SysStateRegions,SysStateRegions.id==SysCities.id_state_region)\
+                   .join(SysCountries,SysCountries.id==SysStateRegions.id_country)\
+                   .order_by(direction(getattr(SysCities,order_by)))
             
             if search is not None and search!="":
                 rquery = rquery.where(
-                    CmmCities.name.like('%{}%'.format(search)) |
-                    CmmStateRegions.name.like('%{}%'.format(search)) |
-                    CmmCountries.name.like('%{}%'.format(search))
+                    SysCities.name.like('%{}%'.format(search)) |
+                    SysStateRegions.name.like('%{}%'.format(search)) |
+                    SysCountries.name.like('%{}%'.format(search))
                 )
 
             if filter_state is not None:
                 if str(filter_state).find(",")==-1:
-                    rquery = rquery.where(CmmCities.id_state_region==filter_state)
+                    rquery = rquery.where(SysCities.id_state_region==filter_state)
                 else:
-                    rquery = rquery.where(CmmCities.id_state_region.in_(filter_state))
+                    rquery = rquery.where(SysCities.id_state_region.in_(filter_state))
 
             #print(rquery)
 
@@ -133,7 +133,7 @@ class CitiesList(Resource):
     def post(self):
         try:
             req = request.get_json()
-            reg:CmmCities = CmmCities()
+            reg:SysCities = SysCities()
             reg.name = req["name"]
             reg.id_state_region = req["id_state_region"]
             db.session.add(reg)
@@ -153,7 +153,7 @@ class CityApi(Resource):
     @auth.login_required
     def get(self,id:int):
         try:
-            req:CmmCities|None = CmmCities.query.get(id)
+            req:SysCities|None = SysCities.query.get(id)
             if req is None:
                 return {
                     "error_code": HTTPStatus.BAD_REQUEST.value,
@@ -181,7 +181,7 @@ class CityApi(Resource):
     def post(self,id:int):
         try:
             req = request.get_json()
-            reg:CmmCities|None = CmmCities.query.get(id)
+            reg:SysCities|None = SysCities.query.get(id)
             if reg is not None:
                 reg.name = req["name"]
                 reg.id_state_region = req["id_state_region"]
@@ -200,7 +200,7 @@ class CityApi(Resource):
     @auth.login_required
     def delete(self,id:int):
         try:
-            reg = CmmCities.query.get(id)
+            reg = SysCities.query.get(id)
             setattr(reg,"trash",True)
             db.session.commit()
             return True

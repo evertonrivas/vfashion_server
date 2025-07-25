@@ -21,7 +21,7 @@ plan_pag_model = ns_plan.model(
 )
 
 plan_model = ns_plan.model(
-    "Brand",{
+    "Plan",{
         "id": fields.Integer,
         "name": fields.String,
         "plan_value": fields.Float,
@@ -36,18 +36,15 @@ plan_model = ns_plan.model(
 )
 
 plan_return = ns_plan.model(
-    "BrandReturn",{
+    "PlanReturn",{
         "pagination": fields.Nested(plan_pag_model),
         "data": fields.List(fields.Nested(plan_model))
     }
 )
 
-def _get_plan(id:int) -> SysPlan|None:
-    """Retorna um plano pelo id"""
-    return SysPlan.query.get(id)
 
 @ns_plan.route("/")
-class CollectionList(Resource):
+class PaymentList(Resource):
     @ns_plan.response(HTTPStatus.OK,"Obtem um registro de um plano",plan_return)
     @ns_plan.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @ns_plan.param("page","Número da página de registros","query",type=int,required=True)
@@ -165,13 +162,13 @@ class CollectionList(Resource):
 
 @ns_plan.route("/<int:id>")
 @ns_plan.param("id","Id do registro")
-class CollectionApi(Resource):
+class PaymentApi(Resource):
     @ns_plan.response(HTTPStatus.OK,"Retorna os dados dados de uma marca")
     @ns_plan.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required
     def get(self,id:int):
         try:
-            cquery = _get_plan(id)
+            cquery = SysPlan.query.get(id)
             if cquery is None:
                 return {
                     "error_code": HTTPStatus.BAD_REQUEST.value,

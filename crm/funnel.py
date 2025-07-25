@@ -3,9 +3,9 @@ from os import environ
 from flask import request
 from http import HTTPStatus
 from models.helpers import _get_params, db
+from models.tenant import CrmFunnel, CrmFunnelStage
 from flask_restx import Resource, fields, Namespace
 from sqlalchemy import Update, desc, exc, and_, asc, Select
-from models.tenant import CrmFunnel, CrmFunnelStage
 
 ns_funil = Namespace("funnels",description="Operações para manipular funis de clientes")
 

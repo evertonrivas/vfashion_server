@@ -53,7 +53,8 @@ blueprint = Blueprint("cmm",__name__,url_prefix="/cmm/api/")
 @blueprint.before_request
 def before_request():
     """ Executa antes de cada requisição """
-    if request.headers.get("x-customer", None) is None:
+    # apenas no common serah verificada a existencia do auth
+    if request.base_url.find("users/auth")==-1 and request.headers.get("x-customer", None) is None:
         return {"message": "Customer header is required"}, 400
     
     tenant = Database(str(request.headers.get("tenant")))

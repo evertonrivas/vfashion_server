@@ -15,12 +15,13 @@ class Flimv():
     dbconn:Engine
     internal_flimv = []
 
-    def __init__(self) -> None:
+    def __init__(self,_schema:str) -> None:
         conn = str(environ.get("F2B_DB_LIB"))+"://"
         conn += str(environ.get("F2B_DB_USER"))+":"
         conn += str(environ.get("F2B_DB_PASS"))+"@"
         conn += str(environ.get("F2B_DB_HOST"))+"/"
         conn += str(environ.get("F2B_DB_NAME"))
+        conn += "?options=-c%20search_path="+_schema
         self.dbconn = create_engine(conn)
         super().__init__()
 

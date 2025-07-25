@@ -2,7 +2,7 @@ from auth import auth
 from os import environ
 from flask import request
 from http import HTTPStatus
-from models.tenant import CmmCountries
+from models.public import SysCountries
 from models.helpers import _get_params, db
 from sqlalchemy import Select, desc, exc, asc
 from flask_restx import Resource,Namespace,fields
@@ -56,12 +56,12 @@ class CategoryList(Resource):
                 search    = None if not hasattr(params,"search") else params.search
                 list_all  = False if not hasattr(params,"list_all") else params.list_all
 
-            rquery = Select(CmmCountries.id,
-                            CmmCountries.name).select_from(CmmCountries)\
-                            .order_by(direction(getattr(CmmCountries,order_by)))
+            rquery = Select(SysCountries.id,
+                            SysCountries.name).select_from(SysCountries)\
+                            .order_by(direction(getattr(SysCountries,order_by)))
 
             if search is not None:
-                rquery = rquery.where(CmmCountries.name.like("%{}%".format(search)))
+                rquery = rquery.where(SysCountries.name.like("%{}%".format(search)))
 
             if not list_all:
                 pag = db.paginate(rquery,page=pag_num,per_page=pag_size)
@@ -100,7 +100,7 @@ class CategoryList(Resource):
     def post(self):
         try:
             req = request.get_json()
-            reg = CmmCountries()
+            reg = SysCountries()
             reg.name = req["name"]
             db.session.add(reg)
             db.session.commit()
@@ -119,7 +119,7 @@ class CategoryList(Resource):
         try:
             req = request.get_json()
             for id in req["ids"]:
-                reg = CmmCountries.query.get(id)
+                reg = SysCountries.query.get(id)
                 setattr(reg,"trash",req["toTrash"])
                 db.session.commit()
             return True
@@ -137,7 +137,7 @@ class CategoryApi(Resource):
     @auth.login_required
     def get(self,id:int):
         try:
-            reg:CmmCountries|None = CmmCountries.query.get(id)
+            reg:SysCountries|None = SysCountries.query.get(id)
             if reg is None:
                 return {
                     "error_code": HTTPStatus.BAD_REQUEST.value,
@@ -162,7 +162,7 @@ class CategoryApi(Resource):
     def post(self,id:int):
         try:
             req = request.get_json()
-            reg:CmmCountries|None = CmmCountries.query.get(id)
+            reg:SysCountries|None = SysCountries.query.get(id)
             if reg is not None:
                 reg.name = req["name"]
                 db.session.commit()
@@ -180,7 +180,7 @@ class CategoryApi(Resource):
     @auth.login_required
     def delete(self,id:int):
         try:
-            reg = CmmCountries.query.get(id)
+            reg = SysCountries.query.get(id)
             setattr(reg,"trash",True)
             db.session.commit()
             return True

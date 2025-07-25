@@ -6,12 +6,13 @@ from datetime import datetime
 from f2bconfig import CustomerAction
 from models.helpers import _get_params, db
 from models.tenant import CmmLegalEntities
+from models.tenant import CmmLegalEntityContact
 from flask_restx import Resource,Namespace,fields
 from sqlalchemy import Delete, Select, and_,exc,asc,desc,func, or_
 from models.tenant import _save_log, B2bCustomerGroupCustomers 
 from models.tenant import  B2bCustomerGroup, CmmLegalEntityHistory
-from models.tenant import CmmCities, CmmCountries, CmmLegalEntityContact
-from models.tenant import CmmLegalEntityFile, CmmStateRegions, CrmFunnelStageCustomer
+from models.tenant import CmmLegalEntityFile,  CrmFunnelStageCustomer
+from models.public import SysCities, SysCountries, SysStateRegions
 
 ns_legal = Namespace("legal-entities",description="Operações para manipular dados de clientes/representantes")
 
@@ -102,26 +103,26 @@ class EntitysList(Resource):
                     CmmLegalEntities.type,
                     CmmLegalEntities.date_created,
                     CmmLegalEntities.date_updated,
-                    CmmCities.id.label("city_id"),
-                    CmmCities.name.label("city_name"),
-                    CmmCities.brazil_ibge_code,
-                    CmmStateRegions.id.label("state_id"),
-                    CmmStateRegions.name.label("state_name"),
-                    CmmStateRegions.acronym,
-                    CmmCountries.id.label("country_id"),
-                    CmmCountries.name.label("country_name"))\
-                .join(CmmCities,CmmCities.id==CmmLegalEntities.id_city)\
-                .join(CmmStateRegions,CmmStateRegions.id==CmmCities.id_state_region)\
-                .join(CmmCountries,CmmCountries.id==CmmStateRegions.id_country)\
+                    SysCities.id.label("city_id"),
+                    SysCities.name.label("city_name"),
+                    SysCities.brazil_ibge_code,
+                    SysStateRegions.id.label("state_id"),
+                    SysStateRegions.name.label("state_name"),
+                    SysStateRegions.acronym,
+                    SysCountries.id.label("country_id"),
+                    SysCountries.name.label("country_name"))\
+                .join(SysCities,SysCities.id==CmmLegalEntities.id_city)\
+                .join(SysStateRegions,SysStateRegions.id==SysCities.id_state_region)\
+                .join(SysCountries,SysCountries.id==SysStateRegions.id_country)\
                 .where(CmmLegalEntities.trash==trash)\
                 .order_by(direction(getattr(CmmLegalEntities,order_by)))
             
             if filter_search is not None:
                 rquery = rquery.where(
                     or_(
-                        CmmCountries.name.like("%{}%".format(filter_search)),
-                        CmmStateRegions.name.like("%{}%".format(filter_search)),
-                        CmmCities.name.like("%{}%".format(filter_search)),
+                        SysCountries.name.like("%{}%".format(filter_search)),
+                        SysStateRegions.name.like("%{}%".format(filter_search)),
+                        SysCities.name.like("%{}%".format(filter_search)),
                         CmmLegalEntities.name.like("%{}%".format(filter_search)),
                         CmmLegalEntities.fantasy_name.like("%{}%".format(filter_search)),
                         CmmLegalEntities.address.like("%{}%".format(filter_search)),
@@ -141,13 +142,13 @@ class EntitysList(Resource):
                 rquery = rquery.where(CmmLegalEntities.type==filter_type)
 
             if filter_city is not None:
-                rquery = rquery.where(CmmCities.id==filter_city)
+                rquery = rquery.where(SysCities.id==filter_city)
 
             if filter_state_region is not None:
-                rquery = rquery.where(CmmStateRegions.id==filter_state_region)
+                rquery = rquery.where(SysStateRegions.id==filter_state_region)
 
             if filter_country is not None:
-                rquery = rquery.where(CmmCountries.id==filter_country)
+                rquery = rquery.where(SysCountries.id==filter_country)
 
             if not list_all:
                 pag = db.paginate(rquery,page=pag_num,per_page=pag_size)
@@ -326,17 +327,17 @@ class EntityApi(Resource):
                 CmmLegalEntities.type,
                 CmmLegalEntities.date_created,
                 CmmLegalEntities.date_updated,
-                CmmCities.id.label("city_id"),
-                CmmCities.name.label("city_name"),
-                CmmCities.brazil_ibge_code,
-                CmmStateRegions.id.label("state_id"),
-                CmmStateRegions.name.label("state_name"),
-                CmmStateRegions.acronym,
-                CmmCountries.id.label("country_id"),
-                CmmCountries.name.label("country_name"))\
-            .join(CmmCities,CmmCities.id==CmmLegalEntities.id_city)\
-            .join(CmmStateRegions,CmmStateRegions.id==CmmCities.id_state_region)\
-            .join(CmmCountries,CmmCountries.id==CmmStateRegions.id_country)\
+                SysCities.id.label("city_id"),
+                SysCities.name.label("city_name"),
+                SysCities.brazil_ibge_code,
+                SysStateRegions.id.label("state_id"),
+                SysStateRegions.name.label("state_name"),
+                SysStateRegions.acronym,
+                SysCountries.id.label("country_id"),
+                SysCountries.name.label("country_name"))\
+            .join(SysCities,SysCities.id==CmmLegalEntities.id_city)\
+            .join(SysStateRegions,SysStateRegions.id==SysCities.id_state_region)\
+            .join(SysCountries,SysCountries.id==SysStateRegions.id_country)\
             .where(CmmLegalEntities.id==id)
 
             m = db.session.execute(rquery).first()
@@ -430,17 +431,17 @@ class EntityApi(Resource):
                     CmmLegalEntities.type,
                     CmmLegalEntities.date_created,
                     CmmLegalEntities.date_updated,
-                    CmmCities.id.label("city_id"),
-                    CmmCities.name.label("city_name"),
-                    CmmCities.brazil_ibge_code,
-                    CmmStateRegions.id.label("state_id"),
-                    CmmStateRegions.name.label("state_name"),
-                    CmmStateRegions.acronym,
-                    CmmCountries.id.label("country_id"),
-                    CmmCountries.name.label("country_name"))\
-                .join(CmmCities,CmmCities.id==CmmLegalEntities.id_city)\
-                .join(CmmStateRegions,CmmStateRegions.id==CmmCities.id_state_region)\
-                .join(CmmCountries,CmmCountries.id==CmmStateRegions.id_country)\
+                    SysCities.id.label("city_id"),
+                    SysCities.name.label("city_name"),
+                    SysCities.brazil_ibge_code,
+                    SysStateRegions.id.label("state_id"),
+                    SysStateRegions.name.label("state_name"),
+                    SysStateRegions.acronym,
+                    SysCountries.id.label("country_id"),
+                    SysCountries.name.label("country_name"))\
+                .join(SysCities,SysCities.id==CmmLegalEntities.id_city)\
+                .join(SysStateRegions,SysStateRegions.id==SysCities.id_state_region)\
+                .join(SysCountries,SysCountries.id==SysStateRegions.id_country)\
                 .join(B2bCustomerGroup,B2bCustomerGroup.id_representative==CmmLegalEntities.id)\
                 .where(and_(CmmLegalEntities.trash.is_(False),B2bCustomerGroupCustomers.id_customer==id))
             
@@ -614,17 +615,17 @@ class EntityOfStage(Resource):
                 CmmLegalEntities.type,
                 CmmLegalEntities.date_created,
                 CmmLegalEntities.date_updated,
-                CmmCities.id.label("city_id"),
-                CmmCities.name.label("city_name"),
-                CmmCities.brazil_ibge_code,
-                CmmStateRegions.id.label("state_id"),
-                CmmStateRegions.name.label("state_name"),
-                CmmStateRegions.acronym,
-                CmmCountries.id.label("country_id"),
-                CmmCountries.name.label("country_name"))\
-            .join(CmmCities,CmmCities.id==CmmLegalEntities.id_city)\
-            .join(CmmStateRegions,CmmStateRegions.id==CmmCities.id_state_region)\
-            .join(CmmCountries,CmmCountries.id==CmmStateRegions.id_country)\
+                SysCities.id.label("city_id"),
+                SysCities.name.label("city_name"),
+                SysCities.brazil_ibge_code,
+                SysStateRegions.id.label("state_id"),
+                SysStateRegions.name.label("state_name"),
+                SysStateRegions.acronym,
+                SysCountries.id.label("country_id"),
+                SysCountries.name.label("country_name"))\
+            .join(SysCities,SysCities.id==CmmLegalEntities.id_city)\
+            .join(SysStateRegions,SysStateRegions.id==SysCities.id_state_region)\
+            .join(SysCountries,SysCountries.id==SysStateRegions.id_country)\
             .join(CrmFunnelStageCustomer,CrmFunnelStageCustomer.id_customer==CmmLegalEntities.id)\
             .where(CrmFunnelStageCustomer.id_funnel_stage==id)\
             .order_by(direction(getattr(CmmLegalEntities,order_by)))
@@ -634,9 +635,9 @@ class EntityOfStage(Resource):
             if search is not None:
                 rquery = rquery.where(
                     or_(
-                        CmmCountries.name.like("%{}%".format(search)),
-                        CmmStateRegions.name.like("%{}%".format(search)),
-                        CmmCities.name.like("%{}%".format(search)),
+                        SysCountries.name.like("%{}%".format(search)),
+                        SysStateRegions.name.like("%{}%".format(search)),
+                        SysCities.name.like("%{}%".format(search)),
                         CmmLegalEntities.name.like("%{}%".format(search)),
                         CmmLegalEntities.fantasy_name.like("%{}%".format(search)), 
                         CmmLegalEntities.neighborhood.like("%{}%".format(search)),

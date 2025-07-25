@@ -7,9 +7,9 @@ from sqlalchemy import create_engine
 BASEDIR = path.abspath(path.dirname(__file__))
 load_dotenv(path.join(BASEDIR, '.env'))
 
-class ArtifInteli(ABC):
+class ArtificialInteligence(ABC):
     dbconn = None
-    ai_model = None
+    ai_model = any
     env = environ
 
     def __init__(self) -> None:

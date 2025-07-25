@@ -1,9 +1,10 @@
 from flask import Blueprint
 from flask_restx import Api
-from smc.customer import ns_customer
 from smc.plan import ns_plan
+from smc.customer import ns_customer
+from smc.payment import ns_payment
 
-nss = [ns_customer, ns_plan]
+nss = [ns_customer, ns_plan, ns_payment]
 
 blueprint = Blueprint("smc",__name__,url_prefix="/smc/api/")
 

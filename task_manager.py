@@ -1,24 +1,34 @@
-from concurrent.futures import ThreadPoolExecutor
-from dotenv import load_dotenv
-from os import environ, path, listdir,remove
-import importlib
-from datetime import datetime
-from flimv import Flimv
 import csv
-from models.public import CmmLegalEntityImport, CmmProductsImport
-from sqlalchemy import Insert, create_engine
 import logging
+import importlib
+from flimv import Flimv
+from datetime import datetime
+from dotenv import load_dotenv
+from sqlalchemy import Insert, create_engine, Select
+from os import environ, path, listdir, remove
+from concurrent.futures import ThreadPoolExecutor
+from models.public import SysCustomer
+from models.tenant import CmmLegalEntityImport, CmmProductsImport
+
 
 BASEDIR = path.abspath(path.dirname(__file__))
 load_dotenv(path.join(BASEDIR, '.env'))
 
-# realiza a conexao com o banco de dados
+# realiza a conexao com o banco de dados (repensar para incluir os tenants)
 conn = str(environ.get("F2B_DB_LIB"))+"://"
 conn += str(environ.get("F2B_DB_USER"))+":"
 conn += str(environ.get("F2B_DB_PASS"))+"@"
 conn += str(environ.get("F2B_DB_HOST"))+"/"
 conn += str(environ.get("F2B_DB_NAME"))
 db = create_engine(conn)
+
+with db.connect() as connection:
+    try:
+        # verifica se a tabela de importacao de produtos existe, senao cria
+        all_active_customers = connection.execute(Select(SysCustomer.id).where(SysCustomer.churn.is_(False)))
+    except Exception as e:
+        logging.error(e)
+
 
 # esse eh o job de carga do ERP que eh executado de hora em hora
 if datetime.now().strftime("%M")=="00":
@@ -29,24 +39,27 @@ if datetime.now().strftime("%M")=="00":
             importlib.import_module('integrations.erp.'+module),
             class_name
         )
-        erp = ERP()
+        for customer in all_active_customers:
+            # cria uma instancia do ERP para cada cliente
+            erp = ERP(customer.id)
 
-        erp.get_representative()
-        erp.get_customer()
-        erp.get_order()
-        erp.get_invoice()
-        erp.get_payment_conditions()
-        erp.get_products()
-        erp.get_bank_slip()
-        erp.get_measure_unit()
-        erp.create_order()
+            erp.get_representative()
+            erp.get_customer()
+            erp.get_order()
+            erp.get_invoice()
+            erp.get_payment_conditions()
+            erp.get_products()
+            erp.get_bank_slip()
+            erp.get_measure_unit()
+            erp.create_order()
 
 # esse eh o job que atualiza as informacoes do FLIMV a cada dia sempre as 1h
 # if datetime.now().strftime("%H%M")=="0100":
 if datetime.now().strftime("%H%M")=="1040":
-    flimv = Flimv()
-    flimv.process()
-
+    for customer in all_active_customers:
+        # cria uma instancia do FLIMV para cada cliente
+        flimv = Flimv(customer.id)
+        flimv.process()
 
 
 def import_file(fName:str):
@@ -59,46 +72,52 @@ def import_file(fName:str):
             if has_header:
                 next(csv_reader)
             with db.connect() as conn:
-                if fName.find("import_P_")!=-1:
-                    for row in csv_reader:
-                        product = {
-                            "refCode":row[0],
-                            "barCode":row[1],
-                            "type":row[2],
-                            "model":row[3],
-                            "brand":row[4],
-                            "name":row[5],
-                            "description":row[6],
-                            "observation":row[7],
-                            "price":float(str(row[8]).replace(",",".")),
-                            "measure_unit":row[9],
-                            "color":row[10],
-                            "size":row[11],
-                            "quantity":int(row[12])
-                        }
-                        conn.execute(Insert(CmmProductsImport),product)
-                elif fName.find("import_E_")!=-1:
-                    for row in csv_reader:
-                        entity = {
-                            "id_original":row[0],
-                            "taxvat":row[1],
-                            "name":row[2],
-                            "fantasy_name":row[3],
-                            "city":row[4],
-                            "postal_code":row[5],
-                            "neighborhood":row[6],
-                            "address":row[7],
-                            "type": "P" if row[8]=='PERSONA' else "C" if row[8]=="CUSTOMER" else "R",
-                            "phone_type":row[9],
-                            "phone_number":row[10],
-                            "is_whatsapp":bool(row[11]),
-                            "phone_is_default":bool([row[12]]),
-                            "email_type":row[13],
-                            "email_address":row[14],
-                            "email_is_default":bool(row[15])
-                        }
-                        conn.execute(Insert(CmmLegalEntityImport),parameters=entity)
-                conn.commit()
+                customers = conn.execute(Select(SysCustomer.id).where(SysCustomer.churn.is_(False)))
+                for customer in customers:
+                    nconn = create_engine(str(environ.get("F2B_DB_LIB"))+"://"+str(environ.get("F2B_DB_USER"))+":"+\
+                        str(environ.get("F2B_DB_PASS"))+"@"+str(environ.get("F2B_DB_HOST"))+"/"+str(environ.get("F2B_DB_NAME"))+"?options=-c%20search_path="+str(customer.id))
+                    ndb = nconn.connect()
+                    
+                    if fName.find("import_P_")!=-1:
+                        for row in csv_reader:
+                            product = {
+                                "refCode":row[0],
+                                "barCode":row[1],
+                                "type":row[2],
+                                "model":row[3],
+                                "brand":row[4],
+                                "name":row[5],
+                                "description":row[6],
+                                "observation":row[7],
+                                "price":float(str(row[8]).replace(",",".")),
+                                "measure_unit":row[9],
+                                "color":row[10],
+                                "size":row[11],
+                                "quantity":int(row[12])
+                            }
+                            ndb.execute(Insert(CmmProductsImport),product)
+                    elif fName.find("import_E_")!=-1:
+                        for row in csv_reader:
+                            entity = {
+                                "id_original":row[0],
+                                "taxvat":row[1],
+                                "name":row[2],
+                                "fantasy_name":row[3],
+                                "city":row[4],
+                                "postal_code":row[5],
+                                "neighborhood":row[6],
+                                "address":row[7],
+                                "type": "P" if row[8]=='PERSONA' else "C" if row[8]=="CUSTOMER" else "R",
+                                "phone_type":row[9],
+                                "phone_number":row[10],
+                                "is_whatsapp":bool(row[11]),
+                                "phone_is_default":bool([row[12]]),
+                                "email_type":row[13],
+                                "email_address":row[14],
+                                "email_is_default":bool(row[15])
+                            }
+                            ndb.execute(Insert(CmmLegalEntityImport),parameters=entity)
+                    ndb.commit()
             #fecha o arquivo
             csv_file.close()
 

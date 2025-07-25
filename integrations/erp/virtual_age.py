@@ -4,8 +4,9 @@ from os import environ
 # from models import _show_query
 from integrations.erp import erp
 from requests import RequestException
-from models.tenant import CmmStateRegions, CmmCategories
-from models.tenant import CmmProductsCategories,CmmCities
+from models.tenant import CmmCategories
+from models.tenant import CmmProductsCategories
+from models.public import SysStateRegions, SysCities
 from models.tenant import CmmMeasureUnit,CmmLegalEntities
 from sqlalchemy import Insert,Select, Update, and_,or_,exc
 from models.tenant import CmmLegalEntityContact,CmmProducts
@@ -254,12 +255,12 @@ class VirtualAge(erp.ERP):
     def _get_id_city(self,p_ibge_code:str,p_state:str):
         try:
             with self.dbconn.connect() as con:
-                stmt = Select(CmmCities)\
-                    .join(CmmStateRegions,CmmStateRegions.id==CmmCities.id_state_region)\
+                stmt = Select(SysCities)\
+                    .join(SysStateRegions,SysStateRegions.id==SysCities.id_state_region)\
                     .where(
                         and_(
-                            CmmCities.brazil_ibge_code.like('%{}'.format(p_ibge_code)),
-                            CmmStateRegions.acronym==p_state
+                            SysCities.brazil_ibge_code.like('%{}'.format(p_ibge_code)),
+                            SysStateRegions.acronym==p_state
                         )
                     )
                 ct = con.execute(stmt).one_or_none()

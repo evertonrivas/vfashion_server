@@ -1,9 +1,10 @@
-from datetime import datetime
-from integrations.shipping import shipping
-from requests import RequestException
 import logging
+from datetime import datetime
+from .shipping import Shipping
+from requests import RequestException
 
-class BauerExpress(shipping.Shipping):
+
+class BauerExpress(Shipping):
     def __init__(self) -> None:
         super().__init__()
 

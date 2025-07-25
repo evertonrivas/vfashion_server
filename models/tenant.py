@@ -1,8 +1,8 @@
 from os import path
-from models.helpers import db as dbForModel
 from datetime import datetime
 from dotenv import load_dotenv
 from f2bconfig import CustomerAction
+from models.helpers import db as dbForModel
 from sqlalchemy import ForeignKey, event, func, Column
 from sqlalchemy import String, Integer, CHAR, DateTime, Boolean, Text, DECIMAL, SmallInteger, Date
 
@@ -120,22 +120,6 @@ class CmmMeasureUnit(dbForModel.Model):
     code        = Column(CHAR(4),nullable=False)
     description = Column(String(50),nullable=False)
     trash       = Column(Boolean,nullable=False,server_default='0',default=0)
-
-class CmmCountries(dbForModel.Model):
-    id   = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
-    name = Column(String(100),nullable=False)
-
-class CmmStateRegions(dbForModel.Model):
-    id         = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
-    id_country = Column(Integer,nullable=False,index=True,comment="Id da tabela CmmCoutries")
-    name       = Column(String(100),nullable=False)
-    acronym    = Column(String(10),nullable=False)
-
-class CmmCities(dbForModel.Model):
-    id              = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
-    id_state_region = Column(Integer,nullable=False,index=True,comment="Id da tabela CmmStateRegions")
-    name            = Column(String(100),nullable=False)
-    brazil_ibge_code= Column(String(10),nullable=True)
 
 class CmmLegalEntities(dbForModel.Model):
     id                = Column(Integer,primary_key=True,nullable=False,autoincrement=True)

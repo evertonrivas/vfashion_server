@@ -1,8 +1,9 @@
+from auth import auth
+from flask import request
 from http import HTTPStatus
 from typing import TypedDict
 from flask_restx import Resource,fields,Namespace
-from flask import request
-from auth import auth
+
 
 api = Namespace("consumer",description="Operações para manipular dados de consumidores")
 apis = Namespace("consumer-groups",description="Operações para manipular grupos de consumidores")
@@ -73,7 +74,7 @@ class CustomerApi(Resource):
     @api.response(HTTPStatus.OK.value,"Obtem um registro de um consumidor",cons_model)
     @api.response(HTTPStatus.BAD_REQUEST.value,"Registro não encontrado")
     #@auth.login_required
-    def get(self,id:int)->Consumer:
+    def get(self,id:int):
         return None
 
     @api.response(HTTPStatus.OK.value,"Salva dados de um consumidor")

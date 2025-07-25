@@ -4,7 +4,6 @@ from http import HTTPStatus
 from datetime import datetime
 from models.helpers import db
 from models.tenant import ScmFlimv
-# from models import _show_query
 from sqlalchemy import Select, exc, desc
 from flask_restx import Resource, Namespace, fields
 

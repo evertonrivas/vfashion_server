@@ -1,8 +1,8 @@
-from requests.exceptions import HTTPError 
 import logging
-from integrations.cep import cep
+from .cep import CEP
+from requests.exceptions import HTTPError 
 
-class ViaCep(cep.CEP):
+class ViaCep(CEP):
 
     def __init__(self) -> None:
         super().__init__()

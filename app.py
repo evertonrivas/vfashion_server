@@ -1,6 +1,9 @@
+import locale
 from flask import Flask
 from flask_cors import CORS
 from sqlalchemy import text
+from os import environ, path
+from dotenv import load_dotenv
 from cmm.api import blueprint as cmm
 from crm.api import blueprint as crm
 from b2b.api import blueprint as b2b
@@ -9,14 +12,11 @@ from scm.api import blueprint as scm
 from mpg.api import blueprint as mpg
 from smc.api import blueprint as smc
 from models.helpers import db, migrate
-import locale
-from dotenv import load_dotenv
-from os import environ,path
 
 BASEDIR = path.abspath(path.dirname(__file__))
 load_dotenv(path.join(BASEDIR, '.env'))
 
-locale.setlocale(locale.LC_TIME,environ.get("F2B_LOCALE"))
+# locale.setlocale(locale.LC_TIME,str(environ.get("F2B_LOCALE")))
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = str(environ.get("F2B_DB_LIB"))+"://"+str(environ.get("F2B_DB_USER"))+":"+\
@@ -39,7 +39,7 @@ try:
             conn.close()
 
         #se nao existirem as tabelas tenta cria-las
-        db.create_all()
+        db.create_all("public")
 except Exception as e:
     print(e)
     print("###################################################")

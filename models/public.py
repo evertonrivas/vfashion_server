@@ -1,14 +1,14 @@
 import jwt
 import uuid
 import bcrypt
-from models.helpers import db as dbForModel
 from os import path,environ
 from dotenv import load_dotenv
+from models.helpers import db as dbForModel
 from sqlalchemy import ForeignKey, func, Column
 from sqlalchemy.dialects.postgresql import UUID
 from datetime import datetime,timedelta, timezone
 from sqlalchemy import DECIMAL, Date,Index, Boolean
-from sqlalchemy import String, Integer, CHAR, DateTime
+from sqlalchemy import String, Integer, CHAR, DateTime, SmallInteger
 
 BASEDIR = path.abspath(path.dirname(__file__))
 load_dotenv(path.join(BASEDIR, '.env'))
@@ -94,6 +94,19 @@ class SysPlan(dbForModel.Model):
     date_created    = Column(DateTime,nullable=False,server_default=func.now())
     date_updated    = Column(DateTime,onupdate=func.now())
 
+class SysPayment(dbForModel.Model):
+    __bind_key__    = "public"
+    __table_args__  = {"schema":"public"}
+    id_customer     = Column(ForeignKey(SysCustomer.id),primary_key=True,nullable=False)
+    id_plan         = Column(ForeignKey(SysPlan.id),primary_key=True,nullable=False)
+    year            = Column(SmallInteger,primary_key=True,nullable=False)
+    month           = Column(SmallInteger,primary_key=True,nullable=False)
+    value           = Column(DECIMAL(10,2),nullable=False)
+    discount        = Column(DECIMAL(10,2),nullable=False)
+    starter         = Column(DECIMAL(10,2),nullable=False,server_default="0",default=0)
+    date_created    = Column(DateTime,nullable=False,server_default=func.now())
+    date_updated    = Column(DateTime,onupdate=func.now())
+
 class SysCustomerPlan(dbForModel.Model):
     __bind_key__      = "public"
     __table_args__    = {"schema": "public"}
@@ -112,3 +125,20 @@ class SysCustomerUser(dbForModel.Model):
     __table_args__ = {"schema": "public"}
     id_customer    = Column(ForeignKey(SysCustomer.id),primary_key=True,nullable=False)
     id_user        = Column(ForeignKey(SysUsers.id),primary_key=True,nullable=False)
+
+
+class SysCountries(dbForModel.Model):
+    id   = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
+    name = Column(String(100),nullable=False)
+
+class SysStateRegions(dbForModel.Model):
+    id         = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
+    id_country = Column(ForeignKey(SysCountries.id),nullable=False,index=True,comment="Id da tabela SysCountries")
+    name       = Column(String(100),nullable=False)
+    acronym    = Column(String(10),nullable=False)
+
+class SysCities(dbForModel.Model):
+    id              = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
+    id_state_region = Column(Integer,nullable=False,index=True,comment="Id da tabela CmmStateRegions")
+    name            = Column(String(100),nullable=False)
+    brazil_ibge_code= Column(String(10),nullable=True)

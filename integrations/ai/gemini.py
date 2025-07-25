@@ -1,7 +1,8 @@
 from google import genai
+from .artificial_intelligence import ArtificialInteligence
 # from google.genai import types
 
-class Gemini():
+class Gemini(ArtificialInteligence):
     def __init__(self) -> None:
         self.ai_model = genai.Client(api_key='F2B_GEMINI_IA_API_KEY')
         super().__init__()

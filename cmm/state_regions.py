@@ -2,7 +2,7 @@ from auth import auth
 from os import environ
 from flask import request
 from http import HTTPStatus
-from models.tenant import CmmStateRegions
+from models.public import SysStateRegions
 from models.helpers import _get_params, db
 from flask_restx import Resource,Namespace,fields
 from sqlalchemy import Select, desc, exc, asc, or_
@@ -54,24 +54,24 @@ class CategoryList(Resource):
                 list_all  = False if not hasattr(params,"list_all") else params.list_all
                 filter_country = None if not hasattr(params,"country") else params.country
 
-            rquery = Select(CmmStateRegions.id,
-                            CmmStateRegions.id_country,
-                            CmmStateRegions.name,
-                            CmmStateRegions.acronym)\
-                            .select_from(CmmStateRegions)\
-                            .order_by(direction(getattr(CmmStateRegions,order_by)))
+            rquery = Select(SysStateRegions.id,
+                            SysStateRegions.id_country,
+                            SysStateRegions.name,
+                            SysStateRegions.acronym)\
+                            .select_from(SysStateRegions)\
+                            .order_by(direction(getattr(SysStateRegions,order_by)))
             
             if search is not None:
                 rquery = rquery.where(or_(
-                    CmmStateRegions.name.like("%{}%".format(search)),
-                    CmmStateRegions.acronym.like("%{}%".format(search))
+                    SysStateRegions.name.like("%{}%".format(search)),
+                    SysStateRegions.acronym.like("%{}%".format(search))
                 ))
 
             if filter_country is not None:
                 if str(filter_country).find(",")==-1:
-                    rquery = rquery.where(CmmStateRegions.id_country==filter_country)
+                    rquery = rquery.where(SysStateRegions.id_country==filter_country)
                 else:
-                    rquery = rquery.where(CmmStateRegions.id_country.in_(filter_country))
+                    rquery = rquery.where(SysStateRegions.id_country.in_(filter_country))
 
             if not list_all:
                 pag = db.paginate(rquery,page=pag_num,per_page=pag_size)
@@ -114,7 +114,7 @@ class CategoryList(Resource):
     def post(self):
         try:
             req = request.get_json()
-            reg:CmmStateRegions = CmmStateRegions()
+            reg:SysStateRegions = SysStateRegions()
             reg.name = req["name"]
             reg.id_country = req["id_country"]
             db.session.add(reg)
@@ -134,7 +134,7 @@ class CategoryApi(Resource):
     @auth.login_required
     def get(self,id:int):
         try:
-            reg:CmmStateRegions|None = CmmStateRegions.query.get(id)
+            reg:SysStateRegions|None = SysStateRegions.query.get(id)
             if reg is None:
                 return {
                     "error_code": HTTPStatus.BAD_REQUEST.value,
@@ -162,7 +162,7 @@ class CategoryApi(Resource):
     def post(self,id:int):
         try:
             req = request.get_json()
-            reg:CmmStateRegions|None = CmmStateRegions.query.get(id)
+            reg:SysStateRegions|None = SysStateRegions.query.get(id)
             if reg is not None:
                 reg.name = req["name"]
                 reg.id_country = req["id_country"]
@@ -181,7 +181,7 @@ class CategoryApi(Resource):
     @auth.login_required
     def delete(self,id:int):
         try:
-            reg = CmmStateRegions.query.get(id)
+            reg = SysStateRegions.query.get(id)
             setattr(reg,"trash",True)
             db.session.commit()
             return True

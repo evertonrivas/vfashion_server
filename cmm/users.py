@@ -44,7 +44,6 @@ usr_return = ns_user.model(
 
 @ns_user.route("/")
 class UsersList(Resource):
-
     @ns_user.response(HTTPStatus.OK,"Obtem a listagem de usuários",usr_return)
     @ns_user.response(HTTPStatus.BAD_REQUEST,"Falha oa listar registros!")
     @ns_user.param("page","Número da página de registros","query",type=int,required=True)

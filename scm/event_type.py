@@ -4,7 +4,6 @@ from flask import request
 from http import HTTPStatus
 from datetime import datetime
 from models.helpers import db
-# from models import _show_query
 from models.helpers import _get_params
 from models.tenant import ScmEventType
 from sqlalchemy import Select, exc, asc, desc
