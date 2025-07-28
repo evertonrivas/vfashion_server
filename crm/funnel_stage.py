@@ -5,9 +5,9 @@ from flask import request
 from http import HTTPStatus
 from models.helpers import _get_params, db
 from sqlalchemy import Select, Update, desc, exc, and_, asc, or_
-from models.tenant import CmmLegalEntities, CrmFunnel, _save_log
+from models.tenant import CmmLegalEntities, CrmFunnel, _save_entity_log
 from models.tenant import CrmFunnelStageCustomer, CrmFunnelStage
-from f2bconfig import CrmFunnelType, CustomerAction, LegalEntityType
+from f2bconfig import CrmFunnelType, EntityAction, LegalEntityType
 
 
 ns_fun_stg = Namespace("funnel-stages",description="Operações para manipular estágios dos funis de clientes")
@@ -301,7 +301,7 @@ class FunnelStageCustomer(Resource):
             customer_stage.id_funnel_stage = new_stage
             stage = db.session.execute(Select(CrmFunnelStage.name).where(CrmFunnelStage.id==new_stage)).first()
             db.session.commit()
-            _save_log(int(str(id_customer)),CustomerAction.MOVE_CRM_FUNNEL,'Movido para o estágio '+(stage.name if stage is not None else ''))
+            _save_entity_log(int(str(id_customer)),EntityAction.MOVE_CRM_FUNNEL,'Movido para o estágio '+(stage.name if stage is not None else ''))
 
             return True
         except exc.SQLAlchemyError as e:
@@ -323,7 +323,7 @@ class FunnelStageCustomer(Resource):
                 )
                 db.session.commit()
                 stage = db.session.execute(Select(CrmFunnelStage.name).where(CrmFunnelStage.id==req['stage'])).first()
-                _save_log(customer,CustomerAction.MOVE_CRM_FUNNEL,'Movido para o estágio '+(stage.name if stage is not None else ''))
+                _save_entity_log(customer,EntityAction.MOVE_CRM_FUNNEL,'Movido para o estágio '+(stage.name if stage is not None else ''))
                 db.session.commit()
             return True
         except exc.SQLAlchemyError as e:

@@ -3,6 +3,7 @@ import uuid
 import bcrypt
 from os import path,environ
 from dotenv import load_dotenv
+from f2bconfig import CustomerAction
 from models.helpers import db as dbForModel
 from sqlalchemy import ForeignKey, func, Column
 from sqlalchemy.dialects.postgresql import UUID
@@ -12,6 +13,16 @@ from sqlalchemy import String, Integer, CHAR, DateTime, SmallInteger
 
 BASEDIR = path.abspath(path.dirname(__file__))
 load_dotenv(path.join(BASEDIR, '.env'))
+
+def _save_customer_log(id:int,id_customer:str, act:CustomerAction, p_log_action:str):
+    log:CmmCustomerHistory = CmmCustomerHistory()
+    setattr(log,"id_user",id)
+    setattr(log,"action",act.value)
+    setattr(log,"history",p_log_action)
+    setattr(log,"id_customer",id_customer)
+    setattr(log,"date_created",datetime.now())
+    dbForModel.session.add(log)
+    dbForModel.session.commit()
 
 class SysUsers(dbForModel.Model):
     __bind_key__    = "public"
@@ -142,3 +153,13 @@ class SysCities(dbForModel.Model):
     id_state_region = Column(Integer,nullable=False,index=True,comment="Id da tabela CmmStateRegions")
     name            = Column(String(100),nullable=False)
     brazil_ibge_code= Column(String(10),nullable=True)
+
+class CmmCustomerHistory(dbForModel.Model):
+    __bind_key__    = "public"
+    __table_args__  = {"schema": "public"}
+    id           = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
+    id_user      = Column(ForeignKey(SysUsers.id),nullable=False,index=True,comment="Id do usuário que realizou a ação")
+    id_customer  = Column(ForeignKey(SysCustomer.id),nullable=False,index=True,comment="Id da tabela SysCustomer")
+    action       = Column(CHAR(1),nullable=False,comment="Ação realizada no cliente")
+    history      = Column(String(255),nullable=False,comment="Histórico da ação realizada")
+    date_created = Column(DateTime,nullable=False,server_default=func.now())

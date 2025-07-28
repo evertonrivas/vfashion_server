@@ -4,12 +4,12 @@ from flask import request
 from http import HTTPStatus
 from datetime import datetime
 from common import _send_email
-from models.tenant import _save_log
 from models.helpers import _get_params, db
+from models.public import _save_customer_log
 from flask_restx import Resource,Namespace,fields
 from f2bconfig import CustomerAction, MailTemplates
 from models.public import SysUsers, SysCustomer, SysCustomerUser
-from sqlalchemy import Delete, Select, desc, exc, and_, asc, Insert, func, or_
+from sqlalchemy import Delete, Select, desc, exc, and_, asc, func, or_
 
 ns_user = Namespace("users",description="Operações para manipular dados de usuários do sistema")
 
@@ -274,11 +274,11 @@ class UserApi(Resource):
                 db.session.commit()
 
                 if req["id_customer"]!="undefined":
-                        usrEn = SysCustomerUser()
-                        setattr(usrEn,"id_user",id)
-                        usrEn.id_customer = req["id_customer"]
-                        db.session.add(usrEn)
-                        db.session.commit()
+                    usrEn = SysCustomerUser()
+                    setattr(usrEn,"id_user",id)
+                    usrEn.id_customer = req["id_customer"]
+                    db.session.add(usrEn)
+                    db.session.commit()
 
             return True
         except exc.DatabaseError as e:
@@ -326,7 +326,7 @@ class UserAuth(Resource):
 
             #tenta buscar um profile
             idProfile = 0
-            customer = SysCustomer.query.filter(SysCustomerUser.id_user==usr.id).first()
+            customer = SysCustomerUser.query.filter(SysCustomerUser.id_user==usr.id).first()
             if customer is not None:
                 idProfile = customer.id_customer
 
@@ -344,7 +344,7 @@ class UserAuth(Resource):
                 usr.is_authenticate = True
                 db.session.commit()
                 if idProfile!=0:
-                    _save_log(idProfile,CustomerAction.SYSTEM_ACCESS,'Efetuou login')
+                    _save_customer_log(usr.id,idProfile,CustomerAction.SYSTEM_ACCESS,'Efetuou login')
                 return obj_retorno
             else:
                 return 0 #senha invalida
@@ -368,7 +368,7 @@ class UserAuth(Resource):
                         }
                         usr.is_authenticate = True
                         db.session.commit()
-                        _save_log(entity.id,CustomerAction.SYSTEM_ACCESS,'Efetuou login')
+                        _save_customer_log(usr.id,entity.id,CustomerAction.SYSTEM_ACCESS,'Efetuou login')
                         return obj_retorno
         return -1 #usuario invalido
     
@@ -408,7 +408,7 @@ class UserAuthLogout(Resource):
                 db.session.commit()
                 entity = SysCustomerUser.query.filter(SysCustomerUser.id_user==id).first()
                 if entity is not None:
-                    _save_log(entity.id,CustomerAction.SYSTEM_ACCESS,'Efetuou logoff')
+                    _save_customer_log(id,entity.id,CustomerAction.SYSTEM_ACCESS,'Efetuou logoff')
                 return True
         except Exception:
             return False
@@ -496,22 +496,37 @@ ns_user.add_resource(UserUpdate,'/massive-change')
 
 # @ns_user.hide
 class UserNew(Resource):
-    @ns_user.response(HTTPStatus.OK,"Cria um novo usuário no sistem!")
+    @ns_user.response(HTTPStatus.OK,"Cria um novo usuário no sistema!")
     @ns_user.response(HTTPStatus.BAD_REQUEST,"Falha ao criar o usuário!")
     @ns_user.doc(body=usr_model)
     def post(self):
         try:
             req = request.get_json()
-            db.session.execute(
-                Insert(SysUsers),[{
-                    "username": usr["username"],
-                    "name": usr["name"],
-                    "type": usr["type"],
-                    "active": True,
-                    "date_created": datetime.now(),
-                    "password": SysUsers().hash_pwd(usr["password"])
-                }for usr in req])
-            db.session.commit()
+
+            usr = SysUsers.query.filter(SysUsers.username==req["username"]).first()
+            if usr is not None:
+                return {
+                    "error_code": -1,
+                    "error_details": "Usuário já cadastrado!",
+                    "error_sql": ""
+                }
+            else:
+                usr = SysUsers()
+                usr.username = req["username"]
+                usr.name     = req["name"]
+                usr.type     = req["type"]
+                setattr(usr,"active",True)
+                setattr(usr,"date_created",datetime.now())
+                usr.password = usr.hash_pwd(req["password"])
+                db.session.add(usr)
+                db.session.commit()
+
+                usrE = SysCustomerUser()
+                usrE.id_user = usr.id
+                usrE.id_customer = req["id_customer"]
+                db.session.add(usrE)
+                db.session.commit()
+
             return  True
         except exc.SQLAlchemyError as e:
             return {

@@ -1,7 +1,7 @@
 from os import path
 from datetime import datetime
 from dotenv import load_dotenv
-from f2bconfig import CustomerAction
+from f2bconfig import EntityAction
 from models.helpers import db as dbForModel
 from sqlalchemy import ForeignKey, event, func, Column
 from sqlalchemy import String, Integer, CHAR, DateTime, Boolean, Text, DECIMAL, SmallInteger, Date
@@ -10,7 +10,7 @@ BASEDIR = path.abspath(path.dirname(__file__))
 load_dotenv(path.join(BASEDIR, '.env'))
 
 
-def _save_log(id:int, act:CustomerAction, p_log_action:str):
+def _save_entity_log(id:int, act:EntityAction, p_log_action:str):
     log:CmmLegalEntityHistory = CmmLegalEntityHistory()
     setattr(log,"action",act.value)
     setattr(log,"history",p_log_action)

@@ -10,7 +10,7 @@ class MailTemplates(Enum):
     DEFAULT      = 'mail_template.html'
     PWD_RECOVERY = 'password_recovery.html'
 
-class CustomerAction(Enum):
+class EntityAction(Enum):
     #SA = System Access, TC = Task Created, FA = File Attached, ES = E-mail Sended, ER = E-mail Replied, RC = Return Created, FB = Financial Bloqued/Unbloqued
     DATA_REGISTERED       = 'DR'
     DATA_UPDATED          = 'DU'
@@ -21,7 +21,6 @@ class CustomerAction(Enum):
     ORDER_CREATED         = 'OC'
     ORDER_UPDATED         = 'OU'
     ORDER_DELETED         = 'OD'
-    SYSTEM_ACCESS         = 'SA'
     TASK_CREATED          = 'TC'
     FILE_ATTACHED         = 'FA'
     FILE_DETTACHED        = 'FD'
@@ -32,6 +31,12 @@ class CustomerAction(Enum):
     FINANCIAL_BLOQUED     = 'FB'
     FINANCIAL_UNBLOQUED   = 'FU'
     COMMENT_ADDED         = 'CA'
+    
+class CustomerAction(Enum):
+    SYSTEM_ACCESS    = 'SA'
+    DATA_REGISTERED  = 'DR'
+    DATA_UPDATED     = 'DU'
+    DATA_DELETED     = 'DD'
     
 class ContactType(Enum):
     EMAIL = 'E'

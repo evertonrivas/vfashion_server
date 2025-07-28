@@ -10,9 +10,9 @@ from datetime import datetime
 from models.helpers import _get_params, db
 from models.public import SysUsers as CmmUsers
 from flask_restx import Resource,Namespace,fields
-from f2bconfig import CustomerAction, DevolutionStatus, OrderStatus
+from f2bconfig import EntityAction, DevolutionStatus, OrderStatus
 from sqlalchemy import Update, and_, exc, Select, Delete, asc, desc, func
-from models.tenant import CmmTranslateSizes, CmmUserEntity, FprDevolution, _save_log
+from models.tenant import CmmTranslateSizes, CmmUserEntity, FprDevolution, _save_entity_log
 from models.tenant import B2bCartShopping, B2bOrders,B2bOrdersProducts, B2bPaymentConditions, CmmLegalEntities
 from models.tenant import B2bCustomerGroup, B2bCustomerGroupCustomers, B2bProductStock, B2bTarget, CmmProducts, CmmTranslateColors
 
@@ -182,7 +182,7 @@ class OrdersList(Resource):
                 db.session.execute(stmt)
                 db.session.commit()
 
-                _save_log(customer,CustomerAction.ORDER_CREATED,'Novo pedido realizado ('+str('{:010d}'.format(order.id))+') - em '+datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
+                _save_entity_log(customer,EntityAction.ORDER_CREATED,'Novo pedido realizado ('+str('{:010d}'.format(order.id))+') - em '+datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
 
             return True
         except exc.SQLAlchemyError as e:
@@ -361,9 +361,9 @@ class OrderApi(Resource):
             order.status = req["status"]
             db.session.commit()
 
-            _save_log(
+            _save_entity_log(
                 order.id_customer, # type: ignore
-                CustomerAction.ORDER_DELETED if req["status"]==OrderStatus.REJECTED else CustomerAction.ORDER_UPDATED,
+                EntityAction.ORDER_DELETED if req["status"]==OrderStatus.REJECTED else EntityAction.ORDER_UPDATED,
                 'Pedido '+('excluído' if req["status"]==OrderStatus.REJECTED else 'atualizado')+' ('+str('{:010d}'.format(order.id))+') - em '+datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
 
             return True
@@ -384,12 +384,12 @@ class OrderApi(Resource):
             setattr(order,"trash",True)
             db.session.commit()
             if (req["id_customer"]!=0):
-                _save_log(req['id_customer'],CustomerAction.ORDER_DELETED,'Pedido ('+str(id)+') cancelado pelo cliente em '+datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
+                _save_entity_log(req['id_customer'],EntityAction.ORDER_DELETED,'Pedido ('+str(id)+') cancelado pelo cliente em '+datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
             else:
                 legal:CmmLegalEntities = CmmLegalEntities.query.get(req["id_representative"]) # type: ignore
-                _save_log(
+                _save_entity_log(
                     order.id_customer, # type: ignore
-                    CustomerAction.ORDER_DELETED,
+                    EntityAction.ORDER_DELETED,
                     'Pedido ('+str(id)+') cancelado pelo representante ('+str(legal.name)+') em '+datetime.now().strftime("%d/%m/%Y %H:%M:%S")
                     )
             return True

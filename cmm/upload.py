@@ -7,10 +7,10 @@ from http import HTTPStatus
 from datetime import datetime
 from models.helpers import db
 from werkzeug import exceptions
-from f2bconfig import CustomerAction
+from f2bconfig import EntityAction
 from flask_restx import Resource,Namespace
 from sqlalchemy import Select, Update,Delete, func
-from models.tenant import _save_log, CmmLegalEntities, CmmLegalEntityFile, CmmProductsImages
+from models.tenant import _save_entity_log, CmmLegalEntities, CmmLegalEntityFile, CmmProductsImages
 
 ns_upload = Namespace("upload",description="Operações para manipular upload de dados")
 
@@ -64,7 +64,7 @@ class UploadApi(Resource):
                 fileCount += 1
 
             combinedFiles = ','.join(files)
-            _save_log(id,CustomerAction.FILE_ATTACHED,"Adicionado(s) o(s) arquivo(s) "+combinedFiles)
+            _save_entity_log(id,EntityAction.FILE_ATTACHED,"Adicionado(s) o(s) arquivo(s) "+combinedFiles)
 
             return True
         except exceptions.HTTPException as e:
@@ -88,7 +88,7 @@ class UploadApi(Resource):
                     os.remove(str(os.environ.get("F2B_APP_PATH"))+'assets/'+str(file.folder)+str(file.name))
                     db.session.execute(Delete(CmmLegalEntityFile).where(CmmLegalEntityFile.id==id))
                     db.session.commit()
-                    _save_log(file.id_legal_entity,CustomerAction.FILE_DETTACHED,'Removido o arquivo '+file.name)
+                    _save_entity_log(file.id_legal_entity,EntityAction.FILE_DETTACHED,'Removido o arquivo '+file.name)
                 return True
         except exceptions.HTTPException:
             return False

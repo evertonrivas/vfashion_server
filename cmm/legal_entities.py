@@ -3,13 +3,13 @@ from os import environ
 from flask import request
 from http import HTTPStatus
 from datetime import datetime
-from f2bconfig import CustomerAction
+from f2bconfig import EntityAction
 from models.helpers import _get_params, db
 from models.tenant import CmmLegalEntities
 from models.tenant import CmmLegalEntityContact
 from flask_restx import Resource,Namespace,fields
 from sqlalchemy import Delete, Select, and_,exc,asc,desc,func, or_
-from models.tenant import _save_log, B2bCustomerGroupCustomers 
+from models.tenant import _save_entity_log, B2bCustomerGroupCustomers 
 from models.tenant import  B2bCustomerGroup, CmmLegalEntityHistory
 from models.tenant import CmmLegalEntityFile,  CrmFunnelStageCustomer
 from models.public import SysCities, SysCountries, SysStateRegions
@@ -268,7 +268,7 @@ class EntitysList(Resource):
 
             db.session.commit()
 
-            _save_log(cst.id,CustomerAction.DATA_REGISTERED,'Registro criado')  # type: ignore
+            _save_entity_log(cst.id,EntityAction.DATA_REGISTERED,'Registro criado')  # type: ignore
 
             return cst.id
         except exc.SQLAlchemyError as e:
@@ -296,7 +296,7 @@ class EntitysList(Resource):
                 #     )
                 #     db.session.commit()
 
-                _save_log(id,CustomerAction.DATA_DELETED,'Registro '+('movido para a' if req["toTrash"]==1 else 'removido da') +' Lixeira')
+                _save_entity_log(id,EntityAction.DATA_DELETED,'Registro '+('movido para a' if req["toTrash"]==1 else 'removido da') +' Lixeira')
             return True
         except exc.SQLAlchemyError as e:
             return {
@@ -538,7 +538,7 @@ class EntityApi(Resource):
                             ct.is_whatsapp  = contact["is_whatsapp"]
                             db.session.commit()
                 
-                _save_log(id,CustomerAction.DATA_UPDATED,'Registro alterado')
+                _save_entity_log(id,EntityAction.DATA_UPDATED,'Registro alterado')
 
                 return id
             return 0
@@ -558,7 +558,7 @@ class EntityApi(Resource):
             cst = CmmLegalEntities.query.get(id)
             setattr(cst,"trash",True)
             db.session.commit()
-            _save_log(id,CustomerAction.DATA_DELETED,'Registro arquivado')
+            _save_entity_log(id,EntityAction.DATA_DELETED,'Registro arquivado')
             return True
         except exc.SQLAlchemyError as e:
             return {
@@ -787,10 +787,10 @@ class EntityContact(Resource):
                 ct.is_whatsapp     = r['is_whatsapp']
                 ct.value           = r['value']
                 if r["id"] == 0:
-                    _save_log(r['id_legal_entity'],CustomerAction.DATA_REGISTERED,'Adicionado contato '+r['name'])
+                    _save_entity_log(r['id_legal_entity'],EntityAction.DATA_REGISTERED,'Adicionado contato '+r['name'])
                     db.session.add(ct)
                 else:
-                    _save_log(r['id_legal_entity'],CustomerAction.DATA_UPDATED,'Atualizado contato '+r['name'])
+                    _save_entity_log(r['id_legal_entity'],EntityAction.DATA_UPDATED,'Atualizado contato '+r['name'])
                 db.session.commit()
                 return True
         except exc.SQLAlchemyError as e:
@@ -878,16 +878,8 @@ class EntityHistory(Resource):
     def post(self,id:int):
         try:
             req = request.get_json()
-            hist:CmmLegalEntityHistory = CmmLegalEntityHistory()
-            if hist is not None:
-                setattr(hist,"action",CustomerAction.COMMENT_ADDED.value)
-                setattr(hist,"id_legal_entity",id)
-                setattr(hist,"date_created",datetime.now())
-                hist.history = req
-                db.session.add(hist)
-                db.session.commit()
-                return True
-            return False
+            _save_entity_log(id,EntityAction.COMMENT_ADDED,'Adicionado comentário: '+req)
+            return True
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
