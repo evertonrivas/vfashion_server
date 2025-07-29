@@ -313,15 +313,16 @@ class CartItem(Resource):
                 "errors_sql": e._sql_message()
             }
 
-@ns_cart.param('id_entity','Código do perfil',"query",type=int)
 class CartTotal(Resource):
     @ns_cart.response(HTTPStatus.OK,"Lista o total de produtos no carrinho")
     @ns_cart.response(HTTPStatus.BAD_REQUEST,"Falha ao contar registros!")
     @ns_cart.param("userType","Tipo do usuário","query",enum=['A','C','R'])
     @auth.login_required
-    def get(self,id_entity:int):
+    def get(self):
 
         userType = request.args.get("userType")
+        # arrumar o codigo
+        id_entity = int(str(request.args.get("id_profile")))
 
         query = Select(func.count(distinct(tuple_(B2bCartShopping.id_product))).label("total"))\
             .select_from(B2bCartShopping)
@@ -345,4 +346,4 @@ class CartTotal(Resource):
 
         return db.session.execute(query).one().total if userType!='A' else db.session.execute(query).scalar()
 
-ns_cart.add_resource(CartTotal,'/total/<int:id_entity>')
+ns_cart.add_resource(CartTotal,'/total/')

@@ -1,7 +1,7 @@
 from flask import Blueprint, request
 from cmm.ai import ns_ai
 from flask_restx import Api
-from cmm.users import ns_user
+from cmm.users import ns_user, SysUsers
 from cmm.cities import ns_city
 from cmm.email import ns_email
 from cmm.products import ns_prod
@@ -57,11 +57,14 @@ def before_request():
     has_auth = request.base_url.find("users/auth")
     has_config = request.base_url.find("config")
     has_start = request.base_url.find("start")
-    if (has_auth==-1 and has_config==-1 and has_start==-1) and request.headers.get("x-customer", None) is None:
-        return {"message": "Customer header is required"}, 400
     
-    tenant = Database(str(request.headers.get("tenant")))
-    tenant.switch_schema()
+    if has_auth==-1 and has_config==-1 and has_start==-1:
+        if "Authorization" in request.headers:
+            tkn = request.headers["Authorization"].replace("Bearer ","")
+            if tkn is not None:
+                token = SysUsers.extract_token(tkn) if tkn else None
+                tenant = Database(str('' if token is None else token["profile"]))
+                tenant.switch_schema()
 
 api = Api(blueprint,
     version="1.0",

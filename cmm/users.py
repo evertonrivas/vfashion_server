@@ -334,12 +334,12 @@ class UserAuth(Resource):
             pwd = str(request.form.get("password")).encode()
             if usr.check_pwd(pwd):
                 obj_retorno = {
-					"token_access": usr.get_token(),
+					"token_access": usr.get_token(str(idProfile)),
 					"token_type": "Bearer",
 					"token_expire": usr.token_expire.strftime("%Y-%m-%d %H:%M:%S"),
 					"level_access": usr.type,
                     "id_user": usr.id,
-                    "id_customer": idProfile
+                    "id_profile": str(idProfile)
                 }
                 usr.is_authenticate = True
                 db.session.commit()
@@ -359,12 +359,12 @@ class UserAuth(Resource):
                     pwd = str(request.form.get("password")).encode()
                     if usr.check_pwd(pwd):
                         obj_retorno = {
-                            "token_access": usr.get_token(),
+                            "token_access": usr.get_token(str(entity.id)),
                             "token_type": "Bearer",
                             "token_expire": usr.token_expire.strftime("%Y-%m-%d %H:%M:%S"),
                             "level_access": usr.type,
                             "id_user": usr.id,
-                            "id_profile": entity.id
+                            "id_profile": str(entity.id)
                         }
                         usr.is_authenticate = True
                         db.session.commit()
@@ -400,6 +400,7 @@ ns_user.add_resource(UserAuth,"/auth")
 
 @ns_user.param("id","Id do registro")
 class UserAuthLogout(Resource):
+     @auth.login_required
      def post(self,id:int):
         try:
             usr:SysUsers|None = SysUsers.query.get(id)
@@ -599,7 +600,9 @@ class UserCount(Resource):
     @auth.login_required
     def get(self):
         try:
-            stmt = Select(func.count(SysUsers.id).label("total")).select_from(SysUsers)
+            stmt = Select(func.count(SysUsers.id).label("total")).select_from(SysUsers)\
+            .join(SysCustomerUser,SysCustomerUser.id_user==SysUsers.id)\
+            .where(SysCustomerUser.id_customer==request.headers.get("x-customer", None))
             if(request.args.get("level")!=""):
                 stmt = stmt.where(SysUsers.type==request.args.get("level"))
             row = db.session.execute(stmt).first()
@@ -615,7 +618,9 @@ class UserCount(Resource):
     def post(self):
         try:
             req = request.get_json()
-            stmt = Select(func.count(SysUsers.id).label("total")).select_from(SysUsers)
+            stmt = Select(func.count(SysUsers.id).label("total")).select_from(SysUsers)\
+            .join(SysCustomerUser,SysCustomerUser.id_user==SysUsers.id)\
+            .where(SysCustomerUser.id_customer==request.headers.get("x-customer", None))
             if(req["level"]!=""):
                 stmt = stmt.where(SysUsers.type==req["level"])
             row = db.session.execute(stmt).first()

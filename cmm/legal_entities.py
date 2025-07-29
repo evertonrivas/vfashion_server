@@ -79,18 +79,17 @@ class EntitysList(Resource):
 
         try:
             params = _get_params(search)
-            if params is not None:
-                direction = asc if not hasattr(params,'order') else asc if params.order=='ASC' else desc
-                order_by  = 'id' if not hasattr(params,'order_by') else params.order_by
-                trash     = False if not hasattr(params,"trash") else True
-                list_all  = False if not hasattr(params,"list_all") else True
+            direction = asc if not hasattr(params,'order') else asc if params is not None and params.order=='ASC' else desc
+            order_by  = 'id' if not hasattr(params,'order_by') else params.order_by if params is not None else 'id'
+            trash     = False if not hasattr(params,"trash") else True
+            list_all  = False if not hasattr(params,"list_all") else True
 
-                filter_search = None if not hasattr(params,"search") else params.search
-                filter_type   = None if not hasattr(params,'type') else params.type
-                filter_rep    = None if not hasattr(params,'representative') else params.filter_rep
-                filter_country = None if not hasattr(params,'id_country') else params.id_country
-                filter_city    = None if not hasattr(params,"id_city") else params.id_city
-                filter_state_region = None if not hasattr(params,'id_state_region') else params.id_state_region
+            filter_search = None if not hasattr(params,"search") else params.search if params is not None else None
+            filter_type   = None if not hasattr(params,'type') else params.type if params is not None else None
+            filter_rep    = None if not hasattr(params,'representative') else params.filter_rep if params is not None else None
+            filter_country = None if not hasattr(params,'id_country') else params.id_country if params is not None else None
+            filter_city    = None if not hasattr(params,"id_city") else params.id_city if params is not None else None
+            filter_state_region = None if not hasattr(params,'id_state_region') else params.id_state_region if params is not None else None
 
             rquery = Select(
                     CmmLegalEntities.id,

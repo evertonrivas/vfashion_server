@@ -61,14 +61,16 @@ class CollectionList(Resource):
 
         try:
             params = _get_params(str(query))
-            if params is not None:
-                direction = asc if not hasattr(params,'order') else asc if str(params.order).upper()=='ASC' else desc
-                order_by  = 'id' if not hasattr(params,'order_by') else params.order_by
-                search    = None if not hasattr(params,"search") else params.search
-                trash     = False if not hasattr(params,'active') else True
-                list_all  = False if not hasattr(params,'list_all') else True
+            direction = asc if not hasattr(params,'order') else asc if params is not None and params.order=='ASC' else desc
+            order_by  = 'id' if not hasattr(params,'order_by') else params.order_by if params is not None else 'id'
+            search    = None if not hasattr(params,"search") else params.search if params is not None else None
+            trash     = False if not hasattr(params,'active') else True
+            list_all  = False if not hasattr(params,'list_all') else True
 
-                filter_brand = None if not hasattr(params,'brand') or (hasattr(params,'brand') and params.brand==0) else params.brand
+            if params is not None and (hasattr(params,'brand') or (hasattr(params,'brand') and params.brand==0)):
+                filter_brand = params.brand
+            else:
+                filter_brand = None
 
             rquery = Select(B2bCollection.id,
                             B2bCollection.id_brand,

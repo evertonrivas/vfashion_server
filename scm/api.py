@@ -1,5 +1,6 @@
 from flask_restx import Api
 from scm.flimv import ns_flimv
+from models.public import SysUsers
 from scm.event_type import ns_event
 from models.helpers import Database
 from flask import Blueprint, request
@@ -12,11 +13,12 @@ blueprint = Blueprint("scm",__name__,url_prefix="/scm/api/")
 @blueprint.before_request
 def before_request():
     """ Executa antes de cada requisição """
-    if request.headers.get("x-customer", None) is None:
-        return {"message": "Customer header is required"}, 400
-    
-    tenant = Database(str(request.headers.get("tenant")))
-    tenant.switch_schema()
+    if "Authorization" in request.headers:
+        tkn = request.headers["Authorization"].replace("Bearer ","")
+        if tkn is not None:
+            token = SysUsers.extract_token(tkn) if tkn else None
+            tenant = Database(str('' if token is None else token["profile"]))
+            tenant.switch_schema()
 
 
 api = Api(blueprint,

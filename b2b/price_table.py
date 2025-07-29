@@ -68,12 +68,15 @@ class PriceTableList(Resource):
 
         try:
             params    = _get_params(str(query))
-            if params is not None:
-                direction = asc if not hasattr(params,'order') else asc if str(params.order).upper()=='ASC' else desc
-                order_by  = 'id' if not hasattr(params,'order_by') else params.order_by
-                search    = None if not hasattr(params,"search") or hasattr(params,"search")!="" else params.search
-                trash     = True if not hasattr(params,'active') else False if params.active=="0" else True #foi invertido
-                list_all  = False if not hasattr(params,'list_all') else True
+            direction = asc if not hasattr(params,'order') else asc if params is not None and params.order=='ASC' else desc
+            order_by  = 'id' if not hasattr(params,'order_by') else params.order_by if params is not None else 'id'
+            search    = None if not hasattr(params,"search") or hasattr(params,"search")!="" else params.search if params is not None else None
+            list_all  = False if not hasattr(params,'list_all') else True
+            # trash     = True if not hasattr(params,'active') else False if params.active=="0" else True #foi invertido
+            if params is not None and hasattr(params,'active'):
+                trash = params.active
+            else:
+                trash = False
 
             rquery = Select(B2bTablePrice.id,
                             B2bTablePrice.name,

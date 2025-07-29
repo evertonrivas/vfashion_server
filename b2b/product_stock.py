@@ -95,19 +95,18 @@ class ProductStockList(Resource):
 
         try:
             params    = _get_params(str(query))
-            if params is not None:
-                # trash     = False if not hasattr(params,"trash") else True
-                # order_by  = "id" if not hasattr(params,"order_by") else params.order_by
-                # direction = asc if not hasattr(params,"order") else asc if str(params.order).lower()=="asc" else desc
-                search    = None if not hasattr(params,"search") else params.search
-                list_all  = False if not hasattr(params,"list_all") else True
+            # trash     = False if not hasattr(params,"trash") else True
+            # order_by  = "id" if not hasattr(params,"order_by") else params.order_by
+            # direction = asc if not hasattr(params,"order") else asc if str(params.order).lower()=="asc" else desc
+            search    = None if not hasattr(params,"search") else params.search if params is not None else None
+            list_all  = False if not hasattr(params,"list_all") else True
 
-                filter_brand    = None if not hasattr(params,"brand") else params.brand
-                filter_collect  = None if not hasattr(params,"collection") else params.collection
-                filter_category = None if not hasattr(params,"category") else params.category
-                filter_model    = None if not hasattr(params,"model") else params.model
-                filter_type     = None if not hasattr(params,"type") else params.type
-                filter_color    = None if not hasattr(params,"color") else params.color
+            filter_brand    = None if not hasattr(params,"brand") else params.brand if params is not None else None
+            filter_collect  = None if not hasattr(params,"collection") else params.collection if params is not None else None
+            filter_category = None if not hasattr(params,"category") else params.category if params is not None else None
+            filter_model    = None if not hasattr(params,"model") else params.model if params is not None else None
+            filter_type     = None if not hasattr(params,"type") else params.type if params is not None else None
+            filter_color    = None if not hasattr(params,"color") else params.color if params is not None else None
 
             pquery = Select(B2bProductStock.id_product,
                         CmmProductsGrid.id.label("id_grid"),

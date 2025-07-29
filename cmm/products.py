@@ -81,20 +81,19 @@ class ProductsList(Resource):
 
         try:
             params = _get_params(query)
-            if params is not None:
-                trash     = False if not hasattr(params,"trash") else True
-                order_by  = "name" if not hasattr(params,"order_by") else params.order_by
-                direction = asc if not hasattr(params,"order") else asc if str(params.order).lower()=="asc" else desc
-            
-                list_all          = False if not hasattr(params,"list_all") else params.name
-                filter_search     = None if not hasattr(params,"search") else params.name
-                filter_brand      = None if not hasattr(params,"brand") else params.brand
-                filter_collection = None if not hasattr(params,"collection") else params.collection
-                filter_category   = None if not hasattr(params,"category") else params.category
-                filter_type       = None if not hasattr(params,"type") else params.type
-                filter_model      = None if not hasattr(params,"model") else params.model
-                filter_grid       = None if not hasattr(params,"grid") else params.grid
-                filter_no_stock   = None if not hasattr(params,"no_stock") else True
+            trash     = False if not hasattr(params,"trash") else True
+            order_by  = "name" if not hasattr(params,"order_by") else params.order_by if params is not None else "name"
+            direction = asc if not hasattr(params,'order') else asc if params is not None and params.order=='ASC' else desc
+        
+            list_all          = False if not hasattr(params,"list_all") else params.name if params is not None else False
+            filter_search     = None if not hasattr(params,"search") else params.name if params is not None else None
+            filter_brand      = None if not hasattr(params,"brand") else params.brand if params is not None else None
+            filter_collection = None if not hasattr(params,"collection") else params.collection if params is not None else None
+            filter_category   = None if not hasattr(params,"category") else params.category if params is not None else None
+            filter_type       = None if not hasattr(params,"type") else params.type if params is not None else None
+            filter_model      = None if not hasattr(params,"model") else params.model if params is not None else None
+            filter_grid       = None if not hasattr(params,"grid") else params.grid if params is not None else None
+            filter_no_stock   = None if not hasattr(params,"no_stock") else True
 
             rquery = Select(CmmProducts.id,
                             CmmProducts.prodCode,

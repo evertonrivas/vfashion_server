@@ -1,6 +1,7 @@
 from flask_restx import Api
 from crm.funnel import ns_funil
 from crm.config import ns_crm_cfg
+from models.public import SysUsers
 from models.helpers import Database
 from flask import Blueprint, request
 from crm.funnel_stage import ns_fun_stg
@@ -18,11 +19,12 @@ blueprint = Blueprint("crm",__name__,url_prefix="/crm/api/")
 @blueprint.before_request
 def before_request():
     """ Executa antes de cada requisição """
-    if request.headers.get("x-customer", None) is None:
-        return {"message": "Customer header is required"}, 400
-    
-    tenant = Database(str(request.headers.get("tenant")))
-    tenant.switch_schema()
+    if "Authorization" in request.headers:
+        tkn = request.headers["Authorization"].replace("Bearer ","")
+        if tkn is not None:
+            token = SysUsers.extract_token(tkn) if tkn else None
+            tenant = Database(str('' if token is None else token["profile"]))
+            tenant.switch_schema()
 
 api = Api(blueprint,
     version="1.0",

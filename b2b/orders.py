@@ -77,12 +77,11 @@ class OrdersList(Resource):
 
         try:
             params    = _get_params(str(query))
-            if params is not None:
-                # direction = asc if not hasattr(params,'order') else asc if str(params.order).upper()=='ASC' else desc
-                # order_by  = 'id' if not hasattr(params,'order_by') else params.order_by
-                search    = None if not hasattr(params,"search") else params.search
-                # trash     = True if not hasattr(params,'active') else False #foi invertido
-                # list_all  = False if not hasattr(params,'list_all') else True
+            # direction = asc if not hasattr(params,'order') else asc if str(params.order).upper()=='ASC' else desc
+            # order_by  = 'id' if not hasattr(params,'order_by') else params.order_by
+            search    = None if not hasattr(params,"search") else params.search if params is not None else None
+            # trash     = True if not hasattr(params,'active') else False #foi invertido
+            # list_all  = False if not hasattr(params,'list_all') else True
 
 
             if search is not None:
@@ -415,12 +414,11 @@ class HistoryOrderList(Resource):
         try:
 
             params = _get_params(str(query))
-            if params is not None:
-                order_by  = "id" if not hasattr(params,"order_by") else params.order_by
-                direction = asc if not hasattr(params,"order_dir") else desc if str(params.order_by).upper()=='DESC' else asc
-                list_all  = False if not hasattr(params,"list_all") else True
-                status    = None if not hasattr(params,"status") else params.status
-                no_devolution = False if not hasattr(params,"no_devolution") else True
+            order_by  = "id" if not hasattr(params,"order_by") else params.order_by if params is not None else 'id'
+            direction = asc if not hasattr(params,'order') else asc if params is not None and params.order=='ASC' else desc
+            list_all  = False if not hasattr(params,"list_all") else True
+            status    = None if not hasattr(params,"status") else params.status if params is not None else params
+            no_devolution = False if not hasattr(params,"no_devolution") else True
 
             stmt = Select(
                           B2bOrders.id.label("id_order"),

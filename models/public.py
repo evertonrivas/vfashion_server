@@ -15,7 +15,7 @@ BASEDIR = path.abspath(path.dirname(__file__))
 load_dotenv(path.join(BASEDIR, '.env'))
 
 def _save_customer_log(id:int,id_customer:str, act:CustomerAction, p_log_action:str):
-    log:CmmCustomerHistory = CmmCustomerHistory()
+    log:SysCustomerHistory = SysCustomerHistory()
     setattr(log,"id_user",id)
     setattr(log,"action",act.value)
     setattr(log,"history",p_log_action)
@@ -46,15 +46,15 @@ class SysUsers(dbForModel.Model):
     def check_pwd(self,pwd:str):
         return bcrypt.checkpw(pwd, self.password.encode()) # type: ignore
 
-    def get_token(self,expires_in:int=int(str(environ.get("F2B_EXPIRE_SESSION")))):
+    def get_token(self,_profile:str,expires_in:int=int(str(environ.get("F2B_EXPIRE_SESSION")))):
         now        = datetime.now(tz=timezone.utc)
         expire_utc = now + timedelta(seconds=expires_in)
 
         #encode e decode por causa da diferenca de versoes do windows que pode retornar byte array ao inves de str
-        self.token        = jwt.encode({"username":str(self.username), "iat": now, "exp": expire_utc},str(environ.get("F2B_TOKEN_KEY"))).encode().decode()
+        self.token        = jwt.encode({"username":str(self.username),"profile":_profile, "iat": now, "exp": expire_utc},str(environ.get("F2B_TOKEN_KEY"))).encode().decode()
         self.token_expire = expire_utc
         return self.token
-    
+       
     def renew_token(self):
         now               = datetime.now(tz=timezone.utc) + timedelta(seconds=int(str(environ.get("F2B_EXPIRE_SESSION"))))
         data_token        = jwt.decode(str(self.token),str(environ.get("F2B_TOKEN_KEY")),algorithms=['HS256'])
@@ -69,6 +69,16 @@ class SysUsers(dbForModel.Model):
     def logout(self):
         self.is_authenticate = False
         self.token = None
+
+    @staticmethod
+    def extract_token(token):
+        try:
+            data_token = jwt.decode(token, str(environ.get("F2B_TOKEN_KEY")), algorithms=['HS256'])
+            return data_token
+        except jwt.ExpiredSignatureError:
+            return None
+        except jwt.InvalidTokenError:
+            return None
 
     @staticmethod
     def check_token(token):
@@ -154,12 +164,12 @@ class SysCities(dbForModel.Model):
     name            = Column(String(100),nullable=False)
     brazil_ibge_code= Column(String(10),nullable=True)
 
-class CmmCustomerHistory(dbForModel.Model):
+class SysCustomerHistory(dbForModel.Model):
     __bind_key__    = "public"
     __table_args__  = {"schema": "public"}
     id           = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
     id_user      = Column(ForeignKey(SysUsers.id),nullable=False,index=True,comment="Id do usuário que realizou a ação")
     id_customer  = Column(ForeignKey(SysCustomer.id),nullable=False,index=True,comment="Id da tabela SysCustomer")
-    action       = Column(CHAR(1),nullable=False,comment="Ação realizada no cliente")
+    action       = Column(CHAR(2),nullable=False,comment="SA = System Access, DR = Data Registered, DU = Data Updated, DD = Data Deleted")
     history      = Column(String(255),nullable=False,comment="Histórico da ação realizada")
     date_created = Column(DateTime,nullable=False,server_default=func.now())

@@ -50,15 +50,14 @@ class PaymentConditionsList(Resource):
         query    = "" if request.args.get("query") is None else request.args.get("query")
         try:
             params = _get_params(str(query))
-            if params is not None:
-                trash     = False if not hasattr(params,'trash') else True
-                list_all  = False if not hasattr(params,"list_all") else True
-                order_by  = "id" if not hasattr(params,"order_by") else params.order_by
-                direction = desc if hasattr(params,"order_dir") == 'DESC' else asc
+            trash     = False if not hasattr(params,'trash') else True
+            list_all  = False if not hasattr(params,"list_all") else True
+            order_by  = "id" if not hasattr(params,"order_by") else params.order_by if params is not None else 'id'
+            direction = asc if not hasattr(params,'order') else asc if params is not None and params.order=='ASC' else desc
 
-                filter_search        = None if not hasattr(params,"search") else params.search
-                filter_installments  = None if not hasattr(params,"installments") else params.installments
-                filter_received_days = None if not hasattr(params,"received_days") else params.received_days
+            filter_search        = None if not hasattr(params,"search") else params.search if params is not None else None
+            filter_installments  = None if not hasattr(params,"installments") else params.installments if params is not None else None
+            filter_received_days = None if not hasattr(params,"received_days") else params.received_days if params is not None else None
  
             rquery = Select(B2bPaymentConditions.id,
                             B2bPaymentConditions.name,
