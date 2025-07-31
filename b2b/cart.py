@@ -319,10 +319,8 @@ class CartTotal(Resource):
     @ns_cart.param("userType","Tipo do usuário","query",enum=['A','C','R'])
     @auth.login_required
     def get(self):
-
         userType = request.args.get("userType")
         # arrumar o codigo
-        id_entity = int(str(request.args.get("id_profile")))
 
         query = Select(func.count(distinct(tuple_(B2bCartShopping.id_product))).label("total"))\
             .select_from(B2bCartShopping)
@@ -331,10 +329,10 @@ class CartTotal(Resource):
             #aqui precisa buscar todos os os do representante
             query = query.where(B2bCartShopping.id_customer.in_(
                 Select(B2bCustomerGroupCustomers.id_customer)\
-                .join(B2bCustomerGroup,B2bCustomerGroup.id==B2bCustomerGroupCustomers.id_customer_group)\
-                .where(B2bCustomerGroup.id_representative==id_entity))
+                .join(B2bCustomerGroup,B2bCustomerGroup.id==B2bCustomerGroupCustomers.id_customer_group))
             )
         else:
+            id_entity = int(str(request.args.get("id_profile")))
             query = query.where(B2bCartShopping.id_customer==id_entity)
 
         #zera o SQL se for admin

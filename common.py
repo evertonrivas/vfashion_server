@@ -1,12 +1,36 @@
 import os
-import logging
-import requests
 import jinja2
 import pdfkit
+import logging
+import requests
 from os import environ
+from flask import request
 from random import seed,randint
-from f2bconfig import CustomerAction, MailTemplates
+from models.public import SysUsers
+from models.helpers import Database
+from f2bconfig import EntityAction, MailTemplates
 
+def _before_execute(check:bool = False):
+    # apenas no common serah verificada a existencia do auth
+    if not check:
+        if "Authorization" in request.headers:
+            tkn = request.headers["Authorization"].replace("Bearer ","")
+            if tkn is not None:
+                token = SysUsers.extract_token(tkn) if tkn else None
+                tenant = Database(str('' if token is None else token["profile"]))
+                tenant.switch_schema()
+    else:
+        has_auth = request.base_url.find("users/auth")
+        has_config = request.base_url.find("config")
+        has_start = request.base_url.find("start")
+        
+        if has_auth==-1 and has_config==-1 and has_start==-1:
+            if "Authorization" in request.headers:
+                tkn = request.headers["Authorization"].replace("Bearer ","")
+                if tkn is not None:
+                    token = SysUsers.extract_token(tkn) if tkn else None
+                    tenant = Database(str('' if token is None else token["profile"]))
+                    tenant.switch_schema()
 
 def _gen_report(fileName:str,_content:dict):
     try:
@@ -135,45 +159,43 @@ def _send_email(p_to:list,p_cc:list,p_subject:str,p_content:str,p_tpl:MailTempla
         logging.error(e)
         return False
     
-def _format_action(act:CustomerAction) ->str:
-    if act==CustomerAction.DATA_REGISTERED.value:
+def _format_action(act:EntityAction) ->str:
+    if act==EntityAction.DATA_REGISTERED.value:
         return "Registro de Dados"
-    if act==CustomerAction.DATA_UPDATED.value:
+    if act==EntityAction.DATA_UPDATED.value:
         return "Atualização de Dados"
-    if act==CustomerAction.DATA_DELETED.value:
+    if act==EntityAction.DATA_DELETED.value:
         return "Arquivamento de Dados"
-    if act==CustomerAction.MOVE_CRM_FUNNEL.value:
+    if act==EntityAction.MOVE_CRM_FUNNEL.value:
         return "Movimento de Funil/Estágio"
-    if act==CustomerAction.CHAT_MESSAGE_SEND.value:
+    if act==EntityAction.CHAT_MESSAGE_SEND.value:
         return "Envio de mensagem"
-    if act==CustomerAction.CHAT_MESSAGE_RECEIVED.value:
+    if act==EntityAction.CHAT_MESSAGE_RECEIVED.value:
         return "Recebimento de mensagem"
-    if act==CustomerAction.ORDER_CREATED.value:
+    if act==EntityAction.ORDER_CREATED.value:
         return "Pedido criado"
-    if act==CustomerAction.ORDER_UPDATED.value:
+    if act==EntityAction.ORDER_UPDATED.value:
         return "Pedido atualizado"
-    if act==CustomerAction.ORDER_DELETED.value:
+    if act==EntityAction.ORDER_DELETED.value:
         return "Pedido arquivado"
-    if act==CustomerAction.SYSTEM_ACCESS.value:
-        return "Acesso ao sistema"
-    if act==CustomerAction.TASK_CREATED.value:
+    if act==EntityAction.TASK_CREATED.value:
         return "Tarefa criada"
-    if act==CustomerAction.FILE_ATTACHED.value:
+    if act==EntityAction.FILE_ATTACHED.value:
         return "Arquivo anexado"
-    if act==CustomerAction.FILE_DETTACHED.value:
+    if act==EntityAction.FILE_DETTACHED.value:
         return "Arquivo excluído"
-    if act==CustomerAction.EMAIL_SENDED.value:
+    if act==EntityAction.EMAIL_SENDED.value:
         return "E-mail enviado"
-    if act==CustomerAction.EMAIL_REPLIED.value:
+    if act==EntityAction.EMAIL_REPLIED.value:
         return "E-mail respondido"
-    if act==CustomerAction.RETURN_CREATED.value:
+    if act==EntityAction.RETURN_CREATED.value:
         return "Devolução criada"
-    if act==CustomerAction.RETURN_UPDATED.value:
+    if act==EntityAction.RETURN_UPDATED.value:
         return "Devolução atualizada"
-    if act==CustomerAction.FINANCIAL_BLOQUED.value:
+    if act==EntityAction.FINANCIAL_BLOQUED.value:
         return "Bloqueio financeiro"
-    if act==CustomerAction.FINANCIAL_UNBLOQUED.value:
+    if act==EntityAction.FINANCIAL_UNBLOQUED.value:
         return "Desbloqueio financeiro"
-    if act==CustomerAction.COMMENT_ADDED.value:
+    if act==EntityAction.COMMENT_ADDED.value:
         return "Observação"
     return ""

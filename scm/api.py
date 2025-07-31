@@ -1,9 +1,8 @@
 from flask_restx import Api
+from flask import Blueprint
 from scm.flimv import ns_flimv
-from models.public import SysUsers
+from common import _before_execute
 from scm.event_type import ns_event
-from models.helpers import Database
-from flask import Blueprint, request
 from scm.calendar import ns_calendar
 from scm.rep_comission import ns_comission
 
@@ -13,12 +12,7 @@ blueprint = Blueprint("scm",__name__,url_prefix="/scm/api/")
 @blueprint.before_request
 def before_request():
     """ Executa antes de cada requisição """
-    if "Authorization" in request.headers:
-        tkn = request.headers["Authorization"].replace("Bearer ","")
-        if tkn is not None:
-            token = SysUsers.extract_token(tkn) if tkn else None
-            tenant = Database(str('' if token is None else token["profile"]))
-            tenant.switch_schema()
+    _before_execute()
 
 
 api = Api(blueprint,

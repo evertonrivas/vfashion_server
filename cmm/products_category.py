@@ -51,15 +51,14 @@ class CategoryList(Resource):
 
         try:
             params = _get_params(query)
-            if params is not None:
-                direction = asc if not hasattr(params,'order') else asc if str(params.order).upper()=='ASC' else desc
-                order_by  = 'id' if not hasattr(params,'order_by') else params.order_by
-                search    = None if not hasattr(params,"search") else params.search
-                trash     = False if not hasattr(params,'trash') else True
-                list_all  = False if not hasattr(params,'list_all') else True
+            direction = asc if not hasattr(params,'order') else asc if params is not None and params.order=='ASC' else desc
+            order_by  = 'id' if not hasattr(params,'order_by') else params.order_by if params is not None else 'id'
+            search    = None if not hasattr(params,"search") else params.search if params is not None else None
+            trash     = False if not hasattr(params,'trash') else True
+            list_all  = False if not hasattr(params,'list_all') else True
 
-                filter_just_parent = None if not hasattr(params,'just_parent') else True
-                filter_just_child  = None if not hasattr(params,"just_child") else True
+            filter_just_parent = None if not hasattr(params,'just_parent') else True
+            filter_just_child  = None if not hasattr(params,"just_child") else True
             
             rquery = Select(CmmCategories.id,
                             CmmCategories.origin_id,

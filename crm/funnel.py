@@ -63,15 +63,17 @@ class FunnelList(Resource):
     
         try:
             params = _get_params(query)
-            if params is not None:
-                trash     = False if not hasattr(params,'trash') else True
-                list_all  = False if not hasattr(params,"list_all") else True
-                order_by  = "id" if not hasattr(params,"order_by") else params.order_by
-                direction = desc if not hasattr(params,"order_dir") == 'DESC' else asc
-                search    = None if not hasattr(params,"search") or params.search=='' else params.search
+            trash     = False if not hasattr(params,'trash') else True
+            list_all  = False if not hasattr(params,"list_all") else True
+            order_by  = "id" if not hasattr(params,"order_by") else params.order_by if params is not None else 'id'
+            direction = asc if not hasattr(params,'order') else asc if params is not None and params.order=='ASC' else desc
+            search    = None if not hasattr(params,"search") else params.search if params is not None else None
 
-                filter_type    = None if not hasattr(params,"type") else params.type
-                filter_default = None if not hasattr(params,"default") else True if params.default=="1" else False
+            filter_type    = None if not hasattr(params,"type") else params.type if params is not None else None
+            if hasattr(params,"default") and params is not None:
+                filter_default = params.default
+            else:
+                filter_default = None
 
             rquery = Select(CrmFunnel.id,
                             CrmFunnel.name,

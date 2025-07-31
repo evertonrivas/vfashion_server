@@ -151,10 +151,12 @@ class ProductStockList(Resource):
                     CmmTranslateColors.id.in_(str(filter_color).split(','))
                 )
             
+            # color query
             cquery = Select(B2bProductStock.id_color,
                             CmmTranslateColors.name).distinct()\
                 .join(CmmTranslateColors,CmmTranslateColors.id==B2bProductStock.id_color)
             
+            # size query
             squery = Select(B2bProductStock.id_size,
                             CmmTranslateSizes.new_size.label("name"),
                             B2bProductStock.quantity,
@@ -460,19 +462,21 @@ class ProductsGallery(Resource):
 
         try:
             params     =  _get_params(str(query))
-            if params is not None:
-                order_by   = "id" if not hasattr(params,"order_by") else params.order_by
-                direction  = asc if not hasattr(params,"order") else asc if str(params.order).lower()=='asc' else desc
-                list_all   = False if not hasattr(params,"list_all") else True
-                search     = None if not hasattr(params,'search') else "%{}%".format(params.search)
+            order_by   = "id" if not hasattr(params,"order_by") else params.order_by if params is not None else 'id'
+            direction  = asc if not hasattr(params,'order') else asc if params is not None and params.order=='ASC' else desc
+            list_all   = False if not hasattr(params,"list_all") else True
+            search     = None if not hasattr(params,"search") else params.search if params is not None else None
 
-                filter_brand      = None if not hasattr(params,"brand") else params.brand
-                filter_collection = None if not hasattr(params,"collection") else params.collection
-                filter_category   = None if not hasattr(params,"category") else params.category
-                filter_model      = None if not hasattr(params,"model") else params.model
-                filter_type       = None if not hasattr(params,"type") else params.type
-                filter_color      = None if not hasattr(params,"color") else params.color
-                filter_size       = None if not hasattr(params,"size")else params.size
+            filter_brand      = None if not hasattr(params,"brand") else params.brand if params is not None else None
+            filter_collection = None if not hasattr(params,"collection") else params.collection if params is not None else None
+            filter_category   = None if not hasattr(params,"category") else params.category if params is not None else None
+            filter_model      = None if not hasattr(params,"model") else params.model if params is not None else None
+            filter_type       = None if not hasattr(params,"type") else params.type if params is not None else None
+            filter_color      = None if not hasattr(params,"color") else params.color if params is not None else None
+            filter_size       = None if not hasattr(params,"size")else params.size if params is not None else None
+
+            str_today = datetime.now().isoformat()[0:10]
+            today = datetime.strptime(str_today,"%Y-%m-%d")
 
             #realiza a busca das colecoes que tem restricao no calendario
             rquery = Select(CmmProducts.id,CmmProducts.id_grid,CmmProducts.prodCode,CmmProducts.barCode,
@@ -497,7 +501,7 @@ class ProductsGallery(Resource):
                             B2bProductStock.quantity > 0, #possui quantidade indiferente de tamanho e cor
                             and_( #produto ilimitado
                                 or_(
-                                    B2bProductStock.quantity==0,
+                                    B2bProductStock.quantity.__eq__(0),
                                     B2bProductStock.quantity.is_(None)
                                 ),
                                 B2bProductStock.ilimited.is_(True)
@@ -508,9 +512,9 @@ class ProductsGallery(Resource):
                     B2bCollection.id.in_(
                         Select(ScmEvent.id_collection).where(
                             and_( #esta dentro do periodo
-                                ScmEvent.year==datetime.now().year,
-                                ScmEvent.start_date >= datetime.now().isoformat()[0:10],
-                                ScmEvent.end_date <= datetime.now().isoformat()[0:10]
+                                ScmEvent.year.__eq__(datetime.now().year),
+                                ScmEvent.start_date.__gt__(today),
+                                ScmEvent.end_date.__lt__(today)
                             )
                         )
                     )
@@ -539,7 +543,7 @@ class ProductsGallery(Resource):
                             B2bProductStock.quantity > 0, #possui quantidade indiferente de tamanho e cor
                             and_( #produto ilimitado
                                 or_(
-                                    B2bProductStock.quantity==0,
+                                    B2bProductStock.quantity.__eq__(0),
                                     B2bProductStock.quantity.is_(None)
                                 ),
                                 B2bProductStock.ilimited.is_(True)
@@ -550,9 +554,9 @@ class ProductsGallery(Resource):
                     B2bCollection.id.not_in(
                         Select(ScmEvent.id_collection).where(
                             and_( #que nao esta dentro do periodo
-                                ScmEvent.year==datetime.now().year,
-                                ScmEvent.start_date >= datetime.now().isoformat()[0:10],
-                                ScmEvent.end_date <= datetime.now().isoformat()[0:10]
+                                ScmEvent.year.__eq__(datetime.now().year),
+                                ScmEvent.start_date.__gt__(today),
+                                ScmEvent.end_date.__lt__(today)
                             )
                         )
                     )

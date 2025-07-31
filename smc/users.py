@@ -631,4 +631,4 @@ class UserCount(Resource):
                 "error_details": e._message(),
                 "error_sql": e._sql_message()
             }
-ns_user.add_resource(UserCount,'/count')
+ns_user.add_resource(UserCount,'/count/')

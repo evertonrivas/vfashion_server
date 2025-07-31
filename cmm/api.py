@@ -1,14 +1,12 @@
-from flask import Blueprint, request
 from cmm.ai import ns_ai
 from flask_restx import Api
-from cmm.users import ns_user, SysUsers
+from flask import Blueprint
 from cmm.cities import ns_city
 from cmm.email import ns_email
 from cmm.products import ns_prod
 from cmm.upload import ns_upload
 from cmm.config import ns_config
 from cmm.reports import ns_report
-from models.helpers import Database
 from cmm.countries import ns_country
 from cmm.products_type import ns_type
 from cmm.products_grid import ns_gprod
@@ -19,6 +17,7 @@ from cmm.products_category import ns_cat
 from cmm.translate_colors import ns_color
 from cmm.state_regions import ns_state_region
 from cmm.measure_unit import ns_measure_unit
+from common import _before_execute
 
 
 """ Módulo Common entre os sistemas
@@ -44,7 +43,6 @@ nss = [ns_ai,
        ns_state_region,
        ns_type,
        ns_upload,
-       ns_user,
        ns_email
     ]
 
@@ -53,18 +51,7 @@ blueprint = Blueprint("cmm",__name__,url_prefix="/cmm/api/")
 @blueprint.before_request
 def before_request():
     """ Executa antes de cada requisição """
-    # apenas no common serah verificada a existencia do auth
-    has_auth = request.base_url.find("users/auth")
-    has_config = request.base_url.find("config")
-    has_start = request.base_url.find("start")
-    
-    if has_auth==-1 and has_config==-1 and has_start==-1:
-        if "Authorization" in request.headers:
-            tkn = request.headers["Authorization"].replace("Bearer ","")
-            if tkn is not None:
-                token = SysUsers.extract_token(tkn) if tkn else None
-                tenant = Database(str('' if token is None else token["profile"]))
-                tenant.switch_schema()
+    _before_execute(True)
 
 api = Api(blueprint,
     version="1.0",

@@ -53,12 +53,11 @@ class CategoryList(Resource):
         query    = "" if request.args.get("query") is None else request.args.get("query")
         try:
             params = _get_params(query)
-            if params is not None:
-                direction = asc if not hasattr(params,'order') else asc if str(params.order).upper()=='ASC' else desc
-                order_by  = 'id' if not hasattr(params,'order_by') else params.order_by
-                search    = None if not hasattr(params,"search") else params.search
-                trash     = False if not hasattr(params,'trash') else True
-                list_all  = False if not hasattr(params,'list_all') else True
+            direction = asc if not hasattr(params,'order') else asc if params is not None and params.order=='ASC' else desc
+            order_by  = 'id' if not hasattr(params,'order_by') else params.order_by if params is not None else 'id'
+            search    = None if not hasattr(params,"search") else params.search if params is not None else None
+            trash     = False if not hasattr(params,'trash') else True
+            list_all  = False if not hasattr(params,'list_all') else True
 
             rquery = Select(CmmTranslateSizes.id,
                             CmmTranslateSizes.new_size,

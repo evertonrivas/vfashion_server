@@ -1,9 +1,8 @@
+from flask import Blueprint
 from flask_restx import Api
 from crm.funnel import ns_funil
 from crm.config import ns_crm_cfg
-from models.public import SysUsers
-from models.helpers import Database
-from flask import Blueprint, request
+from common import _before_execute
 from crm.funnel_stage import ns_fun_stg
 
 """ Módulo Customer Relationship Management (Gestão de Relacionamento com o Cliente). 
@@ -19,12 +18,7 @@ blueprint = Blueprint("crm",__name__,url_prefix="/crm/api/")
 @blueprint.before_request
 def before_request():
     """ Executa antes de cada requisição """
-    if "Authorization" in request.headers:
-        tkn = request.headers["Authorization"].replace("Bearer ","")
-        if tkn is not None:
-            token = SysUsers.extract_token(tkn) if tkn else None
-            tenant = Database(str('' if token is None else token["profile"]))
-            tenant.switch_schema()
+    _before_execute()
 
 api = Api(blueprint,
     version="1.0",

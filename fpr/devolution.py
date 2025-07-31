@@ -53,13 +53,12 @@ class CategoryList(Resource):
 
         try:
             params    = _get_params(request.args.get("query"))
-            if params is not None:
-                direction = asc if not hasattr(params,'order') else asc if params.order=='ASC' else desc
-                order_by  = 'id' if not hasattr(params,'order_by') else params.order_by
-                search    = None if not hasattr(params,"search") else params.search
-                list_all  = False if not hasattr(params,"list_all") else params.list_all
-                trash     = False if not hasattr(params,"trash") else True
-                no_status = None if not hasattr(params,"no_status") else params.no_status
+            direction = asc if not hasattr(params,'order') else asc if params is not None and params.order=='ASC' else desc
+            order_by  = 'id' if not hasattr(params,'order_by') else params.order_by if params is not None else 'id'
+            search    = None if not hasattr(params,"search") else params.search if params is not None else None
+            list_all  = False if not hasattr(params,"list_all") else params.list_all if params is not None else False
+            trash     = False if not hasattr(params,"trash") else True
+            no_status = None if not hasattr(params,"no_status") else params.no_status if params is not None else None
 
             rquery = Select(FprDevolution.id,
                             FprDevolution.date,

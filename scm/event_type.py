@@ -53,14 +53,12 @@ class CollectionList(Resource):
 
         try:
             params    = _get_params(query)
-            if params is None:
-                return None
-            direction = asc if not hasattr(params,'order') else asc if str(params.order).upper()=='ASC' else desc
-            order_by  = 'id' if not hasattr(params,'order_by') else params.order_by
+            direction = asc if not hasattr(params,'order') else asc if params is not None and params.order=='ASC' else desc
+            order_by  = 'id' if not hasattr(params,'order_by') else params.order_by if params is not None else 'id'
             trash     = False if not hasattr(params,'trash') else True
             list_all  = False if not hasattr(params,'list_all') else True
             
-            filter_search       = None if not hasattr(params,"search") or str(params.search).strip()=="" else params.search
+            filter_search       = None if not hasattr(params,"search") else params.search if params is not None else None
             filter_just_parent  = False if not hasattr(params,"just_parent") else True
             filter_no_milestone = False if not hasattr(params,"no_milestone") else True
 
@@ -89,7 +87,7 @@ class CollectionList(Resource):
             if filter_no_milestone:
                 rquery = rquery.where(ScmEventType.is_milestone.is_(False))
 
-            if list_all:
+            if not list_all:
                 pag    = db.paginate(rquery,page=pag_num,per_page=pag_size)
                 rquery = rquery.limit(pag_size).offset((pag_num - 1) * pag_size)
 

@@ -61,14 +61,13 @@ class GridList(Resource):
 
         try:
             params    = _get_params(query)
-            if params is not None:
-                trash     = False if not hasattr(params,'trash') else True
-                list_all  = False if not hasattr(params,"list_all") else True
-                order_by  = "id" if not hasattr(params,"order_by") else params.order_by
-                direction = desc if hasattr(params,"order_dir") == 'DESC' else asc
+            trash     = False if not hasattr(params,'trash') else True
+            list_all  = False if not hasattr(params,"list_all") else True
+            order_by  = "id" if not hasattr(params,"order_by") else params.order_by if params is not None else 'id'
+            direction = desc if hasattr(params,"order_dir") == 'DESC' else asc
 
-                filter_search   = None if not hasattr(params,"search") else params.search
-                # filter_default  = None if not hasattr(params,"default") else params.default
+            filter_search   = None if not hasattr(params,"search") else params.search if params is not None else None
+            # filter_default  = None if not hasattr(params,"default") else params.default
 
             rquery = Select(CmmProductsGrid.id,
                             CmmProductsGrid.name,

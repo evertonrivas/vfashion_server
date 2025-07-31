@@ -85,7 +85,7 @@ class ProductsList(Resource):
             order_by  = "name" if not hasattr(params,"order_by") else params.order_by if params is not None else "name"
             direction = asc if not hasattr(params,'order') else asc if params is not None and params.order=='ASC' else desc
         
-            list_all          = False if not hasattr(params,"list_all") else params.name if params is not None else False
+            list_all          = False if not hasattr(params,"list_all") else params.list_all if params is not None else False
             filter_search     = None if not hasattr(params,"search") else params.name if params is not None else None
             filter_brand      = None if not hasattr(params,"brand") else params.brand if params is not None else None
             filter_collection = None if not hasattr(params,"collection") else params.collection if params is not None else None
