@@ -11,14 +11,16 @@ class ArtificialInteligence(ABC):
     dbconn = None
     ai_model = any
     env = environ
+    ai_api_key:str = ""
 
-    def __init__(self) -> None:
+    def __init__(self,api_key:str) -> None:
         conn = str(environ.get("F2B_DB_LIB"))
         conn += "://"+str(environ.get("F2B_DB_USER"))
         conn += ":"+str(environ.get("F2B_DB_PASS"))+"@"
         conn += str(environ.get("F2B_DB_HOST"))+"/"
         conn += str(environ.get("F2B_DB_NAME"))
         self.dbconn = create_engine(conn)
+        self.ai_api_key = api_key
         super().__init__()
     
     

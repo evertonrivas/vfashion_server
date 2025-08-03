@@ -315,9 +315,7 @@ class UserAuth(Resource):
     def post(self):
         req = request.get_json()
         
-        query = Select(SysUsers.id,
-                       SysUsers.type,
-                       SysCustomerUser.id_customer)\
+        query = Select(SysUsers,SysCustomerUser)\
                      .join(SysCustomerUser,SysCustomerUser.id_user==SysUsers.id)\
                      .join(SysCustomer,SysCustomer.id==SysCustomerUser.id_customer)\
                      .where(SysUsers.active.is_(True))\
@@ -329,37 +327,37 @@ class UserAuth(Resource):
         # usr = SysUsers.query.filter(and_(SysUsers.username==request.form.get("username"),SysUsers.active==True)).first()
         if usr is not None:
 
-            cfg = db.session.execute(Select(SysConfig).where(SysConfig.id_customer==usr.id_customer)).first()
+            cfg = db.session.execute(Select(SysConfig).where(SysConfig.id_customer==usr[1].id_customer)).first()
 
             #verifica a senha criptografada anteriormente
             pwd = str(req["password"]).encode()
-            if usr.check_pwd(pwd):
+            if usr[0].check_pwd(pwd):
                 obj_retorno = {
-					"token_access": usr.get_token(str(usr.id_customer)),
+					"token_access": usr[0].get_token(str(usr[1].id_customer)),
 					"token_type": "Bearer",
-					"token_expire": usr.token_expire.strftime("%Y-%m-%d %H:%M:%S"),
-					"level_access": usr.type,
-                    "id_user": usr.id,
-                    "id_profile": str(usr.id_customer),
+					"token_expire": usr[0].token_expire.strftime("%Y-%m-%d %H:%M:%S"),
+					"level_access": usr[0].type,
+                    "id_user": usr[0].id,
+                    "id_profile": str(usr[1].id_customer),
                     "config":{
-                        "system_pagination_size": 25 if cfg is None else cfg.pagination_size,
-                        "use_company_custom": False if cfg is None else cfg.company_custom,
-                        "company_name": "" if cfg is None else cfg.company_name,
-                        "company_logo": "" if cfg is None else cfg.company_logo,
-                        "company_instagram": "" if cfg is None else cfg.url_instagram,
-                        "company_facebook": "" if cfg is None else cfg.url_facebook,
-                        "company_linkedin": "" if cfg is None else cfg.url_linkedin,
-                        "company_max_up_files": 7 if cfg is None else cfg.max_upload_files,
-                        "company_max_up_images": 4 if cfg is None else cfg.max_upload_images,
-                        "company_use_url_images": False if cfg is None else cfg.use_url_images,
-                        "company_dashboard_color": _get_dashboard_config("" if cfg is None else cfg.dashboard_config)[1],
-                        "company_dashboard_image": _get_dashboard_config("" if cfg is None else cfg.dashboard_config)[0],
-                        "flimv_model": "C" if cfg is None else cfg.flimv_model
+                        "system_pagination_size": 25 if cfg is None else cfg[0].pagination_size,
+                        "use_company_custom": False if cfg is None else cfg[0].company_custom,
+                        "company_name": "" if cfg is None else cfg[0].company_name,
+                        "company_logo": "" if cfg is None else cfg[0].company_logo,
+                        "company_instagram": "" if cfg is None else cfg[0].url_instagram,
+                        "company_facebook": "" if cfg is None else cfg[0].url_facebook,
+                        "company_linkedin": "" if cfg is None else cfg[0].url_linkedin,
+                        "company_max_up_files": 7 if cfg is None else cfg[0].max_upload_files,
+                        "company_max_up_images": 4 if cfg is None else cfg[0].max_upload_images,
+                        "company_use_url_images": False if cfg is None else cfg[0].use_url_images,
+                        "company_dashboard_color": _get_dashboard_config("" if cfg is None else cfg[0].dashboard_config)[1],
+                        "company_dashboard_image": _get_dashboard_config("" if cfg is None else cfg[0].dashboard_config)[0],
+                        "flimv_model": "C" if cfg is None else cfg[0].flimv_model
                     }
                 }
-                usr.is_authenticate = True
+                usr[0].is_authenticate = True
                 db.session.commit()
-                _save_customer_log(usr.id,usr.id_customer,CustomerAction.SYSTEM_ACCESS,'Efetuou login')
+                _save_customer_log(usr[0].id,usr[1].id_customer,CustomerAction.SYSTEM_ACCESS,'Efetuou login')
                 return obj_retorno
             else:
                 return 0 #senha invalida

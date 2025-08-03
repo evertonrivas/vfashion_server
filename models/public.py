@@ -149,16 +149,22 @@ class SysCustomerUser(dbForModel.Model):
 
 
 class SysCountries(dbForModel.Model):
+    __bind_key__    = "public"
+    __table_args__  = {"schema": "public"}
     id   = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
     name = Column(String(100),nullable=False)
 
 class SysStateRegions(dbForModel.Model):
+    __bind_key__    = "public"
+    __table_args__  = {"schema": "public"}
     id         = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
     id_country = Column(ForeignKey(SysCountries.id),nullable=False,index=True,comment="Id da tabela SysCountries")
     name       = Column(String(100),nullable=False)
     acronym    = Column(String(10),nullable=False)
 
 class SysCities(dbForModel.Model):
+    __bind_key__    = "public"
+    __table_args__  = {"schema": "public"}
     id              = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
     id_state_region = Column(Integer,nullable=False,index=True,comment="Id da tabela CmmStateRegions")
     name            = Column(String(100),nullable=False)
@@ -178,7 +184,7 @@ class SysConfig(dbForModel.Model):
     __bind_key__        = "public"
     __table_args__      = {"schema":"public"}
     id                  = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
-    id_customer         = Column(ForeignKey(SysCustomer.id),nullable=False,index=True,comment="Id da tabela SysCustomer")
+    id_customer         = Column(ForeignKey(SysCustomer.id),nullable=False,unique=True,index=True,comment="Id da tabela SysCustomer")
     pagination_size     = Column(SmallInteger,nullable=False,default=0)
     email_brevo_api_key = Column(String(2550),nullable=True)
     email_from_name     = Column(String(200),nullable=False)

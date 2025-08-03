@@ -32,19 +32,21 @@ def _before_execute(check:bool = False):
                     tenant = Database(str('' if token is None else token["profile"]))
                     tenant.switch_schema()
 
+def _extract_token(tkn):
+    return SysUsers.extract_token(tkn)
 
 def _get_dashboard_config(_config:str):
-    if _config=="MEN":
+    if _config=="M":
         return (DashboardImage.MEN.value,DashboardImageColor.MEN.value)
-    elif _config=="WOMEN":
+    elif _config=="W":
         return (DashboardImage.WOMEN.value, DashboardImageColor.WOMEN.value)
-    elif _config=="WHEAT":
+    elif _config=="H":
         return (DashboardImage.WHEAT.value, DashboardImageColor.WHEAT.value)
-    elif _config=="DRINK":
+    elif _config=="D":
         return (DashboardImage.DRINK.value, DashboardImageColor.DRINK.value)
-    elif _config=="SHOES":
+    elif _config=="S":
         return (DashboardImage.SHOES.value, DashboardImageColor.SHOES.value)
-    elif _config=="PISTON":
+    elif _config=="P":
         return (DashboardImage.PISTON.value, DashboardImageColor.PISTON.value)
     return (DashboardImage.PHARMA.value, DashboardImageColor.PHARMA.value)
 

@@ -3,9 +3,9 @@ from .artificial_intelligence import ArtificialInteligence
 # from google.genai import types
 
 class Gemini(ArtificialInteligence):
-    def __init__(self) -> None:
-        self.ai_model = genai.Client(api_key='F2B_GEMINI_IA_API_KEY')
-        super().__init__()
+    def __init__(self,_ai_key) -> None:
+        super().__init__(_ai_key)
+        self.ai_model = genai.Client(api_key=self.ai_api_key)
     
     def suggest_email(self, subject: str,type:str):
         if type=="M":
