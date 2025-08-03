@@ -13,14 +13,14 @@ Keyword arguments: relacionamento, clientes, contatos, financeiro
 
 nss = [ns_funil,ns_fun_stg,ns_crm_cfg]
 
-blueprint = Blueprint("crm",__name__,url_prefix="/crm/api/")
+bp_crm = Blueprint("crm",__name__,url_prefix="/crm/api/")
 
-@blueprint.before_request
+@bp_crm.before_request
 def before_request():
     """ Executa antes de cada requisição """
     _before_execute()
 
-api = Api(blueprint,
+api = Api(bp_crm,
     version="1.0",
     title="API Fast2Bee",
     description="Uma API REST para o sistema CLM - Módulo CRM (Customer Relashionship Management)",

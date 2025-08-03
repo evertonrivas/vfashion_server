@@ -48,15 +48,15 @@ nss = [ns_brand,
        ns_stock,
        ns_target]
 
-blueprint = Blueprint("b2b",__name__,url_prefix="/b2b/api/")
+bp_b2b = Blueprint("b2b",__name__,url_prefix="/b2b/api/")
 
-@blueprint.before_request
+@bp_b2b.before_request
 def before_request():
     """ Executa antes de cada requisição """
     _before_execute()
     
 
-api = Api(blueprint,
+api = Api(bp_b2b,
     version="1.0",
     title="API Fast2Bee",
     description="Uma API REST para o sistema CLM - Módulo B2B (Business to Business)",

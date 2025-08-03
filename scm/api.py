@@ -8,14 +8,14 @@ from scm.rep_comission import ns_comission
 
 nss = [ns_calendar,ns_comission,ns_event,ns_flimv]
 
-blueprint = Blueprint("scm",__name__,url_prefix="/scm/api/")
-@blueprint.before_request
+bp_scm = Blueprint("scm",__name__,url_prefix="/scm/api/")
+@bp_scm.before_request
 def before_request():
     """ Executa antes de cada requisição """
     _before_execute()
 
 
-api = Api(blueprint,
+api = Api(bp_scm,
     version="1.0",
     title="API Fast2Bee",
     description="Uma API REST para o sistema CLM - Módulo SCM (Sales Calendar Management)",

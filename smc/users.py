@@ -3,11 +3,11 @@ from os import environ
 from flask import request
 from http import HTTPStatus
 from datetime import datetime
-from common import _send_email
 from models.helpers import _get_params, db
-from models.public import _save_customer_log
 from flask_restx import Resource,Namespace,fields
 from f2bconfig import CustomerAction, MailTemplates
+from common import _send_email, _get_dashboard_config
+from models.public import _save_customer_log, SysConfig
 from models.public import SysUsers, SysCustomer, SysCustomerUser
 from sqlalchemy import Delete, Select, desc, exc, and_, asc, func, or_
 
@@ -57,13 +57,16 @@ class UsersList(Resource):
 
         try:
             params    = _get_params(query)
-            if params is not None:
-                direction = asc if not hasattr(params,'order') else asc if str(params.order).upper()=='ASC' else desc
-                order_by  = 'id' if not hasattr(params,'order_by') else params.order_by
-                search    = None if not hasattr(params,"search") else params.search
-                trash     = True if not hasattr(params,'active') else False if params.active=="1" else True #foi invertido
-                list_all  = False if not hasattr(params,'list_all') else True
-                filter_type   = None if not hasattr(params,'type') else params.type
+            direction = asc if not hasattr(params,'order') else asc if params is not None and params.order=='ASC' else desc
+            order_by  = 'id' if not hasattr(params,'order_by') else params.order_by if params is not None else 'id'
+            search    = None if not hasattr(params,"search") else params.search if params is not None else None
+            list_all  = False if not hasattr(params,'list_all') else True
+            filter_type   = None if not hasattr(params,'type') else params.type if params is not None else None
+
+            if hasattr(params,'active') and params is not None:
+                trash = not params.active
+            else:
+                trash = True
 
             rquery = Select(
                 SysUsers.id,
@@ -123,7 +126,7 @@ class UsersList(Resource):
     @ns_user.response(HTTPStatus.OK,"Cria um ou mais novo(s) usuário(s) no sistema")
     @ns_user.response(HTTPStatus.BAD_REQUEST,"Falha ao criar!")
     @auth.login_required
-    def post(self)->bool|dict:
+    def post(self):
         try:
             req = request.get_json()
 
@@ -243,7 +246,6 @@ class UserApi(Resource):
                 "username": user.username,
                 "type": user.type,
                 "active": user.active,
-                "id_entity": user.id_entity,
                 "password": None,
                 "date_created": user.date_created.strftime("%Y-%m-%d %H:%M:%S"),
                 "date_updated": user.date_updated.strftime("%Y-%m-%d %H:%M:%S") if user.date_updated is not None else None
@@ -308,43 +310,56 @@ class UserApi(Resource):
 class UserAuth(Resource):
     @ns_user.response(HTTPStatus.OK,"Realiza login e retorna o token")
     @ns_user.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
-    @ns_user.param("username","Login do sistema","formData",required=True)
-    @ns_user.param("password","Senha do sistema","formData",required=True)
+    # @ns_user.param("username","Login do sistema","formData",required=True)
+    # @ns_user.param("password","Senha do sistema","formData",required=True)
     def post(self):
-        # req = request.get_json()
-        query = Select(SysUsers)\
-                     .outerjoin(SysCustomerUser,SysCustomerUser.id_user==SysUsers.id)\
-                     .outerjoin(SysCustomer,SysCustomer.id==SysCustomerUser.id_customer)\
+        req = request.get_json()
+        
+        query = Select(SysUsers.id,
+                       SysUsers.type,
+                       SysCustomerUser.id_customer)\
+                     .join(SysCustomerUser,SysCustomerUser.id_user==SysUsers.id)\
+                     .join(SysCustomer,SysCustomer.id==SysCustomerUser.id_customer)\
                      .where(SysUsers.active.is_(True))\
                      .where(or_(
-                         SysUsers.username==request.form.get("username"),
-                         SysCustomer.taxvat==request.form.get("username")
+                         SysUsers.username==req["username"],
+                         SysCustomer.taxvat==req["username"]
                      ))
-        usr = db.session.execute(query).first()[0] # type: ignore
+        usr = db.session.execute(query).first()
         # usr = SysUsers.query.filter(and_(SysUsers.username==request.form.get("username"),SysUsers.active==True)).first()
         if usr is not None:
 
-            #tenta buscar um profile
-            idProfile = 0
-            customer = SysCustomerUser.query.filter(SysCustomerUser.id_user==usr.id).first()
-            if customer is not None:
-                idProfile = customer.id_customer
+            cfg = db.session.execute(Select(SysConfig).where(SysConfig.id_customer==usr.id_customer)).first()
 
             #verifica a senha criptografada anteriormente
-            pwd = str(request.form.get("password")).encode()
+            pwd = str(req["password"]).encode()
             if usr.check_pwd(pwd):
                 obj_retorno = {
-					"token_access": usr.get_token(str(idProfile)),
+					"token_access": usr.get_token(str(usr.id_customer)),
 					"token_type": "Bearer",
 					"token_expire": usr.token_expire.strftime("%Y-%m-%d %H:%M:%S"),
 					"level_access": usr.type,
                     "id_user": usr.id,
-                    "id_profile": str(idProfile)
+                    "id_profile": str(usr.id_customer),
+                    "config":{
+                        "system_pagination_size": 25 if cfg is None else cfg.pagination_size,
+                        "use_company_custom": False if cfg is None else cfg.company_custom,
+                        "company_name": "" if cfg is None else cfg.company_name,
+                        "company_logo": "" if cfg is None else cfg.company_logo,
+                        "company_instagram": "" if cfg is None else cfg.url_instagram,
+                        "company_facebook": "" if cfg is None else cfg.url_facebook,
+                        "company_linkedin": "" if cfg is None else cfg.url_linkedin,
+                        "company_max_up_files": 7 if cfg is None else cfg.max_upload_files,
+                        "company_max_up_images": 4 if cfg is None else cfg.max_upload_images,
+                        "company_use_url_images": False if cfg is None else cfg.use_url_images,
+                        "company_dashboard_color": _get_dashboard_config("" if cfg is None else cfg.dashboard_config)[1],
+                        "company_dashboard_image": _get_dashboard_config("" if cfg is None else cfg.dashboard_config)[0],
+                        "flimv_model": "C" if cfg is None else cfg.flimv_model
+                    }
                 }
                 usr.is_authenticate = True
                 db.session.commit()
-                if idProfile!=0:
-                    _save_customer_log(usr.id,idProfile,CustomerAction.SYSTEM_ACCESS,'Efetuou login')
+                _save_customer_log(usr.id,usr.id_customer,CustomerAction.SYSTEM_ACCESS,'Efetuou login')
                 return obj_retorno
             else:
                 return 0 #senha invalida

@@ -1,13 +1,11 @@
 from cmm.ai import ns_ai
 from flask_restx import Api
 from flask import Blueprint
-from cmm.cities import ns_city
 from cmm.email import ns_email
 from cmm.products import ns_prod
 from cmm.upload import ns_upload
 from cmm.config import ns_config
 from cmm.reports import ns_report
-from cmm.countries import ns_country
 from cmm.products_type import ns_type
 from cmm.products_grid import ns_gprod
 from cmm.translate_sizes import ns_size
@@ -15,7 +13,6 @@ from cmm.products_model import ns_model
 from cmm.legal_entities import ns_legal
 from cmm.products_category import ns_cat
 from cmm.translate_colors import ns_color
-from cmm.state_regions import ns_state_region
 from cmm.measure_unit import ns_measure_unit
 from common import _before_execute
 
@@ -29,10 +26,8 @@ Keyword arguments: usuarios, produtos
 #nss = [ns_user]
 nss = [ns_ai,
        ns_cat,
-       ns_city,
        ns_color,
        ns_config,
-       ns_country,
        ns_gprod,
        ns_legal,
        ns_measure_unit,
@@ -40,20 +35,19 @@ nss = [ns_ai,
        ns_prod,
        ns_report,
        ns_size,
-       ns_state_region,
        ns_type,
        ns_upload,
        ns_email
     ]
 
 
-blueprint = Blueprint("cmm",__name__,url_prefix="/cmm/api/")
-@blueprint.before_request
+bp_cmm = Blueprint("cmm",__name__,url_prefix="/cmm/api/")
+@bp_cmm.before_request
 def before_request():
     """ Executa antes de cada requisição """
     _before_execute(True)
 
-api = Api(blueprint,
+api = Api(bp_cmm,
     version="1.0",
     title="API Fast2Bee",
     description="Uma API REST para o sistema CLM (Módulo Common)",

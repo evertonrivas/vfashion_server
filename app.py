@@ -1,16 +1,16 @@
 import locale
 from flask import Flask
+from cmm.api import bp_cmm
+from crm.api import bp_crm
+from b2b.api import bp_b2b
+from fpr.api import bp_fpr
+from scm.api import bp_scm
+from mpg.api import bp_mpg
+from smc.api import bp_smc
 from flask_cors import CORS
 from sqlalchemy import text
 from os import environ, path
 from dotenv import load_dotenv
-from cmm.api import blueprint as cmm
-from crm.api import blueprint as crm
-from b2b.api import blueprint as b2b
-from fpr.api import blueprint as fpr
-from scm.api import blueprint as scm
-from mpg.api import blueprint as mpg
-from smc.api import blueprint as smc
 from models.helpers import db, migrate
 
 BASEDIR = path.abspath(path.dirname(__file__))
@@ -49,14 +49,13 @@ except Exception as e:
 
 migrate.init_app(app,db)
 
-
-app.register_blueprint(cmm)
-app.register_blueprint(crm)
-app.register_blueprint(b2b)
-app.register_blueprint(fpr)
-app.register_blueprint(scm)
-app.register_blueprint(mpg)
-app.register_blueprint(smc)
+app.register_blueprint(bp_cmm)
+app.register_blueprint(bp_crm)
+app.register_blueprint(bp_b2b)
+app.register_blueprint(bp_fpr)
+app.register_blueprint(bp_scm)
+app.register_blueprint(bp_mpg)
+app.register_blueprint(bp_smc)
 
 CORS(app, resources={r"/*": {"origins": "*"}},supports_credentials=True)
 # CORS(app, resources={r"/*": {"origins": "https://system.fast2bee.com"}},supports_credentials=True)

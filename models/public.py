@@ -173,3 +173,27 @@ class SysCustomerHistory(dbForModel.Model):
     action       = Column(CHAR(2),nullable=False,comment="SA = System Access, DR = Data Registered, DU = Data Updated, DD = Data Deleted")
     history      = Column(String(255),nullable=False,comment="Histórico da ação realizada")
     date_created = Column(DateTime,nullable=False,server_default=func.now())
+
+class SysConfig(dbForModel.Model):
+    __bind_key__        = "public"
+    __table_args__      = {"schema":"public"}
+    id                  = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
+    id_customer         = Column(ForeignKey(SysCustomer.id),nullable=False,index=True,comment="Id da tabela SysCustomer")
+    pagination_size     = Column(SmallInteger,nullable=False,default=0)
+    email_brevo_api_key = Column(String(2550),nullable=True)
+    email_from_name     = Column(String(200),nullable=False)
+    email_from_value    = Column(String(200),nullable=False)
+    flimv_model         = Column(CHAR(1),nullable=False,default='S',comment='S = Seasonal, C = Continuous')
+    dashboard_config    = Column(CHAR(1),nullable=False,default='M',comment='M = Men, W = Women, H = Wheat, D = Drink, S = Shoes, P = Piston, F = PHARMA')
+    ai_model            = Column(CHAR(1),nullable=False,default='G',comment='G = Gemini, C = ChatGPT, D = Deepseek, P = Perplexity')
+    ai_api_key          = Column(String(255),nullable=False)
+    company_custom      = Column(Boolean,nullable=False,default=False)
+    company_name        = Column(String(150),nullable=False)
+    company_logo        = Column(String(255),nullable=True)
+    url_instagram       = Column(String(255),nullable=True)
+    url_facebook        = Column(String(255),nullable=True)
+    url_linkedin        = Column(String(255),nullable=True)
+    max_upload_files    = Column(SmallInteger,nullable=False,default='7')
+    max_upload_images   = Column(SmallInteger,nullable=False,default='4')
+    use_url_images      = Column(Boolean,nullable=False,default=False)
+    track_orders        = Column(Boolean,nullable=False,default=False)

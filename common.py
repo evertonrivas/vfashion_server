@@ -8,7 +8,7 @@ from flask import request
 from random import seed,randint
 from models.public import SysUsers
 from models.helpers import Database
-from f2bconfig import EntityAction, MailTemplates
+from f2bconfig import EntityAction, MailTemplates, DashboardImage, DashboardImageColor
 
 def _before_execute(check:bool = False):
     # apenas no common serah verificada a existencia do auth
@@ -31,6 +31,22 @@ def _before_execute(check:bool = False):
                     token = SysUsers.extract_token(tkn) if tkn else None
                     tenant = Database(str('' if token is None else token["profile"]))
                     tenant.switch_schema()
+
+
+def _get_dashboard_config(_config:str):
+    if _config=="MEN":
+        return (DashboardImage.MEN.value,DashboardImageColor.MEN.value)
+    elif _config=="WOMEN":
+        return (DashboardImage.WOMEN.value, DashboardImageColor.WOMEN.value)
+    elif _config=="WHEAT":
+        return (DashboardImage.WHEAT.value, DashboardImageColor.WHEAT.value)
+    elif _config=="DRINK":
+        return (DashboardImage.DRINK.value, DashboardImageColor.DRINK.value)
+    elif _config=="SHOES":
+        return (DashboardImage.SHOES.value, DashboardImageColor.SHOES.value)
+    elif _config=="PISTON":
+        return (DashboardImage.PISTON.value, DashboardImageColor.PISTON.value)
+    return (DashboardImage.PHARMA.value, DashboardImageColor.PHARMA.value)
 
 def _gen_report(fileName:str,_content:dict):
     try:

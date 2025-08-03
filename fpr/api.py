@@ -12,13 +12,13 @@ Keyword arguments: devolução, cliente, produto
 
 nss = [ns_reason, ns_devolution]
 
-blueprint = Blueprint("fpr",__name__,url_prefix="/fpr/api/")
-@blueprint.before_request
+bp_fpr = Blueprint("fpr",__name__,url_prefix="/fpr/api/")
+@bp_fpr.before_request
 def before_request():
     """ Executa antes de cada requisição """
     _before_execute()
 
-api = Api(blueprint,
+api = Api(bp_fpr,
     version="1.0",
     title="API Fast2Bee",
     description="Uma API REST para o sistema CLM - Módulo FPR (Finished Product Return)",
