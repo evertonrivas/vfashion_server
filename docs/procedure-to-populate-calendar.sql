@@ -1,13 +1,21 @@
-DELIMITER //
+CREATE OR REPLACE FUNCTION populate(p_schema varchar,p_start DATE, p_end DATE)
+RETURNS void AS $$
+DECLARE
+    v_date DATE := p_start;
+BEGIN
+	SET SEARCH_PATH TO p_schema;
+    WHILE v_date <= p_end LOOP
+		EXECUTE format(
+		'INSERT INTO %I.scm_calendar(calendar_date,year,quarter,month,week,day_of_week) VALUES(%L,%L,%L,%L,%L,%L)',
+		p_schema,
+		v_date,
+		EXTRACT(YEAR FROM v_date),
+		EXTRACT(QUARTER FROM v_date),
+		EXTRACT(MONTH FROM v_date),
+		EXTRACT(WEEK FROM v_date),
+		EXTRACT(DOW FROM v_date) + 1);
 
-create procedure populate(p_start DATE, p_end DATE)
-begin
-	declare v_date DATE;
-	set v_date = p_start;
-	while v_date <= p_end do
-		insert into scm_calendar(calendar_date, year, quarter, month, week, day_of_week)
-		VALUES (v_date, YEAR(v_date), QUARTER(v_date), MONTH(v_date), WEEK(v_date, 3), DAYOFWEEK(v_date));
-		set v_date = date_add(v_date,interval 1 day);
-	end while;
-end //
-DELIMITER ;
+        v_date := v_date + INTERVAL '1 day';
+    END LOOP;
+END;
+$$ LANGUAGE plpgsql;

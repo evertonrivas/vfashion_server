@@ -75,7 +75,7 @@ class CategoryList(Resource):
                 rquery = rquery.where(CmmLegalEntities.fantasy_name.like('%{}%'.format(search)))
 
             if no_status is not None:
-                rquery = rquery.where(FprDevolution.status!=no_status)
+                rquery = rquery.where(FprDevolution.status!=int(no_status))
 
             if not list_all:
                 pag = db.paginate(rquery,page=pag_num,per_page=pag_size)

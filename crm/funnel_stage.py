@@ -45,7 +45,7 @@ class FunnelStagesApi(Resource):
                             CrmFunnelStage.order,
                             CrmFunnelStage.date_created,
                             CrmFunnelStage.date_updated)\
-                            .join(CrmFunnel,CrmFunnel.id==CrmFunnelStage.id_funnel)\
+                            .outerjoin(CrmFunnel,CrmFunnel.id==CrmFunnelStage.id_funnel)\
                             .where(CrmFunnelStage.trash==trash)\
                             .order_by(direction(getattr(CrmFunnelStage,order_by)))
             

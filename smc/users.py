@@ -171,6 +171,7 @@ class UsersList(Resource):
                     if usr["id"]==0:
                         user = SysUsers()
                         user.name     = usr["name"]
+                        user.email    = usr["email"]
                         user.username = usr["username"]
                         user.password = user.hash_pwd(usr["password"])
                         user.type     = usr["type"]
@@ -180,6 +181,7 @@ class UsersList(Resource):
                         user:SysUsers|None = SysUsers.query.get(usr["id"])
                         if user is not None:
                             user.name     = usr["name"]
+                            user.email    = usr["email"]
                             user.username = usr["username"]
                             user.password = user.hash_pwd(usr["password"])
                             user.type     = usr["type"]
@@ -244,6 +246,7 @@ class UserApi(Resource):
                 "id": id,
                 "name": user.name,
                 "username": user.username,
+                "email": user.email,
                 "type": user.type,
                 "active": user.active,
                 "password": None,
@@ -266,9 +269,10 @@ class UserApi(Resource):
             usr:SysUsers|None = SysUsers.query.get(id)
             if usr is not None:
                 usr.name     = req["name"]
+                usr.email    = req["email"]
                 usr.username = req["username"]
                 usr.password = usr.hash_pwd(req["password"])
-                usr.type     = req["type"]
+                # usr.type     = req["type"]
                 db.session.commit()
 
                 #apaga para reconstruir o cadastro
@@ -321,6 +325,7 @@ class UserAuth(Resource):
                      .where(SysUsers.active.is_(True))\
                      .where(or_(
                          SysUsers.username==req["username"],
+                         SysUsers.email==req["username"],
                          SysCustomer.taxvat==req["username"]
                      ))
         usr = db.session.execute(query).first()
@@ -527,6 +532,7 @@ class UserNew(Resource):
             else:
                 usr = SysUsers()
                 usr.username = req["username"]
+                usr.email    = req["email"]
                 usr.name     = req["name"]
                 usr.type     = req["type"]
                 setattr(usr,"active",True)

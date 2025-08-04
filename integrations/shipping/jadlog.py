@@ -14,7 +14,7 @@ class Jadlog(Shipping):
             "Content-type": "application/json"
         }
     
-    def tracking(self, _taxvat: str, _invoice: str, _invoice_serie: str|None = None, _cte: str|None = None, _code:str|None = None):
+    def tracking(self, _taxvat: str, _invoice: str, _invoice_serie: str|None = None, _cte: str|None = None, _code:str|None = None,_tenant:str|None = None):
         self._get_header()
         try:
             resp = self.nav.get("https://jadlog.com.br/api/tracking/consultar",data={

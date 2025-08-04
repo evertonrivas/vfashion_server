@@ -110,9 +110,9 @@ class EntitysList(Resource):
                     SysStateRegions.acronym,
                     SysCountries.id.label("country_id"),
                     SysCountries.name.label("country_name"))\
-                .join(SysCities,SysCities.id==CmmLegalEntities.id_city)\
-                .join(SysStateRegions,SysStateRegions.id==SysCities.id_state_region)\
-                .join(SysCountries,SysCountries.id==SysStateRegions.id_country)\
+                .outerjoin(SysCities,SysCities.id==CmmLegalEntities.id_city)\
+                .outerjoin(SysStateRegions,SysStateRegions.id==SysCities.id_state_region)\
+                .outerjoin(SysCountries,SysCountries.id==SysStateRegions.id_country)\
                 .where(CmmLegalEntities.trash==trash)\
                 .order_by(direction(getattr(CmmLegalEntities,order_by)))
             

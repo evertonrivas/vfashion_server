@@ -14,7 +14,7 @@ class Braspress(Shipping):
             "Authorization": str(self.env.get("F2B_BRASPRESS_TOKEN_TYPE"))+" "+str(self.env.get("F2B_BRASPRESS_TOKEN_ACCESS"))
         }
 
-    def tracking(self, _taxvat: str, _invoice: str, _invoice_serie: str|None = None, _cte: str|None = None, _code:str|None = None):
+    def tracking(self, _taxvat: str, _invoice: str, _invoice_serie: str|None = None, _cte: str|None = None, _code:str|None = None,_tenant:str|None = None):
         self._get_header()
         try:
             resp = self.nav.get('https://api.braspress.com/v'+str(self.env.get("F2B_BRASPRESS_API_VERSION"))+'/tracking/byNf/'+_taxvat+'/'+_invoice+'/json')

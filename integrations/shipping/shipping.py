@@ -26,4 +26,4 @@ class Shipping(ABC):
     def _get_header(self):pass
 
     @abstractmethod
-    def tracking(self,_taxvat:str,_invoice:str,_invoice_serie:str|None = None, _cte:str|None = None, _code:str|None = None):pass
+    def tracking(self,_taxvat:str,_invoice:str,_invoice_serie:str|None = None, _cte:str|None = None, _code:str|None = None,_tenant:str|None = None):pass

@@ -7,8 +7,16 @@ from smc.payment import ns_payment
 from smc.countries import ns_country
 from smc.customer import ns_customer
 from smc.state_regions import ns_state_region
+from smc.configuration import ns_configuration
 
-nss = [ns_customer, ns_plan, ns_payment, ns_user, ns_city, ns_country, ns_state_region]
+nss = [ns_customer,
+       ns_plan,
+       ns_payment,
+       ns_user,
+       ns_city,
+       ns_country,
+       ns_state_region,
+       ns_configuration]
 
 bp_smc = Blueprint("smc",__name__,url_prefix="/smc/api/")
 

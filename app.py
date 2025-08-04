@@ -7,8 +7,8 @@ from fpr.api import bp_fpr
 from scm.api import bp_scm
 from mpg.api import bp_mpg
 from smc.api import bp_smc
-from flask_cors import CORS
 from sqlalchemy import text
+from flask_cors import CORS
 from os import environ, path
 from dotenv import load_dotenv
 from models.helpers import db, migrate
@@ -40,6 +40,12 @@ try:
 
         #se nao existirem as tabelas tenta cria-las
         db.create_all("public")
+
+        # atualiza os tenants
+        # tenants = db.session.execute(Select(SysCustomer.id)).all()
+        # for tenant in tenants:
+        #     db.create_all(str(tenant.id))
+
 except Exception as e:
     print(e)
     print("###################################################")

@@ -1,4 +1,5 @@
 import calendar
+import requests
 import importlib
 import simplejson
 from auth import auth
@@ -7,12 +8,12 @@ from flask import request
 from http import HTTPStatus
 from decimal import Decimal
 from datetime import datetime
+from common import _extract_token
 from models.helpers import _get_params, db
-from models.public import SysUsers as CmmUsers
 from flask_restx import Resource,Namespace,fields
 from f2bconfig import EntityAction, DevolutionStatus, OrderStatus
 from sqlalchemy import Update, and_, exc, Select, Delete, asc, desc, func
-from models.tenant import CmmTranslateSizes, CmmUserEntity, FprDevolution, _save_entity_log
+from models.tenant import CmmTranslateSizes, FprDevolution, _save_entity_log
 from models.tenant import B2bCartShopping, B2bOrders,B2bOrdersProducts, B2bPaymentConditions, CmmLegalEntities
 from models.tenant import B2bCustomerGroup, B2bCustomerGroupCustomers, B2bProductStock, B2bTarget, CmmProducts, CmmTranslateColors
 
@@ -407,12 +408,11 @@ class HistoryOrderList(Resource):
     @ns_order.param("pageSize","Número de registros por página","query",type=int,required=True,default=25)
     @ns_order.param("query","Texto para busca","query")
     @auth.login_required
-    def get(self,id:int):
+    def get(self):
         pag_num   = 1 if request.args.get("page") is None else int(str(request.args.get("page")))
         pag_size  = int(str(environ.get("F2B_PAGINATION_SIZE"))) if request.args.get("pageSize") is None else int(str(request.args.get("pageSize")))
         query     = "" if request.args.get("query") is None else request.args.get("query")
         try:
-
             params = _get_params(str(query))
             order_by  = "id" if not hasattr(params,"order_by") else params.order_by if params is not None else 'id'
             direction = asc if not hasattr(params,'order') else asc if params is not None and params.order=='ASC' else desc
@@ -442,15 +442,19 @@ class HistoryOrderList(Resource):
                 .join(CmmLegalEntities,CmmLegalEntities.id==B2bOrders.id_customer)\
                 .order_by(direction(getattr(B2bOrders, order_by)))
             
-            if id!=0:
-                access = db.session.execute(
-                    Select(CmmUsers.type)\
-                    .join(CmmUserEntity,CmmUserEntity.id_user==CmmUsers.id)\
-                    .where(CmmUserEntity.id_entity==id)
-                ).first()
-                if access is not None:
-                    if access.type!='A' and access.type!='L':
-                        stmt = stmt.where(B2bOrders.id_customer==id)
+            # if "Authorization" in request.headers:
+            #     tkn = request.headers["Authorization"].replace("Bearer ","")
+            #     if tkn is not None:
+            #         token = _extract_token(tkn)
+
+            #         access = db.session.execute(
+            #             Select(CmmUsers.type)\
+            #             .join(CmmUserEntity,CmmUserEntity.id_user==CmmUsers.id)\
+            #             .where(CmmUserEntity.id_entity==id)
+            #         ).first()
+            #         if access is not None:
+            #             if access.type!='A' and access.type!='L':
+            #                 stmt = stmt.where(B2bOrders.id_customer==id)
 
             if status is not None:
                 stmt = stmt.where(B2bOrders.status==status)
@@ -459,6 +463,18 @@ class HistoryOrderList(Resource):
                 stmt = stmt.where(B2bOrders.id.not_in(
                     Select(FprDevolution.id_order).where(FprDevolution.status!=DevolutionStatus.REJECTED.value)
                 ))
+                    
+            track_order = False
+            if "Authorization" in request.headers:
+                tkn = request.headers["Authorization"].replace("Bearer ","")
+                if tkn is not None:
+                    token = _extract_token(tkn)
+                    if token is not None:
+                        url =str(environ.get("F2B_SMC_URL"))+"/configuration/"+str(token["profile"])
+                        cfg_req = requests.get(url)
+                        if cfg_req.status_code==HTTPStatus.OK.value:
+                            cfg = cfg_req.json()
+                            track_order = bool(cfg["track_orders"])
 
             # _show_query(stmt)
             
@@ -488,7 +504,13 @@ class HistoryOrderList(Resource):
                         "status": r.status,
                         "integration_number": r.integration_number,
                         "invoice_number": r.invoice_number,
-                        "track": (None if int(str(environ.get("F2B_TRACK_ORDER")))==0 else self.__getTrack(r.taxvat,r.invoice_number,r.invoice_serie,r.track_company,r.track_code) ),
+                        "track": (None if track_order is False else self.__getTrack(
+                            r.taxvat,
+                            r.invoice_number,
+                            r.invoice_serie,
+                            r.track_company,
+                            r.track_code,
+                            cfg.id_customer) ),
                         "date_created": r.date_created.strftime("%d/%m/%Y %H:%M:%S")
                     }for r in db.session.execute(stmt)]
                 }
@@ -507,7 +529,13 @@ class HistoryOrderList(Resource):
                         "status": r.status,
                         "integration_number": r.integration_number,
                         "invoice_number": r.invoice_number,
-                        "track": (None if int(str(environ.get("F2B_TRACK_ORDER")))==0 else self.__getTrack(r.taxvat,r.invoice_number,r.invoice_serie,r.track_company,r.track_code) ),
+                        "track": (None if track_order is False else self.__getTrack(
+                            r.taxvat,
+                            r.invoice_number,
+                            r.invoice_serie,
+                            r.track_company,
+                            r.track_code,
+                            cfg.id_customer) ),
                         "date_created": r.date_created.strftime("%d/%m/%Y %H:%M:%S")
                     }for r in db.session.execute(stmt)]
         except exc.SQLAlchemyError as e:
@@ -517,7 +545,7 @@ class HistoryOrderList(Resource):
                 "error_sql": e._sql_message()
             }
     
-    def __getTrack(self,_cnpj:str,_nf:int,_nf_serie:int,_emp:str,_code:str):
+    def __getTrack(self,_cnpj:str,_nf:int,_nf_serie:int,_emp:str,_code:str,_tenant:str):
 
         class_name = str(_emp).lower().replace("_","").title().replace(" ","")
         SHIPPING = getattr(
@@ -527,18 +555,9 @@ class HistoryOrderList(Resource):
 
         track = SHIPPING()
 
-        return track.tracking(_cnpj,_nf,_nf_serie)
-
-        # if _emp=="BRASPRESS":
-        #     return shipping.Shipping().tracking(ShippingCompany.BRASPRESS,opts)
-        # if _emp=="JAMEF":
-        #     return shipping.Shipping().tracking(ShippingCompany.JAMEF,opts)
-        # if _emp=="JADLOG":
-        #     return shipping.Shipping().tracking(ShippingCompany.JADLOG,opts)
-
-        return _code
+        return track.tracking(_cnpj,_nf,_nf_serie,_tenant=_tenant)
         
-ns_order.add_resource(HistoryOrderList,'/history/<int:id>')
+ns_order.add_resource(HistoryOrderList,'/history/')
 
 
 class HistoryOrderApi(Resource):

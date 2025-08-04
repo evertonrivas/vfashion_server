@@ -30,6 +30,7 @@ class SysUsers(dbForModel.Model):
     id              = Column(Integer,primary_key=True,nullable=False,autoincrement=True)
     name            = Column(String(255),nullable=False,comment="Nome do usuário")
     username        = Column(String(100), nullable=False,unique=True)
+    email           = Column(String(255),nullable=False,unique=True)
     password        = Column(String(255), nullable=False)
     type            = Column(CHAR(1),nullable=False,default='L',server_default='L',comment='A = Administrador, L = Lojista, I = Lojista (IA), R = Representante, V = Vendedor, C = Company User')
     date_created    = Column(DateTime,nullable=False,server_default=func.now())

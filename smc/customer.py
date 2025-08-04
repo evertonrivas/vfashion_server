@@ -3,7 +3,7 @@ from os import environ
 from flask import request
 from http import HTTPStatus
 from datetime import datetime
-from sqlalchemy import Select, exc, asc, desc
+from sqlalchemy import Select, exc, asc, desc, text
 from flask_restx import Resource,Namespace,fields
 from models.helpers import db, _get_params, Database
 from models.public import SysCustomer, SysCustomerPlan, SysCustomerUser, SysUsers
@@ -89,6 +89,13 @@ def _register_customer(
             tenant = Database(str(customer.id))
             tenant.create_schema()
             tenant.create_tables()
+
+            start_date = str(datetime.now().year)+"-01-01"
+            end_date   = str(datetime.now().year+100)+"-01-01"
+
+            # as funcoes do PostgreSQL sao chamadas com o SELECT
+            db.session.execute(text("SELECT public.populate('"+str(customer.id)+"','"+start_date+"','"+end_date+"')"))
+            db.session.commit()            
             
         return True
     except exc.SQLAlchemyError as e:

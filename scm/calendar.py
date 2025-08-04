@@ -35,13 +35,13 @@ class CalendarList(Resource):
             params = _get_params(search)
             if params is not None:
                 if params.start=="" and params.end=="":
-                    params.start = datetime.now().strftime("%Y-01-01")
-                    params.end = datetime.now().strftime("%Y-12-31")
+                    params.start = date(datetime.now().year,1,1)
+                    params.end = date(datetime.now().year,12,31)
 
                 yquery = Select(ScmCalendar.year).distinct()\
                     .where(between(ScmCalendar.calendar_date,params.start,params.end))\
-                    .where(ScmCalendar.day_of_week==7)\
-                    .order_by(asc(ScmCalendar.time_id))
+                    .where(ScmCalendar.day_of_week==7)
+                    # .order_by(asc(ScmCalendar.time_id))
 
                 retorno = [{
                         "year": y.year,
@@ -63,8 +63,8 @@ class CalendarList(Resource):
         return db.session.execute(Select(ScmCalendar.month).distinct()\
             .where(between(ScmCalendar.calendar_date,dt_start,dt_end))\
             .where(ScmCalendar.year==_current_year)\
-            .where(ScmCalendar.day_of_week==7)\
-            .order_by(asc(ScmCalendar.time_id))
+            .where(ScmCalendar.day_of_week==7)
+            #.order_by(asc(ScmCalendar.time_id))
         ).all()
     
     def __get_weeks(self,dt_start,dt_end,_current_year,_current_month):
@@ -72,8 +72,8 @@ class CalendarList(Resource):
         for w in db.session.execute(Select(ScmCalendar.week).distinct()\
             .where(between(ScmCalendar.calendar_date,dt_start,dt_end))\
             .where(and_(ScmCalendar.year==_current_year,ScmCalendar.month==_current_month))\
-            .where(ScmCalendar.day_of_week==7)\
-            .order_by(asc(ScmCalendar.time_id))
+            .where(ScmCalendar.day_of_week==7)
+            # .order_by(asc(ScmCalendar.time_id))
         ).all():
             weeks.append(w.week)
         return weeks
@@ -84,8 +84,8 @@ class CalendarList(Resource):
     def post(self):
         try:
             req = request.get_json()
-            date_start = datetime.strptime(req["date_start"],"%Y-%m-%d")
-            date_end   = datetime.strptime(req["date_end"],"%Y-%m-%d")
+            date_start = datetime.strptime(req["date_start"],"%Y-%m-%d").date()
+            date_end   = datetime.strptime(req["date_end"],"%Y-%m-%d").date()
 
             reg = ScmEvent()
             reg.name          = req["name"]
@@ -284,8 +284,8 @@ class CalendarEventList(Resource):
             if params is None:
                 return None
             if params.start=="" and params.end=="":
-                params.start = datetime.now().strftime("%Y-01-01")
-                params.end   = datetime.now().strftime("%Y-12-31")
+                params.start = date(datetime.now().year,1,1)
+                params.end   = date(datetime.now().year,12,31)
 
             yquery = Select(ScmEvent.id,
                             ScmEvent.id_parent,
