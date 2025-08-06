@@ -10,7 +10,9 @@ from smc.api import bp_smc
 from sqlalchemy import text
 from flask_cors import CORS
 from os import environ, path
+from sqlalchemy import Select
 from dotenv import load_dotenv
+from models.public import SysCustomer
 from models.helpers import db, migrate
 
 BASEDIR = path.abspath(path.dirname(__file__))
@@ -42,9 +44,16 @@ try:
         db.create_all("public")
 
         # atualiza os tenants
-        # tenants = db.session.execute(Select(SysCustomer.id)).all()
-        # for tenant in tenants:
-        #     db.create_all(str(tenant.id))
+        tenants = db.session.execute(Select(SysCustomer.id)).all()
+        for tenant in tenants:
+            schema = str(tenant.id)
+            db.session.execute(text(f'set search_path to "{schema}"'))
+            db.session.commit()
+            db.metadata.create_all(
+                db.engine.execution_options(
+                    schema_translate_map={None:schema}
+                )
+            )
 
 except Exception as e:
     print(e)
