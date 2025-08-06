@@ -273,7 +273,7 @@ class B2bOrders(dbForModel.Model):
     total_itens          = Column(Integer,nullable=False)
     installments         = Column(SmallInteger,nullable=False)
     installment_value    = Column(DECIMAL(10,2),nullable=False)
-    status               = Column(SmallInteger,nullable=False,comment="0 - Enviado, 1 - Em processamento, 2 - Em transporte, 3 - Finalizado")
+    status               = Column(SmallInteger,nullable=False,comment="-1 - Rascunho, 0 - Em análise, 1 - Enviado, 2 - Em processamento, 3 - Em transporte, 4 - Finalizado, 5 - Rejeitado")
     integration_number   = Column(Integer,nullable=True,comment="Número do pedido no sistema de cliente")
     track_code           = Column(String(30),nullable=True,comment="Código de rastreamento (apenas para correios)")
     track_company        = Column(String(30),nullable=True,comment="Nome da empresa de transporte")

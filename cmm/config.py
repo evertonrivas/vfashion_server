@@ -1,8 +1,13 @@
 import importlib
 from os import environ
 from flask import request
+# from sqlalchemy import exc
 from http import HTTPStatus
-from flask_restx import Resource,Namespace,fields
+# from models.helpers import db
+# from sqlalchemy import Select
+# from common import _extract_token
+# from models.public import SysConfig
+from flask_restx import Resource, Namespace, fields
 
 ns_config = Namespace("config",description="Obtem as configuracoes do sistema")
 
@@ -30,6 +35,13 @@ cfg_cep_model = ns_config.model(
 
 @ns_config.route("/")
 class CategoryList(Resource):
+    @ns_config.response(HTTPStatus.OK,"Obtem as informações de configuração do tenant")
+    @ns_config.response(HTTPStatus.BAD_REQUEST,"Falha ao listar registros!")
+    def get(self):
+        pass
+
+
+    
     @ns_config.response(HTTPStatus.OK,"Obtem as informações de CEP")
     @ns_config.response(HTTPStatus.BAD_REQUEST,"Falha ao listar registros!")
     @ns_config.doc(body=cfg_cep_model,description="Dados necessários",name="content")
