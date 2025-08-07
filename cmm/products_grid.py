@@ -6,7 +6,7 @@ from models.helpers import _get_params, db
 from flask_restx import Resource,Namespace,fields
 from sqlalchemy import Delete, Select, asc, desc, exc
 from models.tenant import CmmProductsGridSizes, CmmTranslateSizes
-from models.tenant import CmmProductsGrid,CmmProductsGridDistribution
+from models.tenant import CmmProductsGrid, CmmProductsGridDistribution
 
 ns_gprod = Namespace("products-grid",description="Operações para manipular dados das grades de produtos")
 

@@ -4,7 +4,7 @@ from flask import request
 from http import HTTPStatus
 from datetime import datetime
 from models.helpers import _get_params, db
-from flask_restx import Resource,Namespace,fields
+from flask_restx import Resource, Namespace, fields
 from models.tenant import FprReason, _save_entity_log
 from f2bconfig import EntityAction, DevolutionStatus
 from models.tenant import FprDevolution, FprDevolutionItem

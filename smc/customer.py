@@ -4,7 +4,7 @@ from flask import request
 from http import HTTPStatus
 from datetime import datetime
 from sqlalchemy import Select, exc, asc, desc, text
-from flask_restx import Resource,Namespace,fields
+from flask_restx import Resource, Namespace, fields
 from models.helpers import db, _get_params, Database
 from models.public import SysCustomer, SysCustomerPlan, SysCustomerUser, SysUsers
 

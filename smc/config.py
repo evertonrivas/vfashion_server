@@ -1,4 +1,4 @@
-from auth import auth
+# from auth import auth
 from flask import request
 from http import HTTPStatus
 from models.helpers import db # , _get_params
@@ -173,7 +173,7 @@ class ConfigApi(Resource):
 
     @ns_config.response(HTTPStatus.OK,"Atualiza os dados da configuração de um cliente")
     @ns_config.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
-    @auth.login_required
+    # @auth.login_required
     def post(self,id:str):
         try:
             req = request.get_json()
@@ -183,7 +183,6 @@ class ConfigApi(Resource):
                 reg.email_brevo_api_key = req["email_brevo_api_key"]
                 reg.email_from_name     = req["email_from_name"]
                 reg.email_from_value    = req["email_from_value"]
-                reg.flimv_model         = req["flimv_model"]
                 reg.dashboard_config    = req["dashboard_config"]
                 reg.ai_model            = req["ai_model"]
                 reg.ai_api_key          = req["ai_api_key"]
@@ -193,10 +192,16 @@ class ConfigApi(Resource):
                 reg.url_instagram       = req["url_instagram"]
                 reg.url_facebook        = req["url_facebook"]
                 reg.url_linkedin        = req["url_linkedin"]
-                reg.max_upload_files    = req["max_upload_files"]
-                reg.max_upload_images   = req["max_upload_images"]
-                reg.use_url_images      = req["use_url_images"]
-                reg.track_orders        = req["track_orders"]
+                if "flimv_model" in req:
+                    reg.flimv_model = req["flimv_model"]
+                if "max_upload_files" in req:
+                    reg.max_upload_files = req["max_upload_files"]
+                if "max_upload_images" in req:
+                    reg.max_upload_images = req["max_upload_images"]
+                if "use_url_images" in req:
+                    reg.use_url_images = req["use_url_images"]
+                if "track_orders" in req:
+                    reg.track_orders = req["track_orders"]
                 db.session.commit()
                 return True
             return False 

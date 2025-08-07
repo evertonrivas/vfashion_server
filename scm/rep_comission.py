@@ -6,7 +6,7 @@ from datetime import datetime
 from models.tenant import B2bBrand
 from models.helpers import _get_params, db
 from sqlalchemy import Select, exc, asc, desc
-from flask_restx import Resource,Namespace,fields
+from flask_restx import Resource, Namespace, fields
 
 ns_comission = Namespace("representative-comission",description="Operações para manipular dados de comissões de representantes")
 

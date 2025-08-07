@@ -7,7 +7,7 @@ from f2bconfig import EntityAction
 from models.helpers import _get_params, db
 from models.tenant import CmmLegalEntities
 from models.tenant import CmmLegalEntityContact
-from flask_restx import Resource,Namespace,fields
+from flask_restx import Resource, Namespace, fields
 from sqlalchemy import Delete, Select, and_,exc,asc,desc,func, or_
 from models.tenant import _save_entity_log, B2bCustomerGroupCustomers 
 from models.tenant import  B2bCustomerGroup, CmmLegalEntityHistory

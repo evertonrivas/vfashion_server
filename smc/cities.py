@@ -4,7 +4,7 @@ from flask import request
 from http import HTTPStatus
 from models.helpers import _get_params, db
 from sqlalchemy import Select, desc, exc, asc
-from flask_restx import Resource,Namespace,fields
+from flask_restx import Resource, Namespace, fields
 from models.public import SysCities , SysCountries, SysStateRegions
 ns_city = Namespace("cities",description="Operações para manipular dados de cidades")
 

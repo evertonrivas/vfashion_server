@@ -1,4 +1,3 @@
-from flask_restx import Resource,Namespace,fields
 import simplejson
 from auth import auth
 from os import environ
@@ -7,12 +6,13 @@ from decimal import Decimal
 from http import HTTPStatus
 from models.helpers import _get_params, db
 from f2bconfig import ProductMassiveAction
-from models.tenant import B2bCollection, B2bProductStock 
+from flask_restx import Resource, Namespace, fields
 from models.tenant import CmmCategories, CmmMeasureUnit
+from models.tenant import B2bCollection, B2bProductStock 
 from models.tenant import CmmProducts, CmmProductsCategories
 from models.tenant import CmmProductsGrid, CmmProductsImages
 from models.tenant import CmmProductsTypes, CmmProductsModels
-from sqlalchemy import Delete, Update, desc, exc, asc,Select, or_
+from sqlalchemy import Delete, Update, desc, exc, asc, Select, or_
 
 ns_prod  = Namespace("products",description="Operações para manipular dados de produtos")
 

@@ -1,13 +1,13 @@
-from flask_restx import Resource,Namespace
 from auth import auth
 from os import environ
 from flask import request
 from http import HTTPStatus
 from models.helpers import _get_params, db
+from flask_restx import Resource, Namespace
 from sqlalchemy import Select, Update, desc, exc, and_, asc, or_
-from models.tenant import CmmLegalEntities, CrmFunnel, _save_entity_log
 from models.tenant import CrmFunnelStageCustomer, CrmFunnelStage
 from f2bconfig import CrmFunnelType, EntityAction, LegalEntityType
+from models.tenant import CmmLegalEntities, CrmFunnel, _save_entity_log
 
 
 ns_fun_stg = Namespace("funnel-stages",description="Operações para manipular estágios dos funis de clientes")

@@ -4,7 +4,7 @@ from flask import request
 from http import HTTPStatus
 from datetime import datetime
 from models.helpers import _get_params, db
-from flask_restx import Resource,Namespace,fields
+from flask_restx import Resource ,Namespace, fields
 from f2bconfig import CustomerAction, MailTemplates
 from common import _send_email, _get_dashboard_config
 from models.public import _save_customer_log, SysConfig

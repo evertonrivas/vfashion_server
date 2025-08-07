@@ -5,7 +5,7 @@ from http import HTTPStatus
 from models.public import SysCountries
 from models.helpers import _get_params, db
 from sqlalchemy import Select, desc, exc, asc
-from flask_restx import Resource,Namespace,fields
+from flask_restx import Resource, Namespace, fields
 
 ns_country = Namespace("countries",description="Operações para manipular dados de países")
 

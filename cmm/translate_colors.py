@@ -4,7 +4,7 @@ from flask import request
 from http import HTTPStatus
 from models.helpers import _get_params, db
 from sqlalchemy import Select, exc, desc, asc
-from flask_restx import Resource,Namespace,fields
+from flask_restx import Resource, Namespace, fields
 from models.tenant import B2bProductStock, CmmTranslateColors
 
 ns_color = Namespace("translate-colors",description="Operações para manipular dados de cores")

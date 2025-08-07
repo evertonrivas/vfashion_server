@@ -6,7 +6,7 @@ from datetime import datetime,date
 from f2bconfig import CrmFunnelType
 from models.helpers import _get_params, db
 from models.tenant import ScmEvent, ScmEventType
-from flask_restx import Resource,Namespace,fields
+from flask_restx import Resource, Namespace, fields
 from sqlalchemy import exc, asc,between,Select,and_, func
 from models.tenant import CrmConfig, CrmFunnel, CrmFunnelStage 
 from models.tenant import B2bBrand, B2bCollection, ScmCalendar

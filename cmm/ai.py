@@ -1,5 +1,5 @@
-import importlib
 import requests
+import importlib
 from auth import auth
 from os import environ
 from flask import request
@@ -32,7 +32,7 @@ class AiApi(Resource):
                     token = _extract_token(tkn)
                     if token is not None:
                         # faz a chamada para reduzir acoplamento
-                        resp = requests.get(str(environ.get("F2B_SMC_URL"))+"/config/",{
+                        resp = requests.get(str(environ.get("F2B_SMC_URL"))+"config/",{
                             "tenant": token["profile"]
                         })
                         if resp.status_code==HTTPStatus.OK.value:

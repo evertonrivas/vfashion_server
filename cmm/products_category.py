@@ -5,7 +5,7 @@ from http import HTTPStatus
 from models.tenant import CmmCategories
 from models.helpers import _get_params, db
 from sqlalchemy import Select, exc, asc, desc
-from flask_restx import Resource,Namespace,fields
+from flask_restx import Resource, Namespace, fields
 
 ns_cat  = Namespace("products-category",description="Operações para manipular dados de categorias de produtos")
 

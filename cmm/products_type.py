@@ -5,7 +5,7 @@ from http import HTTPStatus
 from models.helpers import _get_params, db
 from models.tenant import CmmProductsTypes
 from sqlalchemy import Select, exc, asc, desc
-from flask_restx import Resource,Namespace,fields
+from flask_restx import Resource, Namespace, fields
 
 ns_type = Namespace("products-type",description="Operações para manipular dados de tipos de produtos")
 

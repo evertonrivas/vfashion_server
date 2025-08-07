@@ -6,7 +6,7 @@ from decimal import Decimal
 from http import HTTPStatus
 from datetime import datetime
 from models.helpers import _get_params, db
-from flask_restx import Resource,Namespace,fields
+from flask_restx import Resource, Namespace, fields
 from sqlalchemy import Delete, Select, and_, exc, or_, desc, asc
 from models.tenant import CmmTranslateColors, CmmTranslateSizes, ScmEvent
 from models.tenant import B2bBrand, B2bCartShopping, B2bCollection, B2bProductStock

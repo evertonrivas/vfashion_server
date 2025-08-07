@@ -8,8 +8,8 @@ from datetime import datetime
 from models.helpers import db
 from werkzeug import exceptions
 from f2bconfig import EntityAction
-from flask_restx import Resource,Namespace
-from sqlalchemy import Select, Update,Delete, func
+from flask_restx import Resource, Namespace
+from sqlalchemy import Select, Update, Delete, func
 from models.tenant import _save_entity_log, CmmLegalEntities, CmmLegalEntityFile, CmmProductsImages
 
 ns_upload = Namespace("upload",description="Operações para manipular upload de dados")

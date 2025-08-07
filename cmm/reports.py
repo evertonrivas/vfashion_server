@@ -1,14 +1,14 @@
 import os
 import base64
-import datetime
 import decimal
+import datetime
 from auth import auth
 from os import environ
 from flask import request
 from http import HTTPStatus
 from models.tenant import CmmReport
 from models.helpers import _get_params, db
-from flask_restx import Resource,Namespace
+from flask_restx import Resource, Namespace
 from common import _format_action, _gen_report
 from sqlalchemy import Select, text, desc, exc, asc, or_
 

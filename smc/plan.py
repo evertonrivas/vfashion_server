@@ -6,7 +6,7 @@ from datetime import datetime
 from models.public import SysPlan
 from models.helpers import _get_params, db
 from sqlalchemy import Select, exc, asc, desc
-from flask_restx import Resource,Namespace,fields
+from flask_restx import Resource, Namespace, fields
 
 ns_plan = Namespace("plan",description="Operações para manipular dados de planos de assinatura")
 

@@ -3,11 +3,11 @@ from flask_restx import Api
 from smc.plan import ns_plan
 from smc.users import ns_user
 from smc.cities import ns_city
+from smc.config import ns_config
 from smc.payment import ns_payment
 from smc.countries import ns_country
 from smc.customer import ns_customer
 from smc.state_regions import ns_state_region
-from smc.config import ns_config
 
 nss = [ns_customer,
        ns_plan,

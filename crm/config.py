@@ -5,7 +5,7 @@ from http import HTTPStatus
 from models.helpers import db
 from sqlalchemy import Select, exc
 from models.tenant import CrmConfig
-from flask_restx import Resource,Namespace
+from flask_restx import Resource, Namespace
 
 ns_crm_cfg = Namespace("config",description="Configurações do módulo de CRM")
 

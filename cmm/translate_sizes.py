@@ -5,7 +5,7 @@ from http import HTTPStatus
 from models.helpers import _get_params, db
 from models.tenant import CmmTranslateSizes
 from sqlalchemy import Select, exc, desc, asc
-from flask_restx import Resource,Namespace,fields
+from flask_restx import Resource, Namespace, fields
 
 ns_size = Namespace("translate-sizes",description="Operações para manipular dados de tamanhos")
 

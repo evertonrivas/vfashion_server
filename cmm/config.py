@@ -1,12 +1,9 @@
-import importlib
+import requests
 from os import environ
 from flask import request
-# from sqlalchemy import exc
+from sqlalchemy import exc
 from http import HTTPStatus
-from models.helpers import db
-from sqlalchemy import Select, exc
 from common import _extract_token
-# from models.public import SysConfig
 from flask_restx import Resource, Namespace, fields
 
 ns_config = Namespace("config",description="Obtem as configuracoes do sistema")
@@ -14,6 +11,8 @@ ns_config = Namespace("config",description="Obtem as configuracoes do sistema")
 #API Models
 cfg_model = ns_config.model(
     "Config",{
+        "ai_model": fields.String,
+        "ai_api_key": fields.String,
         "use_company_custom":fields.Boolean,
         "company_name":fields.String,
         "company_logo":fields.String,
@@ -37,7 +36,10 @@ class ConfigList(Resource):
                 tkn = str(request.headers.get("Authorization")).replace("Bearer ","")
                 if tkn is not None:
                     token = _extract_token(tkn)
-                    
+                    if token is not None:
+                        resp = requests.post(str(environ.get("F2B_SMC_URL"))+str(token["profile"]),request.get_json())
+                        if resp.status_code == HTTPStatus.OK.value:
+                            return True
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,

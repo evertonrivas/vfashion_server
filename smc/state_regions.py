@@ -4,8 +4,8 @@ from flask import request
 from http import HTTPStatus
 from models.public import SysStateRegions
 from models.helpers import _get_params, db
-from flask_restx import Resource,Namespace,fields
 from sqlalchemy import Select, desc, exc, asc, or_
+from flask_restx import Resource, Namespace, fields
 
 ns_state_region = Namespace("state-regions",description="Operações para manipular dados de estados ou regiões")
 
