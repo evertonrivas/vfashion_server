@@ -10,7 +10,7 @@ from flask_restx import Resource,Namespace
 ns_crm_cfg = Namespace("config",description="Configurações do módulo de CRM")
 
 @ns_crm_cfg.route("/")
-class CollectionList(Resource):
+class ConfigList(Resource):
     @ns_crm_cfg.response(HTTPStatus.OK,"Obtem um registro de uma coleção")
     @ns_crm_cfg.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required

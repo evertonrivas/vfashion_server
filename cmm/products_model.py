@@ -36,7 +36,7 @@ model_return = ns_model.model(
 )
 
 @ns_model.route("/")
-class CategoryList(Resource):
+class ModelList(Resource):
     @ns_model.response(HTTPStatus.OK,"Obtem a listagem de categorias de modelos de produto",model_return)
     @ns_model.response(HTTPStatus.BAD_REQUEST,"Falha ao listar registros!")
     @ns_model.param("page","Número da página de registros","query",type=int,required=True,default=1)
@@ -141,7 +141,7 @@ class CategoryList(Resource):
             }
 
 @ns_model.route("/<int:id>")
-class CategoryApi(Resource):
+class ModelApi(Resource):
     @ns_model.response(HTTPStatus.OK,"Obtem um registro de um modelo de produto",model_model)
     @ns_model.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required

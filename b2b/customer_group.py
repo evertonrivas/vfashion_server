@@ -44,7 +44,7 @@ coll_return = ns_customer_g.model(
 
 
 @ns_customer_g.route("/")
-class CollectionList(Resource):
+class CustomerGroupList(Resource):
     @ns_customer_g.response(HTTPStatus.OK,"Obtem um registro de uma coleção",coll_return)
     @ns_customer_g.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @ns_customer_g.param("page","Número da página de registros","query",type=int,required=True)
@@ -168,7 +168,7 @@ class CollectionList(Resource):
 
 @ns_customer_g.route("/<int:id>")
 @ns_customer_g.param("id","Id do registro")
-class CollectionApi(Resource):
+class CustomerGroupApi(Resource):
     @ns_customer_g.response(HTTPStatus.OK,"Retorna os dados dados de uma coleção")
     @ns_customer_g.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required

@@ -34,7 +34,7 @@ mu_return = ns_measure_unit.model(
 )
 
 @ns_measure_unit.route("/")
-class CategoryList(Resource):
+class MeasureUnitList(Resource):
     @ns_measure_unit.response(HTTPStatus.OK,"Obtem a listagem de unidades de medida",mu_return)
     @ns_measure_unit.response(HTTPStatus.BAD_REQUEST,"Falha ao listar registros!")
     @ns_measure_unit.param("page","Número da página de registros","query",type=int,required=True,default=1)
@@ -135,7 +135,7 @@ class CategoryList(Resource):
             }
 
 @ns_measure_unit.route("/<int:id>")
-class CategoryApi(Resource):
+class MeasureUnitApi(Resource):
     @ns_measure_unit.response(HTTPStatus.OK,"Obtem um registro de uma unidade de medida",mu_model)
     @ns_measure_unit.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required

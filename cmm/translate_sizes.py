@@ -37,7 +37,7 @@ size_return = ns_size.model(
 )
 
 @ns_size.route("/")
-class CategoryList(Resource):
+class SizeList(Resource):
     @ns_size.response(HTTPStatus.OK,"Obtem a listagem de traduções de tamanhos",size_return)
     @ns_size.response(HTTPStatus.BAD_REQUEST,"Falha ao listar registros!")
     @ns_size.param("page","Número da página de registros","query",type=int,required=True,default=1)
@@ -153,7 +153,7 @@ class CategoryList(Resource):
             }
 
 @ns_size.route("/<int:id>")
-class CategoryApi(Resource):
+class SizeApi(Resource):
     @ns_size.response(HTTPStatus.OK,"Obtem um registro de uma nova tradução de tamanho",size_model)
     @ns_size.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required

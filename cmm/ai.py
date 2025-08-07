@@ -18,7 +18,7 @@ cfg_ai_model = ns_ai.model(
 )
 
 @ns_ai.route("/")
-class CategoryList(Resource):   
+class AiApi(Resource):   
     @ns_ai.response(HTTPStatus.OK.value,"Executa a inteligencia artificial")
     @ns_ai.response(HTTPStatus.BAD_REQUEST.value,"Falha ao listar registros!")
     @ns_ai.doc(body=cfg_ai_model,description="Dados necessários",name="content")

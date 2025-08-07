@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime
-from requests import RequestException
 from .shipping import Shipping
+from requests import RequestException
 
 class Jadlog(Shipping):
     def __init__(self) -> None:

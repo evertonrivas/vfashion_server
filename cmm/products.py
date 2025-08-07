@@ -339,7 +339,6 @@ class ProductsList(Resource):
 @ns_prod.route("/<int:id>")
 @ns_prod.param("id","Id do registro")
 class ProductApi(Resource):
-
     @ns_prod.response(HTTPStatus.OK,"Obtem um registro de produto",prd_model)
     @ns_prod.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado")
     @auth.login_required

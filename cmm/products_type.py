@@ -36,7 +36,7 @@ type_return = ns_type.model(
 )
 
 @ns_type.route("/")
-class CategoryList(Resource):
+class TypeList(Resource):
     @ns_type.response(HTTPStatus.OK,"Obtem a listagem de categorias de tipos de produto",type_return)
     @ns_type.response(HTTPStatus.BAD_REQUEST,"Falha ao listar registros!")
     @ns_type.param("page","Número da página de registros","query",type=int,required=True,default=1)
@@ -140,7 +140,7 @@ class CategoryList(Resource):
             }
 
 @ns_type.route("/<int:id>")
-class CategoryApi(Resource):
+class TypeApi(Resource):
     @ns_type.response(HTTPStatus.OK,"Obtem um registro de um tipo de produto",type_model)
     @ns_type.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required

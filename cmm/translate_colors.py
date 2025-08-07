@@ -38,7 +38,7 @@ model_return = ns_color.model(
 )
 
 @ns_color.route("/")
-class CategoryList(Resource):
+class ColorsList(Resource):
     @ns_color.response(HTTPStatus.OK,"Obtem a listagem de traduções de cores",model_return)
     @ns_color.response(HTTPStatus.BAD_REQUEST,"Falha ao listar registros!")
     @ns_color.param("page","Número da página de registros","query",type=int,required=True,default=1)
@@ -156,7 +156,7 @@ class CategoryList(Resource):
             }
 
 @ns_color.route("/<int:id>")
-class CategoryApi(Resource):
+class ColorsApi(Resource):
     @ns_color.response(HTTPStatus.OK,"Obtem um registro de uma nova tradução de cor",color_model)
     @ns_color.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required

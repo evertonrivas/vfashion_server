@@ -35,7 +35,7 @@ brand_return = ns_brand.model(
 )
 
 @ns_brand.route("/")
-class CollectionList(Resource):
+class BrandList(Resource):
     @ns_brand.response(HTTPStatus.OK,"Obtem um registro de uma marca",brand_return)
     @ns_brand.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @ns_brand.param("page","Número da página de registros","query",type=int,required=True)
@@ -142,7 +142,7 @@ class CollectionList(Resource):
 
 @ns_brand.route("/<int:id>")
 @ns_brand.param("id","Id do registro")
-class CollectionApi(Resource):
+class BrandApi(Resource):
     @ns_brand.response(HTTPStatus.OK,"Retorna os dados dados de uma marca")
     @ns_brand.response(HTTPStatus.BAD_REQUEST,"Registro não encontrado!")
     @auth.login_required

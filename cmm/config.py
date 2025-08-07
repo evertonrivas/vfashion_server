@@ -3,9 +3,9 @@ from os import environ
 from flask import request
 # from sqlalchemy import exc
 from http import HTTPStatus
-# from models.helpers import db
-# from sqlalchemy import Select
-# from common import _extract_token
+from models.helpers import db
+from sqlalchemy import Select, exc
+from common import _extract_token
 # from models.public import SysConfig
 from flask_restx import Resource, Namespace, fields
 
@@ -27,36 +27,34 @@ cfg_model = ns_config.model(
     }
 )
 
-cfg_cep_model = ns_config.model(
-    "Cep",{
-        "postal_code": fields.String
-    }
-)
-
 @ns_config.route("/")
-class CategoryList(Resource):
+class ConfigList(Resource):
     @ns_config.response(HTTPStatus.OK,"Obtem as informações de configuração do tenant")
     @ns_config.response(HTTPStatus.BAD_REQUEST,"Falha ao listar registros!")
     def get(self):
-        pass
-
-
+        try:
+            if "Authorization" in request.headers:
+                tkn = str(request.headers.get("Authorization")).replace("Bearer ","")
+                if tkn is not None:
+                    token = _extract_token(tkn)
+                    
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
     
     @ns_config.response(HTTPStatus.OK,"Obtem as informações de CEP")
     @ns_config.response(HTTPStatus.BAD_REQUEST,"Falha ao listar registros!")
-    @ns_config.doc(body=cfg_cep_model,description="Dados necessários",name="content")
     def post(self):
         try:
-            req = request.get_json()
-            module = str(environ.get("F2B_CEP_MODULE"))
-            class_name = str(environ.get("F2B_CEP_MODULE")).replace("_"," ").title().replace(" ","")
-            CEP_OBJ = getattr(
-            importlib.import_module('integrations.cep.'+module),
-            class_name
-            )
-            cep = CEP_OBJ()
-            return cep.get_postal_code(req["postal_code"])
-        except Exception:
-            return False
-        
+            pass
+        except exc.SQLAlchemyError as e:
+            return {
+                "error_code": e.code,
+                "error_details": e._message(),
+                "error_sql": e._sql_message()
+            }
+    
 # colocar busca do aws da receita e tambem do brasil_aberto
