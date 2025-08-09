@@ -177,13 +177,16 @@ class ConfigApi(Resource):
     def post(self,id:str):
         try:
             req = request.get_json()
-            reg:SysConfig|None = SysConfig.query.get(id)
+            cfg = db.session.execute(Select(SysConfig).where(SysConfig.id_customer==id)).first()
+            if cfg is None:
+                return False
+            
+            reg:SysConfig|None = cfg[0]
             if reg is not None:
                 reg.pagination_size     = req["pagination_size"]
                 reg.email_brevo_api_key = req["email_brevo_api_key"]
                 reg.email_from_name     = req["email_from_name"]
                 reg.email_from_value    = req["email_from_value"]
-                reg.dashboard_config    = req["dashboard_config"]
                 reg.ai_model            = req["ai_model"]
                 reg.ai_api_key          = req["ai_api_key"]
                 reg.company_custom      = req["company_custom"]
@@ -192,6 +195,8 @@ class ConfigApi(Resource):
                 reg.url_instagram       = req["url_instagram"]
                 reg.url_facebook        = req["url_facebook"]
                 reg.url_linkedin        = req["url_linkedin"]
+                if "dashboard_config" in req:
+                    reg.dashboard_config = req["dashboard_config"]
                 if "flimv_model" in req:
                     reg.flimv_model = req["flimv_model"]
                 if "max_upload_files" in req:

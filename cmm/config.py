@@ -13,16 +13,19 @@ cfg_model = ns_config.model(
     "Config",{
         "ai_model": fields.String,
         "ai_api_key": fields.String,
-        "use_company_custom":fields.Boolean,
+        "company_custom":fields.Boolean,
         "company_name":fields.String,
         "company_logo":fields.String,
-        "company_instagram":fields.String,
-        "company_facebook":fields.String,
-        "company_linkedin":fields.String,
-        "company_max_up_files":fields.Integer,
-        "company_max_up_images":fields.Integer,
-        "company_use_url_images":fields.Boolean,
-        "system_pagination_size":fields.Integer,
+        "url_instagram":fields.String,
+        "url_facebook":fields.String,
+        "url_linkedin":fields.String,
+        "max_upload_files":fields.Integer,
+        "max_upload_images":fields.Integer,
+        "use_url_images":fields.Boolean,
+        "pagination_size":fields.Integer,
+        "email_brevo_api_key": fields.String,
+        "email_from_name": fields.String,
+        "email_from_value": fields.String
     }
 )
 
@@ -32,14 +35,33 @@ class ConfigList(Resource):
     @ns_config.response(HTTPStatus.BAD_REQUEST,"Falha ao listar registros!")
     def get(self):
         try:
-            if "Authorization" in request.headers:
-                tkn = str(request.headers.get("Authorization")).replace("Bearer ","")
-                if tkn is not None:
-                    token = _extract_token(tkn)
-                    if token is not None:
-                        resp = requests.post(str(environ.get("F2B_SMC_URL"))+str(token["profile"]),request.get_json())
-                        if resp.status_code == HTTPStatus.OK.value:
-                            return True
+            auth_exist = "Authorization" in request.headers
+            tkn = str(request.headers.get("Authorization")).replace("Bearer ","") if auth_exist else ""
+            token = _extract_token(tkn)
+            if token is not None:
+                resp = requests.get(str(environ.get("F2B_SMC_URL"))+"config/"+str(token["profile"]))
+                if resp.status_code == HTTPStatus.OK.value:
+                    cfg = resp.json()
+                    return {
+                        "ai_model": cfg["ai_model"],
+                        "ai_api_key": cfg["ai_api_key"],
+                        "company_custom": cfg["company_custom"],
+                        "company_name": cfg["company_name"],
+                        "company_logo": cfg["company_logo"],
+                        "url_instagram": cfg["url_instagram"],
+                        "url_facebook": cfg["url_facebook"],
+                        "url_linkedin": cfg["url_linkedin"],
+                        "pagination_size": cfg["pagination_size"],
+                        "email_brevo_api_key": cfg["email_brevo_api_key"],
+                        "email_from_name": cfg["email_from_name"],
+                        "email_from_value": cfg["email_from_value"]
+                    }
+                else:
+                    return {
+                        "error_code": HTTPStatus.BAD_REQUEST.value,
+                        "error_details": "Impossível buscar as configurações!",
+                        "error_sql": ""
+                    }, HTTPStatus.BAD_REQUEST
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
@@ -47,11 +69,18 @@ class ConfigList(Resource):
                 "error_sql": e._sql_message()
             }
     
-    @ns_config.response(HTTPStatus.OK,"Obtem as informações de CEP")
+    @ns_config.response(HTTPStatus.OK,"Salva as informações de configuração do tenant")
     @ns_config.response(HTTPStatus.BAD_REQUEST,"Falha ao listar registros!")
     def post(self):
         try:
-            pass
+            if "Authorization" in request.headers:
+                tkn = str(request.headers.get("Authorization")).replace("Bearer ","")
+                if tkn is not None:
+                    token = _extract_token(tkn)
+                    if token is not None:
+                        resp = requests.post(str(environ.get("F2B_SMC_URL"))+"config/"+str(token["profile"]),json=request.get_json())
+                        if resp.status_code == HTTPStatus.OK.value:
+                            return True
         except exc.SQLAlchemyError as e:
             return {
                 "error_code": e.code,
